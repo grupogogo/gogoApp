@@ -119,6 +119,7 @@ export const useFuntions = () => {
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     };
     const buscarNombre = (categoria) => {
+        console.log(categoria)
         const nombre = (categoria === 'KCG') ? 'KIT COMUNIÓN GRANDE' :
             (categoria === 'KCP') ? 'KIT COMUNIÓN PEQUEÑO' :
                 (categoria === 'KB') ? 'KIT DE BAUTIZO' :
@@ -126,7 +127,9 @@ export const useFuntions = () => {
                         (categoria === 'CB') ? 'CIRIO DE BAUTIZO' :
                             (categoria === 'BLANCOS') ? 'GUANTES BLANCOS' :
                                 (categoria === 'NEGROS') ? 'GUANTES NEGROS' :
-                                    (categoria === 'MITON') ? 'GUANTES MITON' : 'OTROS PRODUCTOS';
+                                    (categoria === 'MITON') ? 'GUANTES MITON' :
+                                        (categoria === 'GUANTES') ? 'GUANTES' :
+                                            'OTROS PRODUCTOS';
 
         return nombre;
     }
@@ -670,6 +673,24 @@ export const useFuntions = () => {
             monthlySales2021,
         };
     }
+    const calculaTotalPedido = (pedido, costoEnvio = 0) => {
+        if (pedido?.itemPedido) {
+            // Calcular el total general
+            const total = pedido.itemPedido.reduce((acc, item) => {
+                const totalPorItem = Object.values(item?.itemPedido || {}).reduce((subAcc, { pedido }) => {
+                    const totalPorCategoria = pedido?.reduce((catAcc, pedidoItem) => {
+                        const total = pedidoItem?.precioUnitario
+                            ? pedidoItem?.precioUnitario * pedidoItem?.cantidad
+                            : pedidoItem?.precio * pedidoItem?.cantidad || 0;
+                        return catAcc + total;
+                    }, 0);
+                    return subAcc + totalPorCategoria;
+                }, 0);
+                return acc + totalPorItem;
+            }, 0);
+            return formatearPrecio(total + costoEnvio);
+        }
+    }
     return {
         //*Parameters
 
@@ -687,7 +708,8 @@ export const useFuntions = () => {
         totalesPedidos,
         totalesPedidosAnuales,
         totalesPedidosAnualesPorCategoria,
-        number_format
+        number_format,
+        calculaTotalPedido
     }
 
 }

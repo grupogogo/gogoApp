@@ -9,7 +9,6 @@ const Sidebar = () => {
     const { limpiarClienteActivo } = useClientesStore();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const { user } = useAuthStore();
-    console.log(user)
     const handleSidebarToggle = () => {
         setIsCollapsed(!isCollapsed);
     };
@@ -18,7 +17,7 @@ const Sidebar = () => {
         <>
             {(user && user.rol === "admin" || user.rol === "superAdmin") && (
 
-                <div className={`navbar-nav bg-gradient-primary sidebar sidebar-dark accordion ${isCollapsed ? "toggled" : ""}`} id="accordionSidebar">
+                <div className={`navbar-nav bg-gradient-primary sidebar sidebar-dark accordion d-xs-none ${isCollapsed ? "toggled" : ""}`} id="accordionSidebar">
                     {/* Sidebar - Brand */}
                     <NavLink className="sidebar-brand d-flex align-items-center justify-content-center" to="/">
                         <div className="sidebar-brand-icon rotate-n-15">
@@ -92,7 +91,7 @@ const Sidebar = () => {
 
                     <hr className="sidebar-divider" />
 
-                   {/*  <li className="nav-item">
+                    {/*  <li className="nav-item">
                         <NavLink className="nav-link" to="/inventario">
                             <i className="fas fa-fw fa-list-check" />
                             {!isCollapsed && <span>Inventario</span>}
@@ -106,38 +105,6 @@ const Sidebar = () => {
                         </NavLink>
                     </li> */}
 
-                    <hr className="sidebar-divider d-none d-md-block" />
-
-                    {/* Sidebar Toggler */}
-                    <div className="text-center text-middle text-light">
-                        <button className="" id="sidebarToggle" onClick={handleSidebarToggle}>
-                        </button>
-                    </div>
-                </div>
-            )}
-            {(user && user.rol === "planta") && (
-                <div className={`navbar-nav bg-gradient-primary sidebar sidebar-dark accordion ${isCollapsed ? "toggled" : ""}`} id="accordionSidebar">
-                    {/* Sidebar - Brand */}
-                    <NavLink className="sidebar-brand d-flex align-items-center justify-content-center" to="/">
-                        <div className="sidebar-brand-icon rotate-n-15">
-                            <i className="fas fa-laugh-wink" />
-                        </div>
-                        {!isCollapsed && (
-                            <div className="sidebar-brand-text mx-3">
-                                <sup>Gogo Admin</sup>
-                            </div>
-                        )}
-                    </NavLink>
-
-                    {/* Divider */}
-                    <hr className="sidebar-divider my-0" />
-
-                    <li className="nav-item">
-                        <NavLink className="nav-link" to="/listaPedidos">
-                            <i className="fas fa-fw fa-list-check" />
-                            {!isCollapsed && <span>Listado de pedidos</span>}
-                        </NavLink>
-                    </li>
                     <hr className="sidebar-divider d-none d-md-block" />
 
                     {/* Sidebar Toggler */}

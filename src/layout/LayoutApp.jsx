@@ -9,7 +9,7 @@ import "react-datepicker/dist/react-datepicker.css";
 export const LayoutApp = ({ children }) => {
     return (
         <>            
-                <div id="wrapper" style={{ overflow: 'scroll' }}>
+                <div id="wrapper">
                     <Sidebar />
                     <div id="content-wrapper" className="d-flex flex-column">
                         <div id="content">

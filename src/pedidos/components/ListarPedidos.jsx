@@ -43,22 +43,25 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
 
   const filteredData = {
     nodes: data.nodes.filter((item) => {
+      // Filtrar por rol "planta" y estado "pendiente"
+      const matchesPlanta =
+        user.rol !== "planta" || item.estado === "pendiente" || item.estado === "preparado";
+
       // Condiciones del filtro existente
       const matchesSearch =
-        item.cliente.nombre.toLowerCase().includes(search.toLowerCase()) || // Filtra por nombre del cliente
-        item.fechaCreacion.toLowerCase().includes(search.toLowerCase()) || // Filtra por fecha
-        item.cliente.ciudad.toLowerCase().includes(search.toLowerCase()) || // Filtra por ciudad
-        item.estado.toLowerCase().includes(search.toLowerCase()) || // Filtra por estado
-        item.pedido_id.toLowerCase().includes(search.toLowerCase()) || // Filtra por pedido ID
-        item.user.name.toLowerCase().includes(search.toLowerCase()); // Filtra por pedido ID
+        item.cliente.nombre.toLowerCase().includes(search.toLowerCase()) ||
+        item.fechaCreacion.toLowerCase().includes(search.toLowerCase()) ||
+        item.cliente.ciudad.toLowerCase().includes(search.toLowerCase()) ||
+        item.estado.toLowerCase().includes(search.toLowerCase()) ||
+        item.pedido_id.toLowerCase().includes(search.toLowerCase()) ||
+        item.user.name.toLowerCase().includes(search.toLowerCase());
 
-      // Condición para filtrar por distribuidor (true o false)
       const matchesDistribuidor =
-        filtroDistribuidor === null || // Si no hay filtro seleccionado, incluye todos
-        item.cliente.distribuidor === filtroDistribuidor; // Compara si el cliente es distribuidor según el filtro
+        filtroDistribuidor === null ||
+        item.cliente.distribuidor === filtroDistribuidor;
 
-      // Combinar ambos filtros
-      return matchesSearch && matchesDistribuidor;
+      // Combinar todos los filtros
+      return matchesPlanta && matchesSearch && matchesDistribuidor;
     }),
   };
 
@@ -88,13 +91,13 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
       Table: `
         --data-table-library_grid-template-columns: 
              8%  
-             20%  
-             26% 
-             8% 
-             10%             
-             6%
-             15%
-             5%             
+             13% 
+             auto 
+             7% 
+             7%             
+             5%
+             auto
+             8%             
     `,
     }
   const theme = useTheme(
@@ -106,7 +109,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
   const pagination = usePagination(data, {
     state: {
       page: 0,
-      size: 30,
+      size: 20,
     },
   });
 
@@ -116,7 +119,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
     setFiltroDistribuidor(value === 'all' ? null : value === 'true');
   };
 
-  const COLUMNS = user.rol === "planta" ?
+  const COLUMNS = (user.rol === "planta") ?
     [
       {
         label: 'ID',
@@ -178,30 +181,27 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
             style={{ borderWidth: '3px' }}
             className={`form-select form-select-sm text-center rounded ${item.estado === 'pendiente'
               ? 'border-danger text-danger'
-              : item.estado === 'preparado'
-                ? 'border-secondary text-secondary'
-                : item.estado === 'enviado'
-                  ? 'border-info text-info'
-                  : item.estado === 'entregado'
-                    ? 'border-warning text-dark'
-                    : item.estado === 'anulado'
-                      ? 'border-dark text-dark'
-                      : item.estado === 'devuelto'
-                        ? 'border-warning text-warning'
-                        : item.estado === 'pagado'
-                          ? 'border-success text-success'
-                          : 'border-light text-light'
+              : 'border-primary text-primary'
               }`}
             onChange={(event) => editarPedido(item, event)}
             name={`tipoDespacho${item.pedido_id}`}
             value={item.estado}
+            disabled={[
+              'pagado',
+              'devuelto',
+              'anulado',
+            ].includes(item.estado)}
             title={`Estado actual: ${item.estado}`}
           >
-            <option value="pendiente">{capitalize(item.estado)}</option>
+            <>
+              <option value="pendiente">Pendiente</option>
+              <option value="preparado">Preparado</option>
+            </>
           </select>
         ),
       },
       {
+        label: 'CANT',
         renderCell: (item) => {
           // Crear un mapa para agrupar las cantidades por categoría
           const categorias = {};
@@ -236,7 +236,6 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
               }
             }
           });
-
           // Generar texto para el tooltip         
           const renderTooltip = (props) => (
             <Tooltip id="button-tooltip" {...props}>
@@ -246,16 +245,18 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
             </Tooltip>
           );
           return (
-            <>
-              <OverlayTrigger
-                placement="left"
-                delay={{ show: 250, hide: 400 }}
-                overlay={renderTooltip}
-              >
-                <Button className='badge rounded-pill bg-secondary' variant="secondary">{totalProductos}</Button>
-              </OverlayTrigger>
-            </>
+            <OverlayTrigger
+              placement="left"
+              delay={{ show: 250, hide: 400 }}
+              overlay={renderTooltip}
+            >
+              <span className=" text-dark" variant="secondary">
+                {
+                  <div className="text-center"> <span className='fw-bold fs-3 font-monospace'>{totalProductos}</span> </div>}
+              </span>
+            </OverlayTrigger>
           );
+
         },
       }
     ] : [
@@ -304,7 +305,6 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           return <div className="text-center"> <span title={`Tipo de despacho: ${despacho}`}>{despacho}</span></div>
         },
       },
-
       {
         label: <i className="fa fa-eye"></i>,
         renderCell: (item) => {
@@ -321,7 +321,6 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           );
         },
       },
-
       {
         label: <i className="fa fa-print"></i>,
         renderCell: (item) => {
@@ -378,7 +377,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
             className={`form-select form-select-sm text-center rounded ${item.estado === 'pendiente'
               ? 'border-danger text-danger'
               : item.estado === 'preparado'
-                ? 'border-secondary text-secondary'
+                ? 'border-primary text-primary'
                 : item.estado === 'enviado'
                   ? 'border-info text-info'
                   : item.estado === 'entregado'
@@ -420,7 +419,6 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
             )}
             {(item.estado === 'enviado') && (
               <>
-                <option value="preparado">Preparado</option>
                 <option value="enviado">Enviado</option>
                 <option value="entregado">Entregado</option>
                 <option value="devuelto">Devuelto</option>
@@ -466,7 +464,6 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
             }
           });
 
-          // Generar texto para el tooltip
           // Generar texto para el tooltip         
           const renderTooltip = (props) => (
             <Tooltip id="button-tooltip" {...props}>
@@ -490,11 +487,10 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
       }
     ];
 
-
   return (
     <>
       <div className="row justify-content-between align-items-center">
-        <div className="col-auto mb-3">
+        <div className="col-md-6 col-6 mb-3">
           <select
             className="form-select"
             onChange={handleFilterChange}
@@ -506,7 +502,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           </select>
         </div>
 
-        <div className="col-md-4 col-12">
+        <div className="col-md-5 col-6">
           <div className="input-group mb-3">
             <input
               type="text"
@@ -518,18 +514,25 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
               value={search}
               onChange={handleSearch}
             />
+            <div className="input-group-append">
+              <button className="btn btn-primary" type="button">
+                <i className="fas fa-search fa-sm" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <CompactTable
-        columns={COLUMNS}
-        data={filteredData}
-        theme={theme}
-        className="table table-bordered table-hover text-left align-middle"
-        pagination={pagination}
-        layout={{ custom: true }}
-      />
+      <div className="table-responsive">
+        <CompactTable
+          columns={COLUMNS}
+          data={filteredData}
+          theme={theme}
+          className="table table-bordered table-hover text-left align-middle"
+          pagination={pagination}
+          layout={{ custom: true }}
+        />
+      </div>
       <br />
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <span>Páginas totales: {pagination.state.getTotalPages(data.nodes)}</span>

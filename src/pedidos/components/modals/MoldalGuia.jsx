@@ -13,6 +13,7 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
     const modalRef = useRef();
     const handleClose = () => { setShow(false) }
     const handleShow = () => { setShow(true) }
+    const { calculaTotalPedido, formatearPrecio } = useFuntions();
 
     const handleDownloadPDF = () => {
         let timerInterval;
@@ -71,7 +72,7 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                 </Modal.Header>
                 <Modal.Body ref={modalRef} >
                     {/* Información del cliente y fecha */}
-                    <Card className="mb-1">
+                    <>
                         <Card.Body>
                             <Row>
                                 <Col>
@@ -79,9 +80,9 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                         <Col className='col-md-12'>
                                             <span className='fw-bold text-danger fs-1'>REMITENTE</span>
                                         </Col>
-                                        <hr className='col-md-10'/>
+                                        <hr className='col-md-10' />
                                         <Col className='col-md-12'>
-                                            <span className='fw-semibold fs-3'>{pedido?.user?.name}</span>
+                                            <span className='fw-semibold fs-3 text-info'>{pedido?.user?.name}</span>
                                         </Col>
                                         <Col>
                                             <span className='fw-semibold'>CC: </span>{pedido?.user?.numIdentificacion}
@@ -105,7 +106,7 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                         </Col>
                                         <hr className='col-md-10' />
                                         <Col className='col-md-12'>
-                                            <span className='fw-bold text-info fs-3'>{(pedido?.cliente?.nombre)}</span> 
+                                            <span className='fw-bold text-info fs-3'>{(pedido?.cliente?.nombre)}</span>
                                         </Col>
                                         <Col className='col-md-12'>
                                             <span className='fw-semibold'>NÚMERO DE IDENTIFICACIÓN:</span> {pedido?.cliente?.nitCC}
@@ -123,11 +124,25 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                         <Col>
                                             <span className='fw-semibold'>TELÉFONO:</span> {pedido?.cliente?.telefono}
                                         </Col>
+                                        {pedido?.formaPago === 'pCasa' || pedido?.formaPago === 'alCobro' && (
+                                            <Row className='text-center mr-2 card'>
+                                                <Col>
+                                                    {pedido?.formaPago === 'pCasa' && (
+                                                        <span className='text-danger fs-4 fw-bold'>PAGO EN CASA: {calculaTotalPedido(pedido)}</span>
+                                                    )}
+                                                    {pedido?.formaPago === 'alCobro' && (
+                                                        <span className='text-danger fs-4 fw-bold'>AL COBRO CON ENVÍO: {calculaTotalPedido(pedido, parseInt(pedido?.costoEnvio))}</span>
+                                                    )}
+                                                </Col>
+                                            </Row>
+                                        )}
                                     </Row>
                                 </Col>
                             </Row>
+
+
                         </Card.Body>
-                    </Card>
+                    </>
                 </Modal.Body>
 
                 <Modal.Footer>

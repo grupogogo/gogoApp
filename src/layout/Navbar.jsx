@@ -1,45 +1,71 @@
+import { Navigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { useAuthStore } from "../hooks/useAuthStore";
+import { useState } from "react";
 
 const Navbar = () => {
     const { user, startLogout } = useAuthStore();
     //console.log(user)
+
+    const [isOpen, setIsOpen] = useState(false);
+
+    const toggleMobileMenu = () => {
+        setIsOpen(!isOpen);
+    };
     return (
         <nav className="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+            <div className="btn-group">
+                <button
+                    type="button"
+                    className="btn btn-link dropdown-toggle d-md-none mr-3"
+                    aria-expanded={isOpen}
+                    onClick={toggleMobileMenu}
+                >
+                    <i className="fa fa-bars" />
+                </button>
+                <ul
+                    className={`dropdown-menu d-md-none position-absolute ${isOpen ? "show" : "d-none"}`}
+                    style={{ left: 2, top: "50px", width: "auto", minWidth: "200px" }}
+                >
+                    <li>
+                        <NavLink className="nav-link dropdown-item ml-2" to="/dashboard">Dashboard
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink className="nav-link dropdown-item ml-2" to="/blur">Budget
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink className="nav-link dropdown-item ml-2" to="/pedidos">Crear pedido
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink className="nav-link dropdown-item ml-2" to="/listapedidos">Listar pedidos
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink className="nav-link dropdown-item ml-2" to="/clientes">Clientes
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink className="nav-link dropdown-item ml-2" to="/productos">Productos
+                        </NavLink>
+                    </li>
+                </ul>
+
+            </div>
+            <div className="nav-item text-gray-600 small text-center text-middle text-start ml-2">
+                {new Date().toLocaleDateString('es-CO', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                })}
+            </div>
             {/* Sidebar Toggle (Topbar) */}
-            <button id="sidebarToggleTop" className="btn btn-link d-md-none rounded-circle mr-3">
-                <i className="fa fa-bars" />
-            </button>
 
             {/* Topbar Navbar */}
             <ul className="navbar-nav ms-auto">
-                {/* Nav Item - Search Dropdown (Visible Only XS) */}
-                <li className="nav-item dropdown no-arrow d-sm-none">
-                    <a
-                        className="nav-link dropdown-toggle"
-                        href="#"
-                        id="searchDropdown"
-                        role="button"
-                        data-bs-toggle="dropdown"
-                        aria-haspopup="true"
-                        aria-expanded="false"
-                    >
-                        <i className="fas fa-search fa-fw" />
-                    </a>
-                    {/* Dropdown - Messages */}
-                    <div className="dropdown-menu dropdown-menu-end p-3 shadow animated--grow-in" aria-labelledby="searchDropdown">
-                        <form className="form-inline mr-auto w-100 navbar-search">
-                            <div className="input-group">
-                                <input type="text" className="form-control bg-light border-0 small" placeholder="Search for..." aria-label="Search" />
-                                <div className="input-group-append">
-                                    <button className="btn btn-primary" type="button">
-                                        <i className="fas fa-search fa-sm" />
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </li>
-
                 {/* Nav Item - Alerts */}
                 <li className="nav-item dropdown no-arrow mx-1">
                     <a
@@ -105,6 +131,8 @@ const Navbar = () => {
                     </div>
                 </li>
 
+
+
                 <div className="topbar-divider d-none d-sm-block" />
 
                 {/* Nav Item - User Information */}
@@ -118,8 +146,8 @@ const Navbar = () => {
                         aria-haspopup="true"
                         aria-expanded="false"
                     >
-                        <span className="mr-2 d-none d-lg-inline text-gray-600 small">{user.name}</span>
-                        <img className="img-profile rounded-circle" src="/src/dashboard/img/undraw_profile.svg" />
+                        <span className="mr-2 d-lg-inline text-gray-600 small">{user.name}</span>
+                        <img className="img-profile rounded-circle" src="/images/avatar/undraw_profile.svg" />
                     </a>
                     {/* Dropdown - User Information */}
                     <div className="dropdown-menu dropdown-menu-end shadow animated--grow-in" aria-labelledby="userDropdown" >
@@ -144,7 +172,6 @@ const Navbar = () => {
                 </li>
             </ul>
         </nav>
-
     )
 };
 

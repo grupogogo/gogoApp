@@ -25,14 +25,14 @@ export const TablaPedidos = () => {
         //console.log(JSON.stringify(pedido));
     }
     const editarPedido = async (pedido, event) => {
-        if (event.target.value === 'pendiente' || event.target.value === 'preparado') {
+        /* if (event.target.value === 'pendiente' || event.target.value === 'preparado') {
             Swal.fire({
                 icon: "error",
                 title: "Oops...",
                 text: "El pedido no se puede editar si ya ha sido despachado!",
             });
             return;
-        }
+        } */
 
         onInputChange(event);
 

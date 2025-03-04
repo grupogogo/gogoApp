@@ -8,7 +8,7 @@ export const useAuthStore = () => {
     const dispatch = useDispatch();
 
     const startLogin = async ({ email, password }) => {
-        dispatch(onChecking())
+        dispatch(onChecking());
         try {
             const { data } = await gogoApi.post('/auth', { email, password })
             localStorage.setItem('token', data.token);

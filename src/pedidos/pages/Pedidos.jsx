@@ -10,7 +10,6 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from 'date-fns/locale/es';
 import { format } from "date-fns"; // Funciones para formato y parseo
-
 import { useDispatch } from "react-redux";
 
 
@@ -289,7 +288,7 @@ export const Pedidos = () => {
 
                       {/* Por Cobrar */}
                       <div className="col-md-4">
-                        {(formaPago === "alCobro" || formaPago === "pCasa") && (
+                        {(formaPago === "alCobro") && (
                           <div className="mb-3 ">
                             <label className="form-label">Costo del despacho</label>
                             <input type="number" className="form-control form-control-sm"

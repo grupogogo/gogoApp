@@ -109,7 +109,6 @@ export const OtrosProductos = ({ agregarPedidoGeneral }) => {
                 showConfirmButton: false,
                 timer: 1500
             });
-            console.log(precioProducto)
             startAddNewProducto({
                 producto: productoNuevo,
                 codigo: codProducto,
@@ -119,12 +118,10 @@ export const OtrosProductos = ({ agregarPedidoGeneral }) => {
             setAlternarProducto(!alternarProducto);
             startLoadingProductos();
         }
-
     }
 
     const cargarSelect = (event, producto) => {
         onInputChange(event);
-        console.log(producto);
         onInputChange({ target: { name: 'precio', value: producto.precio } });
 
     }
@@ -134,7 +131,7 @@ export const OtrosProductos = ({ agregarPedidoGeneral }) => {
         setCantidadItems(Object.values(pedidoOtros).reduce((acc, item) => acc + parseInt(item.cantidad), 0));
         agregarPedidoGeneral('OTR', Object.values(pedidoOtros), detalle); // Llamamos al callback con el pedido y la categoría
         startLoadingProductos();
-    }, [pedidoOtros, detalle]);
+    }, [pedidoOtros, detalle, productos]);
 
 
 
