@@ -15,7 +15,7 @@ export const CirioComunion = ({ agregarPedidoGeneral }) => {
     }, [pedidoCC, detalle]);
     return (
         <>
-            <div className="card">
+            <div className="">
                 <HeadersPedidos codigo='CC' titulo='CIRIO COMUNIÓN' cantidadItems={cantidadItems} collapsed='Four' />
 
                 <div id="collapseFour" className="collapse" aria-labelledby="headingFour" data-bs-parent="#accordionExample"

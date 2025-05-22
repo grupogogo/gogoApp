@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Button, Card, Col, Modal, Row, Table } from 'react-bootstrap'
 import { useFuntions } from '../../../hooks';
 import html2canvas from "html2canvas";
@@ -13,7 +13,7 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
     const modalRef = useRef();
     const handleClose = () => { setShow(false) }
     const handleShow = () => { setShow(true) }
-    const { calculaTotalPedido, formatearPrecio } = useFuntions();
+    const { calculaTotalPedido } = useFuntions();
 
     const handleDownloadPDF = () => {
         let timerInterval;
@@ -47,7 +47,7 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
             pdf.addImage(imgData, "JPEG", 5, 5, imgWidth, imgHeight);
-            pdf.save(`Factura_${pedido?.id}.pdf`);
+            pdf.save(`GuiaDespacho_${pedido?.id}.pdf`);
         });
     };
 
@@ -82,13 +82,13 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                         </Col>
                                         <hr className='col-md-10' />
                                         <Col className='col-md-12'>
-                                            <span className='fw-semibold fs-3 text-info'>{pedido?.user?.name}</span>
+                                            <span className='fw-bold fs-2 text-info'>{pedido?.user?.name}</span>
                                         </Col>
                                         <Col>
                                             <span className='fw-semibold'>CC: </span>{pedido?.user?.numIdentificacion}
                                         </Col>
                                         <Col className='col-md-12'>
-                                            <span className='fw-semibold'>DIRECCIÓN:&nbsp;</span> Carrera 6A # 76 - 23 sur Bogotá - Colombia
+                                            <span className='fw-semibold'>DIRECCIÓN:&nbsp;</span> Carrera 8A # 76 sur - 23 
                                         </Col>
                                         <Col className='col-md-12'>
                                             <Row>
@@ -106,10 +106,10 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                         </Col>
                                         <hr className='col-md-10' />
                                         <Col className='col-md-12'>
-                                            <span className='fw-bold text-info fs-3'>{(pedido?.cliente?.nombre)}</span>
+                                            <span className='fw-bold text-info fs-2'>{(pedido?.cliente?.nombre)}</span>
                                         </Col>
                                         <Col className='col-md-12'>
-                                            <span className='fw-semibold'>NÚMERO DE IDENTIFICACIÓN:</span> {pedido?.cliente?.nitCC}
+                                            <span className='fw-semibold'>NIT o CC:</span> {pedido?.cliente?.nitCC}
                                         </Col>
                                         <Col className='col-md-12'>
                                             <span className='fw-semibold'>CIUDAD: </span>{pedido?.cliente?.ciudad}
@@ -138,9 +138,7 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                         )}
                                     </Row>
                                 </Col>
-                            </Row>
-
-
+                            </Row>                     
                         </Card.Body>
                     </>
                 </Modal.Body>

@@ -4,5 +4,8 @@ export * from './clientes/clientesSlice'
 export * from './ui/uiSlice'
 export * from './pedidos/pedidosSlice'
 export * from './productos/productosSlice'
+export * from './gastos/gastosSlice'
+export * from './productos/preciosSlice'
+export * from './productos/preciosSlice' 
 
 export * from './store'

@@ -47,34 +47,39 @@ export const HeadersPedidos = ({ codigo, titulo, cantidadItems, collapsed, vTota
     }
 
     return (
-        <div className="card-header" id="heading">
-            <button
-                className="btn btn-block text-left collapsed"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target={`#collapse${collapsed}`}
-                aria-expanded="false"
-                aria-controls={`#collapse${collapsed}`}
-            >
-                <div className="row">
-                    <div className="col-lg-8 d-flex align-items-center">
-                        <div className="mr-2 font-weight-bold">{codigo} |</div>
+        <div className='p-1'>
+            <div className="card-header card-hover border-0 shadow-sm" style={{ backgroundColor: '#EDF2F9' }} id="heading">
+                <button
+                    className="btn w-100 text-left collapsed d-flex justify-content-between align-items-center"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target={`#collapse${collapsed}`}
+                    aria-expanded="false"
+                    aria-controls={`collapse${collapsed}`}
+                >
+                    <div className="d-flex align-items-center">
+                        <div className="font-weight-bold me-2">{codigo} |</div>
                         <div>{titulo}</div>
                     </div>
-                    {(cantidadItems !== 0) && (
-                        <div className="col-lg-4 text-right">
-                            <span className="badge badge-primary badge-pill m-1 font-weight-bold fs-6">{cantidadItems}</span>
-                            {(codigo === 'OTR') && (
-                                <span className="badge badge-primary badge-pill m-1 font-weight-bold fs-6">{formatearPrecio(vTotal)}</span>
-                            )}
 
-                            {codigo !== 'OTR' && (
-                                <span className="badge badge-primary badge-pill m-1 font-weight-bold fs-6">{formatPrice(cantidadItems, codigo)}</span>
+                    {cantidadItems !== 0 && (
+                        <div className="text-end">
+                            <span className="badge badge-primary badge-pill m-1 font-weight-bold fs-6 text-secondary">
+                                Items: {cantidadItems}
+                            </span>
+                            {codigo === 'OTR' ? (
+                                <span className="badge badge-primary badge-pill m-1 font-weight-bold fs-6 text-secondary">
+                                    {formatearPrecio(vTotal)}
+                                </span>
+                            ) : (
+                                <span className="badge badge-primary badge-pill m-1 font-weight-bold fs-6 text-black">
+                                    | {formatPrice(cantidadItems, codigo)}
+                                </span>
                             )}
                         </div>
                     )}
-                </div>
-            </button>
+                </button>
+            </div>
         </div>
 
     )

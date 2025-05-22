@@ -32,7 +32,7 @@ export const ClienteLoadInput = () => {
         setClienteActivo(cliente);  // Establece el cliente activo en el estado global o slice
         setSearchTerm('');  // Muestra el nombre del cliente seleccionado en el input
         getPedidosCliente(cliente.cliente_id);  // Carga los pedidos del cliente seleccionado
-        setTimeout(() => setSuggestions([]), 1);//!Revisar         
+        setTimeout(() => setSuggestions([]), 1);//!Revisar    
     };
     return (
         <div className="input-group">

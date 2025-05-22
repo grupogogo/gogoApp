@@ -1,123 +1,74 @@
 import { NavLink } from "react-router-dom";
-import { Pedidos } from "../pedidos/pages/Pedidos";
-import { Clientes } from "../clients/pages/Clientes";
-import { ListaPedidos } from "../pedidos/pages/ListaPedidos";
 import { useAuthStore, useClientesStore } from "../hooks";
 import { useState } from "react";
 
 const Sidebar = () => {
     const { limpiarClienteActivo } = useClientesStore();
-    const [isCollapsed, setIsCollapsed] = useState(false);
     const { user } = useAuthStore();
-    const handleSidebarToggle = () => {
-        setIsCollapsed(!isCollapsed);
-    };
+    const [isHovered, setIsHovered] = useState(false);
+
+    if (!user || (user.rol !== "admin" && user.rol !== "superAdmin")) return null;
 
     return (
-        <>
-            {(user && user.rol === "admin" || user.rol === "superAdmin") && (
+        <div
+            className="bg-dark text-white d-flex flex-column p-2 position-fixed h-100"
 
-                <div className={`navbar-nav bg-gradient-primary sidebar sidebar-dark accordion d-xs-none ${isCollapsed ? "toggled" : ""}`} id="accordionSidebar">
-                    {/* Sidebar - Brand */}
-                    <NavLink className="sidebar-brand d-flex align-items-center justify-content-center" to="/">
-                        <div className="sidebar-brand-icon rotate-n-15">
-                            <i className="fas fa-laugh-wink" />
-                        </div>
-                        {!isCollapsed && (
-                            <div className="sidebar-brand-text mx-3">
-                                <sup>Gogo Admin</sup>
-                            </div>
-                        )}
-                    </NavLink>
+            style={{
+                width: isHovered ? '250px' : '80px',
+                transition: 'width 1s ease',
+                zIndex: 1050 // aseguramos que esté sobrepuesto
+            }}
+        >
+            {/* Logo */}
+            <div className="text-center mb-4">
+                <img
+                    src="/images/logos/LOGO GOGO BLANCO.webp"
+                    alt="Logo"
+                    style={{
+                        width: isHovered ? "70px" : "70px",
+                        height: "auto",
+                        transition: "width 2s ease"
+                    }}
+                />
+            </div>
 
-                    {/* Divider */}
-                    <hr className="sidebar-divider my-0" />
-
-                    {/* Sidebar Items */}
-                    <li className="nav-item">
-                        <NavLink className="nav-link" to="/dashboard">
-                            <i className="fas fa-fw fa-tachometer-alt" />
-                            {!isCollapsed && <span>Dashboard</span>}
-                        </NavLink>
-                    </li>
-
-                    {/* <li className="nav-item">
-                <NavLink className="nav-link" to="/charts">
-                    <i className="fas fa-fw fa-chart-area" />
-                    {!isCollapsed && <span>Charts</span>}
+            {/* Navegación */}
+            <nav className="nav flex-column"
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+            >
+                <NavLink to="/dashboard" className="nav-link text-white d-flex align-items-center mb-3">
+                    <i className="fas fa-tachometer-alt fa-2x me-3" />
+                    {isHovered && <span>Dashboard</span>}
                 </NavLink>
-            </li> */}
 
-                    <li className="nav-item">
-                        <NavLink className="nav-link" to="/bur">
-                            <i className="fas fa-fw fa-sack-dollar" />
-                            {!isCollapsed && <span>Budget</span>}
-                        </NavLink>
-                    </li>
+                <NavLink to="/gastos" className="nav-link text-white d-flex align-items-center mb-3">
+                    <i className="fas fa-sack-dollar fa-2x me-3" />
+                    {isHovered && <span>Gastos</span>}
+                </NavLink>
 
-                    <hr className="sidebar-divider" />
+                <NavLink to="/pedidos" onClick={limpiarClienteActivo} className="nav-link text-white d-flex align-items-center mb-3">
+                    <i className="fas fa-clipboard-list fa-2x me-3" />
+                    {isHovered && <span>Crear Pedido</span>}
+                </NavLink>
 
-                    <li className="nav-item" onClick={limpiarClienteActivo}>
-                        <NavLink className="nav-link" to="/pedidos">
-                            <i className="fas fa-fw fa-clipboard-list" />
-                            {!isCollapsed && <span className="text-light">Crear Pedido</span>}
-                        </NavLink>
-                    </li>
+                <NavLink to="/listaPedidos" className="nav-link text-white d-flex align-items-center mb-3">
+                    <i className="fas fa-list-check fa-2x me-3" />
+                    {isHovered && <span>Listado de pedidos</span>}
+                </NavLink>
 
-                    <li className="nav-item">
-                        <NavLink className="nav-link" to="/listaPedidos">
-                            <i className="fas fa-fw fa-list-check" />
-                            {!isCollapsed && <span>Listado de pedidos</span>}
-                        </NavLink>
-                    </li>
+                <NavLink to="/clientes" className="nav-link text-white d-flex align-items-center mb-3">
+                    <i className="fas fa-address-book fa-2x me-3" />
+                    {isHovered && <span>Clientes</span>}
+                </NavLink>
 
-                    <hr className="sidebar-divider" />
-
-                    <li className="nav-item">
-                        <NavLink className="nav-link" to="/clientes">
-                            <i className="fas fa-fw fa-address-book" />
-                            {!isCollapsed && <span>Clientes</span>}
-                        </NavLink>
-                    </li>
-
-                    <hr className="sidebar-divider" />
-
-                    <li className="nav-item">
-                        <NavLink className="nav-link" to="/productos">
-                            <i className="fas fa-fw fa-table" />
-                            {!isCollapsed && <span>Productos</span>}
-                        </NavLink>
-                    </li>
-
-                    <hr className="sidebar-divider" />
-
-                    {/*  <li className="nav-item">
-                        <NavLink className="nav-link" to="/inventario">
-                            <i className="fas fa-fw fa-list-check" />
-                            {!isCollapsed && <span>Inventario</span>}
-                        </NavLink>
-                    </li> */}
-
-                    {/* <li className="nav-item">
-                        <NavLink className="nav-link" to="/solicitudes">
-                            <i className="fas fa-fw fa-envelope-open-text" />
-                            {!isCollapsed && <span>Solicitudes</span>}
-                        </NavLink>
-                    </li> */}
-
-                    <hr className="sidebar-divider d-none d-md-block" />
-
-                    {/* Sidebar Toggler */}
-                    <div className="text-center text-middle text-light">
-                        <button className="" id="sidebarToggle" onClick={handleSidebarToggle}>
-                        </button>
-                    </div>
-                </div>
-            )}
-        </>
+                <NavLink to="/CuentasXCobrar" className="nav-link text-white d-flex align-items-center mb-3">
+                    <i className="fas fa-table fa-2x me-3" />
+                    {isHovered && <span>Cuentas por cobrar</span>}
+                </NavLink>
+            </nav>
+        </div>
     );
 };
+
 export default Sidebar;
-
-
-

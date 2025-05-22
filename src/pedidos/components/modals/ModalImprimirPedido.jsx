@@ -232,7 +232,7 @@ export const ModalImprimirPedido = ({ setShow, show, pedido }) => {
                                         <Col className='col-md-12'>
                                             <span className='fw-semibold'>Fecha emisión: &nbsp;
                                             </span>
-                                            {new Date().toLocaleDateString('es-CO', { dateStyle: 'long' })}
+                                            {pedido?.fechaCreacion}
                                         </Col>
                                         <Col className='col-md-12'>
                                             <span className='fw-semibold'>{pedido?.user?.name}</span>
@@ -302,7 +302,7 @@ export const ModalImprimirPedido = ({ setShow, show, pedido }) => {
 
 
                                     {/* Si hay menos de 12 filas, agrega filas vacías */}
-                                     {totalesPorCategoria.length < 16 &&
+                                    {totalesPorCategoria.length < 16 &&
                                         Array.from({ length: 11 - totalesPorCategoria.length }).map((_, index) => (
                                             <tr key={`empty-${index}`}>
                                                 <td className='fw-bold text-center'>---</td>

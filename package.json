@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run copy",
+    "copy": "rmdir /s /q ..\\GogoApp-BackEnd\\public && mkdir ..\\GogoApp-BackEnd\\public && xcopy dist ..\\GogoApp-BackEnd\\public /E /I /Y",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
@@ -20,9 +21,11 @@
     "@reduxjs/toolkit": "^2.2.7",
     "@table-library/react-table-library": "^4.1.7",
     "axios": "^1.7.7",
-    "bootstrap": "^5.3.3",
+    "bootstrap": "^5.3.6",
+    "bootstrap-icons": "^1.13.1",
     "cally": "^0.7.2",
-    "chart.js": "^4.4.7",
+    "chart.js": "^4.4.9",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "datatables.net-dt": "^2.1.8",
     "date-fns": "^3.6.0",
     "html2canvas": "^1.4.1",
@@ -41,6 +44,7 @@
     "react-router-dom": "^6.26.1",
     "react-table": "^7.8.0",
     "redux-persist": "^6.0.0",
+    "sass": "^1.89.0",
     "sweetalert2": "^11.6.13",
     "sweetalert2-react-content": "^5.0.7"
   },

@@ -21,14 +21,13 @@ export const ProductsTable = ({ CategoryProduct, tablaPedido, setPedido }) => {
                     <div className="col-lg-5">
                         <div className='row'>
                             <table className="table table-sm table-hover custom-table mr-3">
-                                <thead className="table-secondary">
+                                <thead className="table-light">
                                     <tr className="text-center">
                                         <th colSpan="5" className="text-uppercase">
                                             Listado parcial del pedido - {CategoryProduct}
                                         </th>
                                     </tr>
                                     <tr className='thead-dark text-center'>
-
                                         <th scope="col" className="rounded-2">Producto</th>
                                         <th scope="col" className="rounded-2">Cant.</th>
                                         <th scope="col" className="rounded-2">Precio</th>
@@ -65,7 +64,7 @@ export const ProductsTable = ({ CategoryProduct, tablaPedido, setPedido }) => {
                 <div className="col-lg-5 border">
                     <div className='row'>
                         <table className="table table-sm table-hover custom-table mr-3">
-                            <thead>
+                            <thead className="table-light">
                                 <tr className="text-center">
                                     <th colSpan="5" className="text-uppercase">
                                         Listado parcial del pedido
@@ -76,7 +75,9 @@ export const ProductsTable = ({ CategoryProduct, tablaPedido, setPedido }) => {
                                         ? <th scope="col" className="rounded-2">Categoria</th>
                                         : <th scope="col" className="rounded-2">Genero</th>
                                     }
-                                    <th scope="col" className="rounded-2">Motivo</th>
+                                    {(CategoryProduct !== 5) && (
+                                        <th scope="col" className="rounded-2">Motivo</th>
+                                    )}
                                     <th scope="col" className="rounded-2">Cant.</th>
                                     {(CategoryProduct === 1 || CategoryProduct === 5) && (
                                         <th scope="col" className="rounded-2">Talla</th>
@@ -93,7 +94,9 @@ export const ProductsTable = ({ CategoryProduct, tablaPedido, setPedido }) => {
                                                 {(item.genero === '0') ? 'Niño' : 'Niña'}
                                             </td>
                                         }
-                                        <td className="align-middle">{((item.nombreInput).includes('Surtido')) ? 'Surtido' : 'Detallado'}</td>
+                                        {(CategoryProduct !== 5) && (
+                                            <td className="align-middle">{((item.nombreInput).includes('Surtido')) ? 'Surtido' : 'Detallado'}</td>
+                                        )}
                                         <td className="align-middle">{parseInt(item.cantidad, 0)}</td>
                                         {(CategoryProduct === 1 || CategoryProduct === 5) && (
                                             <td className="align-middle">

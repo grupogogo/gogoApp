@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { CargaImagesTipo } from '../'
-import { useFuntions } from "../../hooks";
+import { useClientesStore, useFuntions } from "../../hooks";
+import Swal from "sweetalert2";
 
 
 export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidadItems }) => {
   const [talla, setTalla] = useState('t0');
   const [tipoPedido, setTipoPedido] = useState('opSurtido');
   const [genero, setGenero] = useState('0');
-  const { buscarPrecio } = useFuntions();
+  const { buscarPrecio, buscarNombre, capitalize } = useFuntions();
+  const { clienteActivo } = useClientesStore();
 
   const handleBlur = (event = 0) => {
     // Eliminar ceros a la izquierda cuando el campo pierde el foco
@@ -24,12 +26,60 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
   const cargarTalla = ({ target }) => {
     setTalla(target.value)
   }
+
+  const verificarPrecio = () => {
+    switch (categoria) {
+      case 'kcg':
+        if (clienteActivo.precios.precioKits.kcg !== null) {
+          return true
+        } else {
+          return false;
+        }
+      case 'kcp':
+        if (clienteActivo.precios.precioKits.kcp !== null) {
+          return true
+        } else {
+          return false;
+        }
+      case 'kb':
+        if (clienteActivo.precios.precioKits.kb !== null) {
+          return true
+        } else {
+          return false;
+        }
+      case 'cc':
+        if (clienteActivo.precios.precioCirios.cc !== null) {
+          return true
+        } else {
+          return false;
+        }
+      case 'cb':
+        if (clienteActivo.precios.precioCirios.cb !== null) {
+          return true
+        } else {
+          return false;
+        }
+
+      default:
+        break;
+    }
+  }
+
   const onInputChangeCont = ({ target }, gen) => {
     const { name, value } = target;
-    console.log(value)
     // Validaciones iniciales
     if (value === '' || isNaN(Number(value))) return;
     if (value < 0) return;
+
+    const ban = verificarPrecio()
+    if (!ban) {
+      Swal.fire({
+        icon: "error",
+        title: 'Agregue primero el precio de ' + capitalize(buscarNombre(categoria.toUpperCase())) + ' para el cliente ' + clienteActivo.nombre,
+        text: "Alto está mal!",
+      });
+      return;
+    }
 
     setPedido(prevState => {
       // Clonamos el estado actual
@@ -72,12 +122,12 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
     <>
       <div className="row">
         {/* TIPO PEDIDO DETALLADO - SURTIDO */}
-        <div className="col-md-6">
-          <div className="card-body form-group">
-            <div className="input-group">
+        <div className="col-md-3">
+          <div className="form-group">
+            <div className="input-group mb-2 mt-2">
               <div className="input-group-prepend">
                 <span className="input-group-text" id="icono-select">
-                  <i className="fas fa-sliders"></i>
+                  <i className="fas fa-chevron-down"></i>
                 </span>
               </div>
               <select id="inputPedido" className="form-control form-control-sm" aria-describedby="icono-select" onChange={cargarTipoForm}>
@@ -166,7 +216,8 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
                     name="inputSurtidoNino"
                     value={pedido.find(item => item.nombreInput === 'inputSurtidoNino')?.cantidad || '0'} // Busca el objeto correspondiente
                     onChange={(event) => onInputChangeCont(event, '0')}
-                    /* onBlur={handleBlur()} */
+                    onFocus={(e) => e.target.select()}
+                  /* onBlur={handleBlur()} */
                   />
 
                 </div>
@@ -180,6 +231,7 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
                     name="inputSurtidoNina"
                     value={pedido.find(item => item.nombreInput === 'inputSurtidoNina')?.cantidad || '0'}
                     onChange={(event) => onInputChangeCont(event, '1')}
+                    onFocus={(e) => e.target.select()}
                   />
                 </div>
               </div>

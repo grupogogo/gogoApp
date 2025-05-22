@@ -1,18 +1,56 @@
 import React, { useEffect } from 'react'
-import { useFuntions } from '../../../hooks';
+import { useClientesStore, useFuntions } from '../../../hooks';
+import Swal from 'sweetalert2';
 
 export const FormGuantes = ({ categoria, tallaInicial, cantTallas, setPedidoGuantes, pedidoGuantes }) => {
 
-    const {buscarPrecio} = useFuntions()
+    const { buscarPrecio, buscarNombre, capitalize } = useFuntions();
+    const { clienteActivo } = useClientesStore();
 
+    const verificarPrecio = () => {
+        switch (categoria) {
+            case 'BLANCOS':
+                if (clienteActivo.precios.precioGuantes.gb !== null) {
+                    return true
+                } else {
+                    return false;
+                }
+            case 'NEGROS':
+                if (clienteActivo.precios.precioGuantes.gn !== null) {
+                    return true
+                } else {
+                    return false;
+                }
+            case 'MITON':
+                if (clienteActivo.precios.precioGuantes.gm !== null) {
+                    return true
+                } else {
+                    return false;
+                }
 
-    
+            default:
+                break;
+        }
+    }
+
     const onInputChange = ({ target }, talla) => {
+        console.log(categoria)
+
         const { name, value } = target;
 
         // Validaciones iniciales
         if (value === '' || isNaN(Number(value))) return;
         if (value < 0) return;
+
+        const ban = verificarPrecio()
+        if (!ban) {
+            Swal.fire({
+                icon: "error",
+                title: 'Agregue primero el precio de guantes ' + categoria.toLowerCase() + ' para el cliente ' + clienteActivo.nombre,
+                text: "Alto está mal!",
+            });
+            return;
+        }
 
         setPedidoGuantes(prevState => {
             // Clonar el estado previo
@@ -45,7 +83,7 @@ export const FormGuantes = ({ categoria, tallaInicial, cantTallas, setPedidoGuan
         });
     };
 
-    useEffect(() => {        
+    useEffect(() => {
     }, [pedidoGuantes]);
 
     return (
@@ -68,7 +106,8 @@ export const FormGuantes = ({ categoria, tallaInicial, cantTallas, setPedidoGuan
                                     name={`inputGuantes-T${index + tallaInicial}-${categoria}`}
                                     value={pedidoGuantes.find(item => item.nombreInput === `inputGuantes-T${index + tallaInicial}-${categoria}`)?.cantidad || '0'}
                                     onChange={event => onInputChange(event, (index + tallaInicial))}
-                                    min="0" // Establecer un mínimo                                    
+                                    min="0" // Establecer un mínimo    
+                                    onFocus={(e) => e.target.select()}
                                 />
                             </div>
                         </div>

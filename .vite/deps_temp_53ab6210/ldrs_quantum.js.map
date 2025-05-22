@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../node_modules/ldrs/temp-ts-out/auto/quantum.js"],
+  "sourcesContent": ["import quantum from '../elements/quantum.js';\nquantum.register();\n"],
+  "mappings": ";;;;;;AACAA,EAAQC,SAAAA;",
+  "names": ["quantum", "register"]
+}

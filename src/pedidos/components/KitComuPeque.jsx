@@ -17,7 +17,7 @@ export const KitComuPeque = ({ agregarPedidoGeneral }) => {
     return (
         <>
             {/* HEADER KIT COMUNION */}
-            <div className="card">
+            <div className="">
                 <HeadersPedidos codigo='KCP' titulo='KIT COMUNION PEQUEÑO' cantidadItems={cantidadItems} collapsed='Two' />
                 <div id="collapseTwo" className="collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample"
                     style={{ overflow: 'hidden', transition: 'height 0.3s ease' }}>

@@ -10,8 +10,7 @@ export const ListaPedidos = () => {
     const { user } = useAuthStore()
     const { startLoadingPedidos } = usePedidosStore();
     const { pedidos } = usePedidosStore()
-    const [totales, setTotales] = useState([])
-    const navegar = useNavigate();
+    const [totales, setTotales] = useState([])    
     const { totalesPedidos } = useFuntions();
 
     useEffect(() => {
@@ -25,29 +24,10 @@ export const ListaPedidos = () => {
     return (
         <LayoutApp>
             {user.rol !== 'planta' && (
-                <div className="container-fluid card">
-                    <Estadisticas totales={totales} tipo={2} />
-                    <div className="alert d-flex justify-content-between align-items-center" role="alert">
-                        <div>
-                            <h6 className="fs-3 m-0 fw-bold text-primary">Listado de pedidos</h6>
-                        </div>
-                        <div>
-                            <button
-                                className="btn btn-success"
-                                type="button"
-                                id="dropdownMenuButton1"
-                                data-toggle="dropdown"
-                                aria-haspopup="true"
-                                aria-expanded="false"
-                                onClick={() => navegar('/pedidos')}
-                            >
-                                Crear pedido &nbsp;
-                                <i className="fa fa-clipboard-list"></i>
-                            </button>
-                        </div>
-                    </div>
+                <div className="container-fluid card p-2">
+                    <Estadisticas totales={totales} tipo={2} />                    
                     <div>
-                        <div className="col">
+                        <div>
                             <TablaPedidos />
                         </div>
                     </div>
@@ -55,12 +35,7 @@ export const ListaPedidos = () => {
             )}
             {user.rol === 'planta' && (
                 <div className="container-fluid">
-                    <Estadisticas totales={totales} tipo={3} />
-                    <div className="alert d-flex justify-content-between align-items-center" role="alert">
-                        <div>
-                            <h6 className="m-0 fw-bold fs-3">Listado de pedidos</h6>
-                        </div>
-                    </div>
+                    {/* <Estadisticas totales={totales} tipo={3} />    */}                 
                     <div>
                         <div className="col">
                             <TablaPedidos />

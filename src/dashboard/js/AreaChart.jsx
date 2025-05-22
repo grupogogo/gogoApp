@@ -2,134 +2,114 @@ import React, { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import { useFuntions } from '../../hooks';
 
-
-// Función para formatear números
-const number_format = (number, decimals, dec_point, thousands_sep) => {
-  number = (number + '').replace(',', '').replace(' ', '');
-  var n = !isFinite(+number) ? 0 : +number,
-    prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
-    sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
-    dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
-    s = '',
-    toFixedFix = function (n, prec) {
-      var k = Math.pow(10, prec);
-      return '' + Math.round(n * k) / k;
-    };
-  s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
-  if (s[0].length > 3) {
-    s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
-  }
-  if ((s[1] || '').length < prec) {
-    s[1] = s[1] || '';
-    s[1] += new Array(prec - s[1].length + 1).join('0');
-  }
-  return s.join(dec);
-};
-
 export const AreaChart = ({ totales, porValor }) => {
+
+  const { number_format } = useFuntions();
+  const monthlySales2025 = Array.isArray(totales?.monthlySales2025) && totales.monthlySales2025.length > 0
+    ? totales.monthlySales2025
+    : totales.monthlySales;
 
   const chartRef = useRef(null);
   useEffect(() => {
     const ctx = chartRef.current.getContext('2d');
+    // Calcular el mes actual (1-12)
+    const currentMonth = new Date().getMonth() + 1;
+    // Labels hasta el mes actual
+    const allLabels = ['0', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const labels = allLabels.slice(0, currentMonth + 1);
+
+    // Recorta los datos de cada año hasta el mes actual
+    const trimData = (data) =>
+      Array.isArray(data) ? data.slice(0, currentMonth + 1) : [];
+
     const myLineChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: ['0', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+        labels,
         datasets: [
           {
-            label: 'Ventas 2025',
+            label: '2025',
             tension: 0.3,
             backgroundColor: "rgba(78, 115, 223, 0.05)",
-            borderColor: [
-              'rgb(54, 162, 235)',
-            ],
-            pointRadius: 4,
-
-            pointBorderColor: [
-              'rgb(54, 162, 235)',
-            ],
+            borderColor: ['rgb(54, 162, 235)'],
+            pointRadius: 5,
+            pointBorderColor: ['rgb(54, 162, 235)'],
             pointHoverRadius: 3,
             pointHoverBackgroundColor: "rgba(54, 162, 235, 1)",
             pointHoverBorderColor: "rgba(54, 162, 235, 1)",
             pointHitRadius: 10,
             pointBorderWidth: 1,
-            data: totales.monthlySales2025,
+            data: trimData(monthlySales2025),
+            datalabels: {
+              align: 'end',
+              anchor: 'end',
+              formatter: (value) => number_format(value),
+              color: 'rgb(54, 162, 235)',
+              font: {
+                size: 10,
+                weight: 'semibold',
+              },
+            },
           },
           {
-            label: 'Ventas 2024',
+            label: '2024',
             tension: 0.3,
             backgroundColor: "rgba(78, 115, 223, 0.05)",
-            borderColor: [
-              'rgb(255, 99, 132)',
-            ],
+            borderColor: ['rgb(255, 99, 132)'],
             pointRadius: 4,
-
-            pointBorderColor: [
-              'rgb(255, 99, 132)',
-            ],
+            pointBorderColor: ['rgb(255, 99, 132)'],
             pointHoverRadius: 3,
             pointHoverBackgroundColor: "rgba(255, 99, 132, 1)",
             pointHoverBorderColor: "rgba(78, 115, 223, 1)",
             pointHitRadius: 10,
             pointBorderWidth: 1,
-            data: totales.monthlySales2024,
+            data: trimData(totales.monthlySales2024),
+            hidden: true,
           },
           {
-            label: 'Ventas 2023',
+            label: '2023',
             tension: 0.3,
             backgroundColor: "rgba(78, 115, 223, 0.05)",
-            borderColor: [
-              'rgb(75, 192, 192)',
-            ],
+            borderColor: ['rgb(75, 192, 192)'],
             pointRadius: 4,
-
-            pointBorderColor: [
-              'rgb(75, 192, 192)',
-            ],
+            pointBorderColor: ['rgb(75, 192, 192)'],
             pointHoverRadius: 3,
             pointHoverBackgroundColor: "rgba(75, 192, 192, 1)",
             pointHoverBorderColor: "rgba(75, 192, 192, 1)",
             pointHitRadius: 10,
             pointBorderWidth: 1,
-            data: totales.monthlySales2023,
+            data: trimData(totales.monthlySales2023),
+            hidden: true,
           },
           {
-            label: 'Ventas 2022',
+            label: '2022',
             tension: 0.3,
-            backgroundColor: "rgba(78, 115, 223, 0.05)",
-            borderColor: [
-              'rgb(153, 102, 255)',
-            ],
+            backgroundColor: "rgba(17, 42, 119, 0.05)",
+            borderColor: ['rgb(153, 102, 255)'],
             pointRadius: 4,
-
-            pointBorderColor: [
-              'rgb(153, 102, 255)',
-            ],
+            pointBorderColor: ['rgb(153, 102, 255)'],
             pointHoverRadius: 3,
             pointHoverBackgroundColor: "rgba(153, 102, 255, 1)",
             pointHoverBorderColor: "rgba(153, 102, 255, 1)",
             pointHitRadius: 10,
             pointBorderWidth: 1,
-            data: totales.monthlySales2022,
+            data: trimData(totales.monthlySales2022),
+            hidden: true,
           },
           {
-            label: 'Ventas 2021',
+            label: '2021',
             tension: 0.3,
             backgroundColor: "rgba(78, 115, 223, 0.05)",
-            borderColor: [
-              'rgb(255, 159, 64)',
-            ],
+            borderColor: ['rgb(255, 159, 64)'],
             pointRadius: 4,
-
-            pointBorderColor: [
-              'rgb(255, 159, 64)',
-            ],
+            pointBorderColor: ['rgb(255, 159, 64)'],
             pointHoverRadius: 3,
             pointHoverBackgroundColor: "rgba(255, 159, 64, 1)",
             pointHoverBorderColor: "rgba(255, 159, 64, 1)",
             pointHitRadius: 10,
             pointBorderWidth: 1,
-            data: totales.monthlySales2021,
+            data: trimData(totales.monthlySales2021),
+            hidden: true,
           }
         ],
       },
@@ -137,10 +117,10 @@ export const AreaChart = ({ totales, porValor }) => {
         maintainAspectRatio: false,
         layout: {
           padding: {
-            left: 10,
-            right: 25,
-            top: 25,
-            bottom: 20
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0
           }
         },
         scales: {
@@ -156,7 +136,7 @@ export const AreaChart = ({ totales, porValor }) => {
           y: {
             ticks: {
               maxTicksLimit: 30,
-              padding: 30,
+              padding: 10,
               callback: function (value) {
                 return ((porValor) ? '' : '$') + number_format(value);
               }
@@ -167,12 +147,30 @@ export const AreaChart = ({ totales, porValor }) => {
               drawBorder: true,
               borderDash: [2],
               zeroLineBorderDash: [2]
-            }
+            },
+            suggestedMax: Math.max(...trimData(monthlySales2025)) * 1.1 // Ajusta el límite superior del eje Y
           }
         },
         plugins: {
           legend: {
-            display: true
+            display: true,
+            onClick: (e, legendItem, legend) => {
+              const index = legendItem.datasetIndex;
+              const ci = legend.chart;
+              const meta = ci.getDatasetMeta(index);
+              meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
+              ci.update();
+            },
+            labels: {
+              usePointStyle: true,
+              padding: 20,
+              font: {
+                size: 12,
+                weight: 'bold',
+                family: 'Arial'
+              },
+              color: '#858796'
+            }
           },
           tooltip: {
             backgroundColor: "rgb(255,255,255)",

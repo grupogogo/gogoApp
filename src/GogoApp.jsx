@@ -4,7 +4,8 @@ import { Provider } from "react-redux"
 import { store } from "./store"
 
 
-export const CalendarApp = () => {
+
+export const GogoApp = () => {
   return (
     <Provider store={store}>
       <BrowserRouter>

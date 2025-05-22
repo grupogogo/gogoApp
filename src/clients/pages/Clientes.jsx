@@ -10,25 +10,15 @@ export const Clientes = () => {
     const { startLoadingClientes } = useClientesStore()
 
     useEffect(() => {
-      startLoadingClientes()
+        startLoadingClientes()
     }, [])
-    
+
     return (
         <LayoutApp>
-            <div className="container-fluid">                
+            <div className="">
                 <div>
-                    <div className="col">
-                        <div className="mb-4">
-                            <div className="text-end">
-                                <button className="btn btn-success btn-icon-split" onClick={handleShow}>
-                                    <span className="">
-                                        <i className="fas fa-user"></i>
-                                    </span>
-                                    <span className="text">Nuevo Cliente</span>
-                                </button>
-                            </div>
-                        </div>
-                        <TablaClientes />
+                    <div className="col">                        
+                        <TablaClientes handleShow={handleShow} />
                     </div>
                 </div>
             </div>

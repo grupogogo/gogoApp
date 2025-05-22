@@ -46,12 +46,12 @@ export const OtrosProductos = ({ agregarPedidoGeneral }) => {
             })
             return;
         } else {
-            if (selectProducto === '0' || cantidad === 0 || precio === 0) {
+            if (selectProducto === '0' || cantidad === 0 || precio === 0 || cantidad <= 0) {
                 Swal.fire({
                     title: "Datos incompletos",
-                    text: 'Datos incpmpletos, agregue los datos faltantes',
+                    text: 'Datos erroneos o incompletos, agregue los datos de forma correcta',
                     icon: "warning"
-                })
+                });
                 return;
             }
             setPedidoOtros(prevState => {
@@ -116,7 +116,10 @@ export const OtrosProductos = ({ agregarPedidoGeneral }) => {
                 detalle: detalleProducto || ''
             });
             setAlternarProducto(!alternarProducto);
-            startLoadingProductos();
+
+            setTimeout(() => {
+                startLoadingProductos();
+            }, 200);
         }
     }
 
@@ -131,13 +134,11 @@ export const OtrosProductos = ({ agregarPedidoGeneral }) => {
         setCantidadItems(Object.values(pedidoOtros).reduce((acc, item) => acc + parseInt(item.cantidad), 0));
         agregarPedidoGeneral('OTR', Object.values(pedidoOtros), detalle); // Llamamos al callback con el pedido y la categoría
         startLoadingProductos();
-    }, [pedidoOtros, detalle, productos]);
-
-
+    }, [pedidoOtros, detalle]);
 
     return (
         <>
-            <div className="card">
+            <div className="">
                 <HeadersPedidos codigo='OTR' titulo='OTROS PRODUCTOS' cantidadItems={cantidadItems} collapsed='Seven' vTotal={vTotal} />
                 <div id="collapseSeven" className="collapse" aria-labelledby="headingFive" data-bs-parent="#accordionExample"
                     style={{ overflow: 'hidden', transition: 'height 0.3s ease' }}>
@@ -153,13 +154,11 @@ export const OtrosProductos = ({ agregarPedidoGeneral }) => {
                                                 </div>
                                                 <select
                                                     value={selectProducto}
-                                                    id="inputFormaPago"
                                                     className="form-control"
                                                     name="selectProducto"
                                                     onChange={(event) => {
                                                         const productoSeleccionado = productos.find(prod => prod.producto === event.target.value);
                                                         cargarSelect(event, productoSeleccionado);
-                                                        console.log("Producto seleccionado:", productoSeleccionado);
                                                     }}
                                                 >
                                                     <option value="seleccionar">Seleccionar</option>
@@ -193,6 +192,7 @@ export const OtrosProductos = ({ agregarPedidoGeneral }) => {
                                                     name="cantidad"
                                                     value={cantidad}
                                                     onChange={onInputChange}
+                                                    onFocus={(e) => e.target.select()}
                                                 />
                                             </div>
                                         </div>
@@ -207,6 +207,7 @@ export const OtrosProductos = ({ agregarPedidoGeneral }) => {
                                                     name="precio"
                                                     value={precio}
                                                     onChange={onInputChange}
+                                                    onFocus={(e) => e.target.select()}
                                                 />
                                             </div>
                                         </div>

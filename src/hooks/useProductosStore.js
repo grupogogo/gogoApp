@@ -10,16 +10,16 @@ export const useProductosStore = () => {
 
     const startLoadingProductos = async () => {
         try {
-            console.log(user)
-            const { data } = await gogoApi.get('/products', { user });
-            dispatch(onLoadProductos(data))
+            const { data } = await gogoApi.get('/products', {
+                headers: { 'x-user-id': user.uid } // Enviar UID en headers
+            });
+            dispatch(onLoadProductos(data));
         } catch (error) {
-            console.log(error)
+            console.log(error);
         }
-    }
+    };
     const startAddNewProducto = async (producto) => {
         dispatch(onAddnewProducto(producto));
-        console.log(producto)
         try {
             const { data } = await gogoApi.post('/products', { producto, user })
         } catch (error) {

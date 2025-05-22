@@ -1,14 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Chart, PieController, ArcElement, Tooltip, Legend } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Colors } from 'chart.js';
 import 'ldrs/quantum'
+import { useFuntions } from '../../hooks';
 
-
-Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
+Chart.register(PieController, ArcElement, Tooltip, Legend, ChartDataLabels);
 Chart.register(Colors);
 
 
-export const PieChart = ({ arrayData, arrayLabels, title }) => {
+export const PieChart = ({ arrayData, arrayLabels, title, anio = 2025 }) => {
+  
+  const { buscarPrecioxCategoriaAnio } = useFuntions()
+
+  if (!arrayData) { return }
+  // Asegúrate de que arrayData y arrayLabels sean arrays y tengan la misma longitud
+  const { formatearPrecio, number_format } = useFuntions()
   const chartRef = useRef(null);
   const [ready, setReady] = useState(false);
 
@@ -34,14 +41,15 @@ export const PieChart = ({ arrayData, arrayLabels, title }) => {
       chartRef.current.chartInstance.destroy();
     }
 
+
     const myPieChart = new Chart(ctx, {
-      type: 'doughnut',
+      type: 'pie',
       data: {
         labels: arrayLabels,
         datasets: [{
           data: arrayData,
           hoverBorderColor: 'rgb(204, 204, 204)',
-          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'], // Colores de ejemplo
+          // Colores de ejemplo
         }],
       },
       options: {
@@ -51,11 +59,41 @@ export const PieChart = ({ arrayData, arrayLabels, title }) => {
           title: {
             display: true,
             text: title
+            , color: 'gray',
+            font: {
+              size: 16,
+              weight: ''
+            },
+            text: title.charAt(0).toUpperCase() + title.slice(1).toLowerCase()
           },
           colors: {
             forceOverride: true
           },
           tooltip: {
+            callbacks: {
+              label: function (tooltipItem) {
+                const index = tooltipItem.dataIndex;
+                const value = arrayData[index];
+                const label = arrayLabels[index];
+                let price = 0;
+                let total = 0;
+                if (
+                  label === 'TOTAL KITS' ||
+                  label === 'LG' ||
+                  label === 'OG' ||
+                  label.includes('OTR')
+                ) {
+                  price = 1;
+                  total = value * price;
+                  //console.log(`Label: ${label}, Valor: ${value}, Precio: ${price}, Total: ${total}`);
+                  return `Total: ${number_format(total)}`;
+                } else {
+                  price = buscarPrecioxCategoriaAnio(label, anio)
+                  total = value * price;
+                  return `Precio unitario: (${formatearPrecio(price)}) | Total: ${formatearPrecio(total)}`;
+                }
+              }
+            },
             backgroundColor: 'rgba(66, 66, 66, 0.8)',
             bodyColor: 'white',
             borderColor: 'white',
@@ -66,17 +104,28 @@ export const PieChart = ({ arrayData, arrayLabels, title }) => {
           },
           legend: {
             display: true,
-            position: 'bottom',
+            position: title.toUpperCase().includes('OTROS') || title.toUpperCase().includes('GUANTES') ? 'bottom' : 'left',
             labels: {
               boxWidth: 20, padding: 5, font: {
-                size: 12
+                size: 9
               }
             },
-
           },
+          datalabels: {
+            display: true,
+            color: 'white',
+            font: {
+              size: 14,
+              weight: 'bold'
+            },
+            formatter: (value, context) => {
+              return `${number_format(value)}`;
+            }
+          }
         },
-        cutout: '60%',
+        // cutout: '60%', // Elimina o comenta esta línea para mostrar un gráfico de pastel (pie) en lugar de donut
       },
+      plugins: [ChartDataLabels], // Registrar el plugin de etiquetas de datos
     });
 
     chartRef.current.chartInstance = myPieChart;

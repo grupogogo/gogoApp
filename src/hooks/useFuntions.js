@@ -1,3 +1,4 @@
+import { useSelector } from 'react-redux';
 import { useAuthStore } from './useAuthStore';
 import { useClientesStore } from './useClientesStore';
 import numalet from 'numalet';
@@ -6,6 +7,9 @@ import numalet from 'numalet';
 export const useFuntions = () => {
     const { clienteActivo } = useClientesStore();
     const { user } = useAuthStore();
+    const precios = useSelector(state => state.precios);
+
+
     const {
         precioKits: {
             kcg = 0,
@@ -22,6 +26,14 @@ export const useFuntions = () => {
             gm = 0,
         } = {},
     } = clienteActivo?.precios || {};
+
+    function limpiarFecha(fecha) {
+        if (fecha !== undefined) {
+            return capitalize(fecha.split(",")[0].trim()); // Toma solo la parte antes de la primera coma y elimina espacios extra
+        } else {
+            return fecha
+        }
+    }
     const number_format = (number, decimals, dec_point, thousands_sep) => {
         number = (number + '').replace(',', '').replace(' ', '');
         const n = !isFinite(+number) ? 0 : +number;
@@ -47,31 +59,26 @@ export const useFuntions = () => {
     // Función para convertir "enero 7, 2025 23:26" a un objeto Date válido
     const convertirFecha = (fechaStr) => {
         const meses = {
-            enero: 0,
-            febrero: 1,
-            marzo: 2,
-            abril: 3,
-            mayo: 4,
-            junio: 5,
-            julio: 6,
-            agosto: 7,
-            septiembre: 8,
-            octubre: 9,
-            noviembre: 10,
-            diciembre: 11,
+            enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+            julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
         };
 
-        // Dividir fecha en partes (mes, día, año y hora)
-        const [mes, dia, anioHora] = fechaStr.split(' '); // Divide por espacios
-        const [anio, hora] = (anioHora || "").split(' '); // Divide el año y hora, si existe
+        // Dividir fecha en partes (mes, día y resto)
+        const partes = fechaStr.split(' ');
+        const mes = partes[0].toLowerCase(); // Primer elemento es el mes
+        const dia = parseInt(partes[1].replace(',', ''), 10); // Día sin coma
+        const anio = parseInt(partes[2], 10); // Año
 
-        // Crear el objeto Date (hora por defecto: 00:00)
-        return new Date(
-            parseInt(anio, 10), // Año
-            meses[mes.toLowerCase()], // Mes
-            parseInt(dia.replace(',', ''), 10), // Día (remover coma)
-            ...(hora ? hora.split(':').map((h) => parseInt(h, 10)) : [0, 0]) // Hora (si existe)
-        );
+        // Verificar si hay hora
+        let hora = 0, minutos = 0;
+        if (partes.length > 3) {
+            const [h, m] = partes[3].split(':'); // Separar hora y minutos
+            hora = parseInt(h, 10);
+            minutos = parseInt(m, 10);
+        }
+
+        // Crear objeto Date con la información
+        return new Date(anio, meses[mes], dia, hora, minutos);
     };
     function obtenerImagen(categoria, genero) {
         if (categoria === 'kcg' || categoria === 'kcp' || categoria === 'cc' || categoria === 'KCG' || categoria === 'KCP' || categoria === 'CC') {
@@ -118,18 +125,51 @@ export const useFuntions = () => {
         if (!word) return '';
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     };
-    const buscarNombre = (categoria) => {
-        console.log(categoria)
+    const totalizarPreciosFabrica = (categorias, cantidad, anio = 2025) => {
+        let totalFabrica = 0;
+        if (categorias) {
+            categorias.forEach((categoria, index) => {
+                //console.log(`Categoría: ${categoria}, Cantidad: ${cantidad[index]}`);
+                totalFabrica += buscarPrecioxCategoriaAnio(categoria, anio) * (cantidad[index] || 0);
+                //console.log(`Precio Fabrica: ${buscarPrecioxCategoriaAnio(categoria, 2025)}, Cantidad: ${cantidad[index]}`, 'Total', totalFabrica)
+            });
+        }
+        return totalFabrica;
+    }
+    const buscarPrecioxCategoriaAnio = (categoria, anio) => { //Trae el precio de fabricacion segun el año y la categoria 
+
+        // Buscar el precio según el año y la categoría
+        const anioKey = `A${anio}`;
+        const preciosAnio = precios[anioKey];
+        let precioProducto = 0;
+
+        if (!preciosAnio) return '';
+        // Normalizar la categoría a minúsculas para coincidir con las claves
+
+        precioProducto = (categoria === 'KIT COMUNIÓN GRANDE') ? preciosAnio.precioKits.kcg :
+            (categoria === 'KIT COMUNIÓN PEQUEÑO') ? preciosAnio.precioKits.kcp :
+                (categoria === 'KIT DE BAUTIZO') ? preciosAnio.precioKits.kb :
+                    (categoria === 'CIRIO DE COMUNIÓN') ? preciosAnio.precioCirios.cc :
+                        (categoria === 'CIRIO DE BAUTIZO') ? preciosAnio.precioCirios.cb :
+                            (categoria === 'GUANTES BLANCOS') ? preciosAnio.precioGuantes.gb :
+                                (categoria === 'GUANTES NEGROS') ? preciosAnio.precioGuantes.gn :
+                                    (categoria === 'GUANTES MITON') ? preciosAnio.precioGuantes.gm : 0;
+
+        return precioProducto;
+    }
+
+    const buscarNombre = (categoria) => { //Busca el nombre de la categoria por la categoria que llegue
         const nombre = (categoria === 'KCG') ? 'KIT COMUNIÓN GRANDE' :
             (categoria === 'KCP') ? 'KIT COMUNIÓN PEQUEÑO' :
                 (categoria === 'KB') ? 'KIT DE BAUTIZO' :
                     (categoria === 'CC') ? 'CIRIO DE COMUNIÓN' :
                         (categoria === 'CB') ? 'CIRIO DE BAUTIZO' :
-                            (categoria === 'BLANCOS') ? 'GUANTES BLANCOS' :
-                                (categoria === 'NEGROS') ? 'GUANTES NEGROS' :
-                                    (categoria === 'MITON') ? 'GUANTES MITON' :
+                            (categoria === 'BLANCOS' || categoria === 'GUANTES-BLANCOS' || categoria === 'GB') ? 'GUANTES BLANCOS' :
+                                (categoria === 'NEGROS' || categoria === 'GN' || categoria === 'GUANTES-NEGROS') ? 'GUANTES NEGROS' :
+                                    (categoria === 'MITON' || categoria === 'GM' || categoria === 'GUANTES-MITON') ? 'GUANTES MITON' :
                                         (categoria === 'GUANTES') ? 'GUANTES' :
-                                            'OTROS PRODUCTOS';
+                                            (categoria === 'G') ? 'GENERAL' :
+                                                'OTROS PRODUCTOS';
 
         return nombre;
     }
@@ -143,7 +183,7 @@ export const useFuntions = () => {
 
         return (numaletInstance(numero)).replace('MXN', 'PESOS');;
     };
-    const calcularTotalesPedidos = (cat, pedidos, setData, setLables, datosUsuario) => {
+    const calcularTotalesPedidos = (cat, pedidos, setData, setLables, datosUsuario) => {// label y datas
         // Objeto para almacenar las sumas por categoría
         const totalesPorCategoria = {};
         const labels = [];
@@ -207,14 +247,15 @@ export const useFuntions = () => {
                                 }
                             } else {
                                 if (cat === 'kits' || cat === 'todos') {
+
                                     if (!totalesPorCategoria[categoria]) {
                                         totalesPorCategoria[categoria] = { cantidad: 0, totalPrecio: 0 };
                                     }
-
                                     pedido.forEach(item => {
                                         totalesPorCategoria[categoria].cantidad += parseInt(item.cantidad || 0);
                                         totalesPorCategoria[categoria].totalPrecio += (item.precioUnitario || item.precio) * parseInt(item.cantidad || 0);
                                     });
+
                                 }
                             }
                         });
@@ -279,11 +320,11 @@ export const useFuntions = () => {
                                 if (!totalesPorCategoria[categoria]) {
                                     totalesPorCategoria[categoria] = { cantidad: 0, totalPrecio: 0 };
                                 }
-
                                 pedido.forEach(item => {
                                     totalesPorCategoria[categoria].cantidad += parseInt(item.cantidad || 0);
                                     totalesPorCategoria[categoria].totalPrecio += (item.precioUnitario || item.precio) * parseInt(item.cantidad || 0);
                                 });
+
                             }
                         }
                     });
@@ -319,6 +360,7 @@ export const useFuntions = () => {
                 }
             } else {
                 if (cat === 'kits' || cat === 'todos') {
+
                     resultadoTotales.push({
                         categoria,
                         cantidad: subcategorias.cantidad,
@@ -326,16 +368,16 @@ export const useFuntions = () => {
                     });
                     labels.push(buscarNombre(categoria));
                     data.push(subcategorias.cantidad);
+                    //console.log(`Categoria: ${categoria}, Cantidad: ${subcategorias.cantidad}, Precio: ${subcategorias.totalPrecio}`);
                 }
             }
         });
-
         setLables(labels);
         setData(data);
 
         return resultadoTotales;
     };
-    const totalesPedidos = (pedidos, datosUsuario) => {// Esto es para las estadisticas
+    const totalesPedidos = (pedidos, datosUsuario) => {// Esto es para las estadisticas mensuales
         let totalSales = 0;
         let totalOrders = 0;
         let currentMonthSales = 0;
@@ -384,6 +426,7 @@ export const useFuntions = () => {
                     if (order.estado === "pagado") { pagado++ }
                     if (order.estado === 'enviado') { enviado++ }
                     totalOrders++;
+
                     order.itemPedido.forEach(item => {
                         Object.values(item.itemPedido).forEach(category => {
                             category.pedido.forEach(product => {
@@ -417,6 +460,120 @@ export const useFuntions = () => {
             enviado
         };
     }
+    const totalKitsXAnio = (pedidos, datosUsuario, anio = 2025) => {
+        let totalSales = 0;
+        const monthlySales = Array(12).fill(0); // Inicializa directamente con 12 meses
+
+        pedidos.forEach(order => {
+            const perteneceAlUsuario = datosUsuario !== true
+                ? order.user._id === user.uid
+                : true;
+
+            if (!perteneceAlUsuario) return;
+
+            order.itemPedido.forEach(item => {
+                Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
+                    if (['KCG', 'KCP', 'KB', 'CC', 'CB'].includes(categoriaItem)) {
+                        category.pedido.forEach(product => {
+                            const price = Number(product.precioUnitario || product.precio || 0);
+                            const quantity = parseInt(product.cantidad, 10) || 0;
+                            const sale = price * quantity;
+
+                            totalSales += sale;
+
+                            const orderDate = convertirFecha(order.fechaCreacion);
+                            if (orderDate.getFullYear() === anio) {
+                                const month = orderDate.getMonth();
+                                monthlySales[month] += sale;
+                            }
+                        });
+                    }
+                });
+            });
+        });
+
+        return {
+            monthlySales,
+            totalSales
+        };
+    };
+
+    const totalGuantesXAnio = (pedidos, datosUsuario, anio = 2025) => {
+        let totalSales = 0;
+        const monthlySales = Array(12).fill(0); // 12 meses, índice 0 = enero
+
+        pedidos.forEach(order => {
+            const perteneceAlUsuario = datosUsuario !== true
+                ? order.user._id === user.uid
+                : true;
+
+            if (!perteneceAlUsuario) return;
+
+            order.itemPedido.forEach(item => {
+                Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
+                    if (categoriaItem === 'GUANTES') {
+                        category.pedido.forEach(product => {
+                            const price = Number(product.precioUnitario || product.precio || 0);
+                            const quantity = parseInt(product.cantidad, 10) || 0;
+                            const sale = price * quantity;
+
+                            totalSales += sale;
+
+                            const orderDate = convertirFecha(order.fechaCreacion);
+                            if (orderDate.getFullYear() === anio) {
+                                const month = orderDate.getMonth();
+                                monthlySales[month] += sale;
+                            }
+                        });
+                    }
+                });
+            });
+        });
+
+        return {
+            monthlySales,
+            totalSales
+        };
+    };
+
+    const totalOtrosXAnio = (pedidos, datosUsuario, anio = 2025) => {
+        let totalSales = 0;
+        const monthlySales = Array(12).fill(0); // 12 meses
+
+        pedidos.forEach(order => {
+            const perteneceAlUsuario = datosUsuario !== true
+                ? order.user._id === user.uid
+                : true;
+
+            if (!perteneceAlUsuario) return;
+
+            order.itemPedido.forEach(item => {
+                Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
+                    if (categoriaItem === 'OTR' || categoriaItem === 'OTROS') {
+                        category.pedido.forEach(product => {
+                            const price = Number(product.precioUnitario || product.precio || 0);
+                            const quantity = parseInt(product.cantidad, 10) || 0;
+                            const sale = price * quantity;
+
+                            totalSales += sale;
+
+                            const orderDate = convertirFecha(order.fechaCreacion);
+                            if (orderDate.getFullYear() === anio) {
+                                const month = orderDate.getMonth();
+                                monthlySales[month] += sale;
+                            }
+                        });
+                    }
+                });
+            });
+        });
+
+        return {
+            monthlySales,
+            totalSales
+        };
+    };
+
     const totalesPedidosAnuales = (pedidos, datosUsuario) => { //Para calculos por años
         let totalSales = 0;
 
@@ -514,43 +671,40 @@ export const useFuntions = () => {
         const monthlySales2024 = [0, ...Array(13).fill(0)];
         const monthlySales2025 = [0, ...Array(13).fill(0)];
         const currentYear = new Date().getFullYear();
-
-
+        console.log()
+        let cont = 0;
         pedidos.forEach(order => {
             if (datosUsuario !== true) {
                 if (order.user._id === user.uid) {
                     order.itemPedido.forEach(item => {
-                        Object.values(item.itemPedido).forEach(category => {
-                            const categoriaItem = Object.keys(item.itemPedido)[0];
-                            if (categoriaItem === 'KCG' || categoriaItem === 'KCP' || categoriaItem === 'KB' || categoriaItem === 'CC' || categoriaItem === 'CB' || categoriaItem === 'OTR') {
-
-                                if (categoriaItem !== categoria) { return }
+                        Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
+                            if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'OTR'].includes(categoriaItem)) {
+                                if (categoriaItem !== categoria) return;
                                 category.pedido.forEach(product => {
-                                    const price = product.precioUnitario || product.precio;
+                                    const price = parseInt(product.precioUnitario) || parseInt(product.precio);
                                     const quantity = parseInt(product.cantidad, 10);
                                     const sale = price * quantity;
                                     totalSales += sale;
+
                                     const orderDate = convertirFecha(order.fechaCreacion);
-                                    if (orderDate.getFullYear() === currentYear) {
-                                        monthlySales2025[orderDate.getMonth() + 1] += quantity; //guarda 2025
-                                        return;
+
+                                    const year = orderDate.getFullYear();
+                                    const month = orderDate.getMonth() + 1;
+
+                                    if (year === currentYear) {
+                                        monthlySales2025[month] += quantity;
+                                    } else if (year === currentYear - 1) {
+                                        monthlySales2024[month] += quantity;
+                                    } else if (year === currentYear - 2) {
+                                        monthlySales2023[month] += quantity;
+                                    } else if (year === currentYear - 3) {
+                                        monthlySales2022[month] += quantity;
+                                    } else if (year === currentYear - 4) {
+                                        monthlySales2021[month] += quantity;
                                     }
-                                    if (orderDate.getFullYear() === currentYear - 1) {
-                                        monthlySales2024[orderDate.getMonth() + 1] += quantity; //guarda 2024
-                                        return;
-                                    }
-                                    if (orderDate.getFullYear() === currentYear - 2) {
-                                        monthlySales2023[orderDate.getMonth() + 1] += quantity; //guarda 2023
-                                        return;
-                                    }
-                                    if (orderDate.getFullYear() === currentYear - 3) {
-                                        monthlySales2022[orderDate.getMonth() + 1] += quantity; //guarda 2022
-                                        return;
-                                    }
-                                    if (orderDate.getFullYear() === currentYear - 4) {
-                                        monthlySales2021[orderDate.getMonth() + 1] += quantity; //guarda 2021
-                                        return;
-                                    }
+
+                                    //console.log('cont:', cont, '-', 'categoria: ', categoriaItem, '-', 'quantity: ', quantity, '- price: ', price, '- orderDate: ', orderDate);
+                                    cont++;
                                 });
                             } else {
                                 category.pedido.forEach(product => {
@@ -562,6 +716,8 @@ export const useFuntions = () => {
                                     const sale = price * quantity;
                                     totalSales += sale;
                                     const orderDate = convertirFecha(order.fechaCreacion);
+
+
                                     if (orderDate.getFullYear() === currentYear) {
                                         monthlySales2025[orderDate.getMonth() + 1] += quantity; //guarda 2025
                                         return;
@@ -584,49 +740,41 @@ export const useFuntions = () => {
                                     }
                                 });
                             }
-
                         });
+
                     });
                 }
             } else {
                 order.itemPedido.forEach(item => {
-                    Object.values(item.itemPedido).forEach(category => {
-                        const categoriaItem = Object.keys(item.itemPedido)[0];
-
-                        if (categoriaItem === 'KCG' || categoriaItem === 'KCP' || categoriaItem === 'KB' || categoriaItem === 'CC' || categoriaItem === 'CB' || categoriaItem === 'OTR') {
-                            if (categoriaItem !== categoria) {
-                                return
-                            }
+                    Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
+                        if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'OTR'].includes(categoriaItem)) {
+                            if (categoriaItem !== categoria) return;
                             category.pedido.forEach(product => {
-                                const price = product.precioUnitario || product.precio;
+                                const price = parseInt(product.precioUnitario) || parseInt(product.precio);
                                 const quantity = parseInt(product.cantidad, 10);
                                 const sale = price * quantity;
                                 totalSales += sale;
+
                                 const orderDate = convertirFecha(order.fechaCreacion);
 
+                                const year = orderDate.getFullYear();
+                                const month = orderDate.getMonth() + 1;
 
-                                if (orderDate.getFullYear() === currentYear) {
-                                    monthlySales2025[orderDate.getMonth() + 1] += quantity; //guarda 2025
-                                    return;
+                                if (year === currentYear) {
+                                    monthlySales2025[month] += quantity;
+                                } else if (year === currentYear - 1) {
+                                    monthlySales2024[month] += quantity;
+                                } else if (year === currentYear - 2) {
+                                    monthlySales2023[month] += quantity;
+                                } else if (year === currentYear - 3) {
+                                    monthlySales2022[month] += quantity;
+                                } else if (year === currentYear - 4) {
+                                    monthlySales2021[month] += quantity;
                                 }
-                                if (orderDate.getFullYear() === currentYear - 1) {
-                                    monthlySales2024[orderDate.getMonth() + 1] += quantity; //guarda 2024
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 2) {
-                                    monthlySales2023[orderDate.getMonth() + 1] += quantity; //guarda 2023
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 3) {
-                                    monthlySales2022[orderDate.getMonth() + 1] += quantity; //guarda 2022
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 4) {
-                                    monthlySales2021[orderDate.getMonth() + 1] += quantity; //guarda 2021
-                                    return;
-                                }
+
+                                //console.log('cont:', cont, '-', 'categoria: ', categoriaItem, '-', 'quantity: ', quantity, '- price: ', price, '- orderDate: ', orderDate);
+                                cont++;
                             });
-                            return
                         } else {
                             category.pedido.forEach(product => {
                                 if (product.categoria !== categoria.split('-')[1]) {
@@ -662,9 +810,11 @@ export const useFuntions = () => {
                             });
                         }
                     });
+
                 });
             }
         });
+        //console.log(monthlySales2025);
         return {
             monthlySales2025,
             monthlySales2024,
@@ -691,6 +841,130 @@ export const useFuntions = () => {
             return formatearPrecio(total + costoEnvio);
         }
     }
+    function capitalizarPrimeraLetra(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    }
+    const totalGastosXAnio = (gastos) => {
+
+        if (gastos) {
+            let totalGastos = 0;
+            const gastosPorAnio = {
+                2021: Array(12).fill(0),
+                2022: Array(12).fill(0),
+                2023: Array(12).fill(0),
+                2024: Array(12).fill(0),
+                2025: Array(12).fill(0),
+            };
+
+            gastos.forEach(gasto => {
+                const fechaGasto = convertirFecha(gasto.fecha);
+                const anio = fechaGasto.getFullYear();
+                const mes = fechaGasto.getMonth();
+                if (gastosPorAnio[anio]) {
+                    gastosPorAnio[anio][mes] += gasto.precio * gasto.cantidad;
+                    totalGastos += gasto.precio * gasto.cantidad;
+                }
+            });
+            return {
+                gastosPorAnio,
+                totalGastos,
+            };
+        }
+    };
+    const totalGastosUsuarios = (gastos, anioComparar, datosUsuario, tipo) => {
+        if (gastos) {
+            let totalGastos = 0;
+            let gastosOG = 0;
+            let gastosLG = 0;
+
+            const gastosPorAnio = [];
+
+            gastos.forEach(gasto => {
+                const fechaGasto = convertirFecha(gasto.fecha);
+                const anio = fechaGasto.getFullYear();
+                if (anio === anioComparar) {
+                    totalGastos += gasto.precio * gasto.cantidad;
+                    if (gasto.user === '679fce0ee8d1ed66d21d18c2') {
+                        gastosOG += gasto.precio * gasto.cantidad;
+                        return;
+                    }
+                    if (gasto.user === '6789ce1b48932f890985d1f7') {
+                        gastosLG += gasto.precio * gasto.cantidad;
+                        return;
+                    }
+                }
+            });
+
+            gastosPorAnio.push(gastosOG, gastosLG, totalGastos);
+            return [
+                totalGastos,
+                gastosOG,
+                gastosLG
+            ];
+        }
+    };
+
+    const calcularTotalesPedidoCxC = (pedido) => { /* retorna el total de cantidades y de venta por pedido */
+        if (!pedido?.itemPedido) return;
+
+        let totalItems = 0;
+        let totalKits = [0, 0, 0, 0, 0];
+        let totalGuantes = [0, 0, 0];
+        let totalOtros = 0;
+
+        const total = pedido.itemPedido.reduce((acc, item) => {
+            const subTotal = Object.entries(item?.itemPedido || {}).reduce((catAcc, [categoriaKey, categoria]) => {
+                const categoriaTotal = (categoria?.pedido || []).reduce((prodAcc, pedidoItem) => {
+                    const cantidad = pedidoItem?.cantidad || 0;
+                    const precioUnitario = pedidoItem?.precioUnitario ?? pedidoItem?.precio ?? 0;
+                    const totalPorProducto = precioUnitario * cantidad;
+                    totalItems += parseInt(cantidad); // Contar cada cantidad
+                    if (categoriaKey === 'GUANTES') {
+                        if (pedidoItem.categoria === 'BLANCOS') {
+                            totalGuantes[0] += totalPorProducto;
+                        } else if (pedidoItem.categoria === 'NEGROS') {
+                            totalGuantes[1] += totalPorProducto;
+                        } else if (pedidoItem.categoria === 'MITON') {
+                            totalGuantes[2] += totalPorProducto;
+                        }
+                    } else if (categoriaKey === 'OTR') {
+                        totalOtros += totalPorProducto;
+                    } else if (categoriaKey === 'KCG') {
+                        totalKits[0] += totalPorProducto;
+                    } else if (categoriaKey === 'KCP') {
+                        totalKits[1] += totalPorProducto;
+                    } else if (categoriaKey === 'KB') {
+                        totalKits[2] += totalPorProducto;
+                    } else if (categoriaKey === 'CC') {
+                        totalKits[3] += totalPorProducto;
+                    } else if (categoriaKey === 'CB') {
+                        totalKits[4] += totalPorProducto;
+                    }
+                    return prodAcc + totalPorProducto;
+                }, 0);
+                return catAcc + categoriaTotal;
+            }, 0);
+            return acc + subTotal;
+        }, 0);
+
+        console.log(
+            //'total:' + total,
+            //'totalItems:' + totalItems,
+            //'totalKits:' + totalKits,
+            //'totalGuantes:' + totalGuantes
+            'totalOtros:' + totalOtros
+        )
+        return {
+            total,
+            totalItems,
+            totalKits,
+            totalGuantes,
+            totalOtros
+        };
+    };
+
+
+
     return {
         //*Parameters
 
@@ -709,7 +983,16 @@ export const useFuntions = () => {
         totalesPedidosAnuales,
         totalesPedidosAnualesPorCategoria,
         number_format,
-        calculaTotalPedido
+        calculaTotalPedido,
+        capitalizarPrimeraLetra,
+        limpiarFecha,
+        totalKitsXAnio,
+        totalGuantesXAnio,
+        totalOtrosXAnio,
+        totalGastosUsuarios,
+        buscarPrecioxCategoriaAnio,
+        totalizarPreciosFabrica,
+        calcularTotalesPedidoCxC
     }
 
 }

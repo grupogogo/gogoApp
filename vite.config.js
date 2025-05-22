@@ -5,6 +5,6 @@ import react from '@vitejs/plugin-react-swc'
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: 'gogoApp' // Cambia el nombre de la carpeta de salida
+    outDir: 'dist' // Cambia el nombre de la carpeta de salida
   }
 })

@@ -9,6 +9,9 @@ import { useAuthStore } from "../hooks";
 import { useEffect } from "react";
 import { ListaPedidos } from "../pedidos/pages/ListaPedidos";
 import { grid } from 'ldrs'
+import { Gastos } from "../gastos/pages/Gastos";
+import { C } from "@table-library/react-table-library/Cell-a4350b14";
+import { CuentasXCobrar } from "../cxc/pages/CuentasXCobrar";
 grid.register()
 
 export const AppRouter = () => {
@@ -53,9 +56,11 @@ export const AppRouter = () => {
                   <Route path="/*" element={<MainDashboard />} />
                   <Route path="/calendar/*" element={<CalendarPage />} />
                   <Route path="/pedidos/*" element={<Pedidos />} />
-                  <Route path="/listaPedidos/*" element={<ListaPedidos />} />
+                  <Route path="/gastos/*" element={<Gastos />} />
+                  <Route path="/listaPedidos/*" element={<ListaPedidos />} />0
                   <Route path="/budget/*" element={<Budget />} />
                   <Route path="/clientes/*" element={<Clientes />} />
+                  <Route path="/CuentasXCobrar/*" element={<CuentasXCobrar />} />
                   <Route path="/*" element={<Navigate to={"/"} />}> </Route>
                 </>
               )}

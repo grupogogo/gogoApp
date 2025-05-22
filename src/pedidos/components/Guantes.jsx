@@ -35,7 +35,7 @@ export const Guantes = ({ agregarPedidoGeneral }) => {
     return (
         <>
             {/* HEADER*/}
-            <div className="card">
+            <div className="">
                 <HeadersPedidos codigo='GUA' titulo='GUANTES  [BLANCOS - NEGROS - MITÓN]' cantidadItems={cantidadItems} collapsed='Six'/>
                 <div id="collapseSix" className="collapse mt-2" aria-labelledby="headingSix" data-bs-parent="#accordionExample"
                     style={{ overflow: 'hidden', transition: 'height 0.3s ease' }}>

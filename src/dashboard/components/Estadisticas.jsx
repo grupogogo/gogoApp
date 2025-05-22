@@ -1,9 +1,11 @@
 import { useFuntions } from "../../hooks";
 
 
-export const Estadisticas = ({ totales, tipo }) => {
+export const Estadisticas = ({ totales, tipo, gastoUsuarios = 0  }) => {
     const { number_format } = useFuntions();
     const { formatearPrecio } = useFuntions();
+
+    //console.log(gastoUsuarios)
     return (
         <>
             <div className="row">

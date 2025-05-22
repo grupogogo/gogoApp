@@ -30,13 +30,30 @@ export const LoginPage = () => {
   const { limpiarClienteActivo } = useClientesStore();
   const [changeWindow, setChangeWindow] = useState(true)
 
-  const loginSubmit = (event) => {
+  const loginSubmit = async (event) => {
     event.preventDefault();
-    startLogin({ email: loginEmail, password: loginPassword });
-    limpiarClienteActivo();
+    if (loginEmail === '' || loginPassword === '') {
+      Swal.fire({
+        title: "Llene los campos solicitados",
+        text: errorMessage,
+        icon: "error"
+      })
+      return;
+    } else {
+      try {
+        await startLogin({ email: loginEmail, password: loginPassword });
+        limpiarClienteActivo(); // Limpiar si el login es exitoso
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: error,
+        });
+      }
+    }
   }
 
-  const registerSubmit = (event) => {
+  const registerSubmit = async (event) => {
     event.preventDefault();
     if (registerPassword !== registerPassword2) {
       Swal.fire({
@@ -45,25 +62,31 @@ export const LoginPage = () => {
         icon: "error"
       })
       return;
+    } else {
+      try {
+        await
+          startRegister({
+            email: registerEmail,
+            password: registerPassword,
+            name: registerName,
+            telefono: telefono,
+            numIdentificacion: numIdentificacion,
+          });
+        Swal.fire({
+          title: "Guardado satisfactoriamente",
+          icon: "success",
+          draggable: true
+        });
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: error,
+        });
+      }
     }
-    startRegister({
-      email: registerEmail,
-      password: registerPassword,
-      name: registerName,
-      telefono: telefono,
-      numIdentificacion: numIdentificacion,
-    })
   }
 
-  useEffect(() => {
-    if (errorMessage !== undefined) {
-      Swal.fire({
-        title: "Error en la autenticacion",
-        text: errorMessage,
-        icon: "error"
-      });
-    }
-  }, [errorMessage])
 
 
   return (

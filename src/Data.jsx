@@ -21,27 +21,10 @@ for (let i = 1; i <= 20; i++) {
   });
 }
 
-const COLUMNS = [
-  { label: 'Task', renderCell: (item) => item.name },
-  {
-    label: 'Deadline',
-    renderCell: (item) =>
-      item.deadline.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }),
-  },
-  { label: 'Type', renderCell: (item) => item.type },
-  {
-    label: 'Complete',
-    renderCell: (item) => item.isComplete.toString(),
-  },
-  { label: 'Tasks', renderCell: (item) => item.nodes },
-];
+
 
 export const Data = () => {
   const data = { nodes };
 
-  return <CompactTable columns={COLUMNS} data={data} />;
+  return <CompactTable data={data} />;
 };

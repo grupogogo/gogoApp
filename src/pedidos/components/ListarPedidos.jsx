@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { CompactTable } from '@table-library/react-table-library/compact';
 import { useTheme } from '@table-library/react-table-library/theme';
 import { usePagination } from "@table-library/react-table-library/pagination";
@@ -7,16 +6,20 @@ import { useState } from 'react';
 import { ModalImprimirPedido } from './modals/ModalImprimirPedido';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
-import { Button } from 'react-bootstrap';
-
+import { Button, Col, Row } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+import { useSort } from "@table-library/react-table-library/sort";
+import { useSelector } from 'react-redux';
 
 
 export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, direccionarPedido, abrirModalImprimir, abrirModalGuia }) => {
-  const { pedidos } = usePedidosStore();
-  const [search, setSearch] = React.useState("");
+  const [search, setSearch] = useState("");
   const { capitalize, convertirFecha } = useFuntions();
   const [filtroDistribuidor, setFiltroDistribuidor] = useState(null);
   const { user } = useAuthStore();
+  const navegar = useNavigate();
+
+  const pedidos = useSelector(state => state.pedidos.pedidos);
 
   const handleSearch = (event) => {
     setSearch(event.target.value);
@@ -28,6 +31,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         // Validar que la fecha sea utilizable
         return pedido.fechaCreacion;
       })
+      .filter((pedido) => pedido.fechaCreacion)
       .sort((a, b) => {
         // Convertir las fechas para ordenarlas
         const fechaA = convertirFecha(a.fechaCreacion);
@@ -64,6 +68,25 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
       return matchesPlanta && matchesSearch && matchesDistribuidor;
     }),
   };
+
+  const sort = useSort(
+    data,
+    {
+      onChange: onSortChange,
+    },
+    {
+      sortFns: {
+        FECHA: (array) => array.sort((a, b) => a.fechaCreacion.localeCompare(b.fechaCreacion)),
+        CLIENTE: (array) => array.sort((a, b) => a.cliente.nombre.localeCompare(b.cliente.nombre)),
+        CIUDAD: (array) => array.sort((a, b) => a.cliente.ciudad.localeCompare(b.cliente.ciudad)),
+        ESTADO: (array) => array.sort((a, b) => a.estado.localeCompare(b.estado)),
+      },
+    }
+  );
+
+  function onSortChange(action, state) {
+    console.log(action, state);
+  }
 
   const marginTheme = {
     BaseCell: `
@@ -103,13 +126,11 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
   const theme = useTheme(
     [marginTheme, sizeColumnTheme]
   );
-
-  // Columnas con renderizado personalizado
-
-  const pagination = usePagination(data, {
+  // Columnas con renderizado personalizado\
+  const pagination = usePagination(filteredData, {
     state: {
       page: 0,
-      size: 20,
+      size: 10,
     },
   });
 
@@ -128,13 +149,13 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         ),
       },
       {
-        label: 'FECHA',
+        label: 'Fecha',
         renderCell: (item) => (
           <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{capitalize(item.fechaCreacion)}</span>
         ),
       },
       {
-        label: 'CLIENTE',
+        label: 'Cliente',
         renderCell: (item) => (
           <span title={`Cliente: ${item.cliente.nombre}`}>{item.cliente.nombre}</span>
         ),
@@ -150,9 +171,9 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         renderCell: (item) => {
           const tipoDespacho = {
             punto: 'E. Punto',
-            urbano: 'E. Urbano',
-            envio: 'Transportadora',
-            recogida: 'Recogen',
+            urbano: 'D. Urbano',
+            envio: 'Despacho',
+            recogida: 'E. planta',
           };
           const despacho = tipoDespacho[item.tipoDespacho] || 'Desconocido';
           return <div className="text-center"> <span title={`Tipo de despacho: ${despacho}`}>{despacho}</span></div>
@@ -164,7 +185,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           return (
             <div className="text-center">
               <button
-                className="btn btn-success"
+                className="btn btn-warning text-white"
                 onClick={() => detallePedido(item)}
                 title="Ver detalles del pedido"
               >
@@ -175,7 +196,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         },
       },
       {
-        label: 'ESTADO',
+        label: 'Estado',
         renderCell: (item) => (
           <select
             style={{ borderWidth: '3px' }}
@@ -201,7 +222,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         ),
       },
       {
-        label: 'CANT',
+        label: 'Cantidad',
         renderCell: (item) => {
           // Crear un mapa para agrupar las cantidades por categoría
           const categorias = {};
@@ -267,16 +288,18 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         ),
       },
       {
-        label: 'FECHA',
+        label: 'Fecha',
         renderCell: (item) => (
-          <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{capitalize(item.fechaCreacion)}</span>
+          <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{(capitalize(item.fechaCreacion))}</span>
         ),
+        sort: { sortKey: "FECHA" },
       },
       {
-        label: 'CLIENTE',
+        label: 'Cliente',
         renderCell: (item) => (
-          <span title={`Cliente: ${item.cliente.nombre}`}>{item.cliente.nombre}</span>
+          <span className="text-start" title={`Cliente: ${item.cliente.nombre}`}>{item.cliente.nombre}</span>
         ),
+        sort: { sortKey: "CLIENTE" },
       },
       {
         label: <i className="fa fa-location-dot"></i>,
@@ -291,15 +314,16 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
             </button>
           </div>
         ),
+        sort: { sortKey: "CIUDAD" },
       },
       {
         label: <i className="fa fa-truck-ramp-box"></i>,
         renderCell: (item) => {
           const tipoDespacho = {
             punto: 'E. Punto',
-            urbano: 'E. Urbano',
-            envio: 'Transportadora',
-            recogida: 'Recogen',
+            urbano: 'D. Urbano',
+            envio: 'Despacho',
+            recogida: 'E. planta',
           };
           const despacho = tipoDespacho[item.tipoDespacho] || 'Desconocido';
           return <div className="text-center"> <span title={`Tipo de despacho: ${despacho}`}>{despacho}</span></div>
@@ -311,7 +335,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           return (
             <div className="text-center">
               <button
-                className="btn btn-success"
+                className="btn btn-warning text-white btn-sm"
                 onClick={() => detallePedido(item)}
                 title="Ver detalles del pedido"
               >
@@ -327,7 +351,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           return (
             <div className="text-center">
               <button
-                className="btn btn-info"
+                className="btn btn-info btn-sm"
                 onClick={() => abrirModalImprimir(item)}
                 title="Ver detalles del pedido"
               >
@@ -342,7 +366,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         renderCell: (item) => (
           <div className="text-center">
             <button
-              className="btn btn-primary"
+              className="btn btn-primary btn-sm"
               onClick={() => direccionarPedido(item)}
               title="Editar pedido"
             >
@@ -357,7 +381,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           item.estado === 'pendiente' && (
             <div className="text-center">
               <button
-                className="btn btn-danger"
+                className="btn btn-danger btn-sm"
                 onClick={() => eliminarPedido(item)}
                 title="Eliminar pedido"
               >
@@ -370,7 +394,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         className: 'column-eliminar',
       },
       {
-        label: 'ESTADO',
+        label: 'Estado',
         renderCell: (item) => (
           <select
             style={{ borderWidth: '3px' }}
@@ -427,6 +451,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
             )}
           </select>
         ),
+        sort: { sortKey: "ESTADO" },
       },
       {
         renderCell: (item) => {
@@ -475,6 +500,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           return (
             <>
               <OverlayTrigger
+                className='text-left'
                 placement="left"
                 delay={{ show: 250, hide: 400 }}
                 overlay={renderTooltip}
@@ -488,9 +514,34 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
     ];
 
   return (
-    <>
+    <div className="card shadow-none p-2 mb-5 bg-body-light rounded">
+      <div className="card-header py-3 mb-1">
+        <Row>
+          <Col>
+            <h5 className="m-0 font-weight-bold text-black">Listado Pedidos</h5>
+          </Col>
+          <Col>
+            <div>
+              <div className="text-end">
+                <button
+                  className="btn btn-success"
+                  type="button"
+                  id="dropdownMenuButton1"
+                  data-toggle="dropdown"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                  onClick={() => navegar('/pedidos')}
+                >
+                  Crear pedido &nbsp;
+                  <i className="fa fa-clipboard-list"></i>
+                </button>
+              </div>
+            </div>
+          </Col>
+        </Row>
+      </div>
       <div className="row justify-content-between align-items-center">
-        <div className="col-md-6 col-6 mb-3">
+        <div className="col-md-6 col-6 mb-2">
           <select
             className="form-select"
             onChange={handleFilterChange}
@@ -503,7 +554,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         </div>
 
         <div className="col-md-5 col-6">
-          <div className="input-group mb-3">
+          <div className="input-group mb-3 mt-3">
             <input
               type="text"
               className="form-control"
@@ -523,7 +574,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         </div>
       </div>
 
-      <div className="table-responsive">
+      <div className="table-responsive table table-hover text-start w-100 compact-table">
         <CompactTable
           columns={COLUMNS}
           data={filteredData}
@@ -531,15 +582,18 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           className="table table-bordered table-hover text-left align-middle"
           pagination={pagination}
           layout={{ custom: true }}
+          sort={sort}
         />
       </div>
       <br />
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <span>Páginas totales: {pagination.state.getTotalPages(data.nodes)}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", width: "99%" }}>
+        <span className="fw-bold">Total registros: {filteredData.nodes.length}</span>
+        <span className="fw-bold">Páginas: {pagination.state.getTotalPages(filteredData.nodes)}</span>
         <span>
           Página:{" "}
-          {pagination.state.getPages(data.nodes).map((_, index) => (
+          {pagination.state.getPages(filteredData.nodes).map((_, index) => (
             <button
+              className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1'}
               key={index}
               type="button"
               style={{
@@ -553,6 +607,6 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         </span>
       </div>
       <ModalImprimirPedido />
-    </>
+    </div>
   );
 };

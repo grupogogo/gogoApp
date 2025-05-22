@@ -19,7 +19,7 @@ export const KitBautizo = ({ agregarPedidoGeneral }) => {
         <>
             {/* HEADER KIT COMUNION */}
 
-            <div className="card">
+            <div className="">
                 <HeadersPedidos codigo='KB' titulo='KIT BAUTIZO' cantidadItems={cantidadItems} collapsed='Three' />
 
                 <div id="collapseThree" className="collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample"

@@ -23,7 +23,6 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
     };
 
     useEffect(() => {
-        console.log(pedido)
         if (pedido?.itemPedido) {
             // Calcular el total general
             const total = pedido.itemPedido.reduce((acc, item) => {
@@ -116,7 +115,9 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                     </Row>
                                     {(pedido?.detalleGeneral) && (
                                         <Row>
-                                            <strong>Detalle General:</strong> {pedido?.detalleGeneral || ''}
+                                            <Col>
+                                                <strong>Detalle General:</strong> {pedido?.detalleGeneral || ''}
+                                            </Col>
                                         </Row>
                                     )}
                                     <br />
@@ -127,7 +128,6 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                 {formatearPrecio(totalGen)}
                                             </span>
                                         </Col>
-
                                     </Row>
                                 </Card.Body>
                             </Card>
@@ -172,7 +172,7 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                                 <th>Motivo</th>
                                                                 {(categoria === 'KCG' || categoria === 'GUANTES') && <th>Talla</th>}
                                                                 <th>Cantidad</th>
-                                                                {categoria !== 'OTR' && <th>Precio Unitario</th>}
+                                                                {categoria === 'OTR' && <th>Precio Unitario</th>}
                                                                 {user.rol !== "planta" && (
                                                                     <th>SubTotal</th>
                                                                 )}
@@ -245,6 +245,9 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                                         {pedidoItem?.precioUnitario && (
                                                                             <td>{formatearPrecio(pedidoItem?.precioUnitario)}</td>
                                                                         )}
+                                                                        {categoria === 'OTR' && (
+                                                                            <td>{formatearPrecio(pedidoItem?.precio)}</td>
+                                                                        )}
                                                                         {user.rol !== "planta" && (
                                                                             <td className="text-right fw-semibold">
                                                                                 {formatearPrecio(
@@ -262,7 +265,7 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                                 <tr className="fw-bold text-center table-dark">
                                                                     {(categoria === 'OTR') && (
                                                                         <>
-                                                                            <td colSpan={3}>
+                                                                            <td colSpan={4}>
                                                                                 Total {buscarNombre(categoria)}
                                                                             </td>
                                                                             <td className='text-right'>{formatearPrecio(totalPorCategoria)}</td>

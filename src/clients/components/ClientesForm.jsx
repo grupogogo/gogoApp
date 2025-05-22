@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react"
 import { useForm } from "../../hooks/"
 import { useClientesStore } from "../../hooks";
@@ -41,13 +40,12 @@ export const ClientesForm = ({ setCliente, cliente }) => {
 
   useEffect(() => {
     setCliente(formState);
-    console.log(formState)
   }, [formState]);
 
   return (
     <>
-      <div className="container">
-        <div className="row">
+      <div className="container card">
+        <div className="row m-2">
           <div className="col-md-12 text-right">
             <div className="form-check form-switch">
               <input className="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckClienteDistribuidor" name="distribuidor" value={!clienteTipo} onChange={selTipoCliente} checked={clienteTipo} />
@@ -57,11 +55,11 @@ export const ClientesForm = ({ setCliente, cliente }) => {
             </div>
           </div>
         </div>
-        <div className='p-4'>
+        <div>
           <div className="row">
             <div className="col-md-8">
               <label htmlFor="iName" className="form-label">Razón social / Nombre</label>
-              <div className="input-group mb-3">
+              <div className="input-group mb-1">
                 <span className="input-group-text" id="icono-select">
                   <i className="fas fa-building-user"></i>
                 </span>
@@ -72,7 +70,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
             <div className="col-md-4">
               <div className="">
                 <label htmlFor="iNit" className="form-label">Nit | CC</label>
-                <div className="input-group mb-3">
+                <div className="input-group mb-1">
                   <span className="input-group-text" id="icono-select">
                     <i className="fas fa-sliders"></i>
                   </span>
@@ -83,7 +81,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
             <div className="col-md-6">
               <div className="">
                 <label htmlFor="iMail" className="form-label">Correo</label>
-                <div className="input-group mb-3">
+                <div className="input-group mb-1">
                   <span className="input-group-text" id="basic-addon1">@</span>
                   <input type="email" className="form-control" id="imail" name="email" value={email || ''} onChange={handleChange} />
                 </div>
@@ -92,7 +90,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
             <div className="col-md-6">
               <div className="">
                 <label htmlFor="iphone" className="form-label">Teléfono</label>
-                <div className="input-group mb-3">
+                <div className="input-group mb-1">
                   <span className="input-group-text" id="icono-select">
                     <i className="fas fa-mobile-retro"></i>
                   </span>
@@ -102,7 +100,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
             </div>
             <div className="col-md-8">
               <label htmlFor="iAddress" className="form-label">Dirección e indicaciones de despacho</label>
-              <div className="input-group mb-3">
+              <div className="input-group mb-1">
                 <span className="input-group-text" id="icono-select">
                   <i className="fas fa-location-dot"></i>
                 </span>
@@ -111,7 +109,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
             </div>
             <div className="col-md-4">
               <label htmlFor="iCountry" className="form-label">Ciudad</label>
-              <div className="input-group mb-3">
+              <div className="input-group mb-1">
                 <span className="input-group-text" id="icono-select">
                   <i className="fas fa-flag"></i>
                 </span>
@@ -121,7 +119,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
             <div className="col-md-12">
               <div className="">
                 <label htmlFor="aInfoAdd" className="form-label">Información adicional</label>
-                <textarea className="form-control" id="aInfoAdd" name="detalle" value={detalle || ''} onChange={handleChange} rows="3"></textarea>
+                <textarea className="form-control" id="aInfoAdd" name="detalle" value={detalle || ''} onChange={handleChange} rows="1"></textarea>
               </div>
             </div>
           </div>

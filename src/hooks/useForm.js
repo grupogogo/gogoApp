@@ -5,8 +5,8 @@ export const useForm = (initialForm = {}, formValidations = {}) => {
 
     const [formState, setFormState] = useState(initialForm);
     const [formValidation, setFormValidation] = useState({})
+    const { limpiarClienteActivo } = useClientesStore();
     const [showModal, setShowModal] = useState(false);
-    const { limpiarClienteActivo} = useClientesStore();
 
 
     const handleClose = () => setShowModal(false);
@@ -29,7 +29,7 @@ export const useForm = (initialForm = {}, formValidations = {}) => {
     const onInputChange = ({ target }) => {
         const { name, value } = target;
         // Validamos si el input pertenece a 'precioKits', 'precioCirios' o 'precioGuantes'
-        if (name === 'kcg' || name === 'kcp' || name === 'kb') {            
+        if (name === 'kcg' || name === 'kcp' || name === 'kb') {
             setFormState((prev) => ({
                 ...prev,
                 precios: {
@@ -71,6 +71,38 @@ export const useForm = (initialForm = {}, formValidations = {}) => {
         }
     };
 
+    const onInputNumbersChange = ({ target }) => {
+        const { name, value } = target;
+
+        // Permitir que el campo quede vacío cuando se borra todo
+        if (value === '') {
+            setFormState((prev) => ({
+                ...prev,
+                [name]: ''
+            }));
+            return;
+        }
+
+        let formattedValue = value;
+
+        if (name === 'precio') {
+            // Permitir números con punto o coma como separador decimal
+            if (!/^\d*[\.,]?\d*$/.test(value)) return;
+
+            // Reemplazar coma por punto para estandarizar el formato decimal
+            formattedValue = value.replace(',', '.');
+        } else {
+            // Para otros campos, solo números enteros
+            if (!/^\d*$/.test(value)) return;
+        }
+
+        setFormState((prev) => ({
+            ...prev,
+            [name]: formattedValue
+        }));
+    };
+
+
 
     const onResetForm = () => {
         setFormState(initialForm);
@@ -91,6 +123,7 @@ export const useForm = (initialForm = {}, formValidations = {}) => {
         ...formState,
         formState,
         onInputChange,
+        onInputNumbersChange,
         onResetForm,
         handleClose,
         handleShow,
@@ -98,5 +131,6 @@ export const useForm = (initialForm = {}, formValidations = {}) => {
         ...formValidation,
         isFormValid,
         showModal,
+        setFormState
     }
 }

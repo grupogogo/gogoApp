@@ -3,24 +3,40 @@ import Modal from 'react-bootstrap/Modal';
 import { ClientesForm } from '../clients/components/ClientesForm';
 import { useState } from 'react';
 import { useClientesStore } from '../hooks';
+import Swal from 'sweetalert2';
 
 
 export const ReusableModal = ({ show, handleClose }) => {
     const { startSavingClient, clienteActivo } = useClientesStore();
     const [cliente, setCliente] = useState({});
 
-    const saveClient = () => {
+    const saveClient = async () => {
+        try {
+
+            await startSavingClient(cliente);
+            Swal.fire({
+                title: "Cliente almacenado correctamente!",
+                icon: "success",
+                draggable: true,                
+            });
+
+        } catch (error) {
+            Swal.fire({
+                icon: "error",
+                title: error,
+                text: "Something went wrong!",                
+              });
+        }
+        handleClose();
+    }
+    const editClient = () => {
         startSavingClient(cliente);
         handleClose();
     }
-    const editClient = () => {                
-        startSavingClient(cliente);
-        handleClose();
-    }    
-    
+
     return (
         <>
-            <Modal className="modal-lg pruebaModal"
+            <Modal className="modal-lg"
                 show={show}
                 onHide={handleClose}
                 backdrop={true} // Controla si se puede cerrar clickeando fuera del modal

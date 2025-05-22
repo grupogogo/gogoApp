@@ -10,7 +10,6 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from 'date-fns/locale/es';
 import { format } from "date-fns"; // Funciones para formato y parseo
-import { useDispatch } from "react-redux";
 
 
 
@@ -25,7 +24,6 @@ export const Pedidos = () => {
   const [total, setTotal] = useState(0);
   const [detallesPorCategoria, setDetallesPorCategoria] = useState([]);
   const { formatearPrecio } = useFuntions();
-  const dispatch = useDispatch();
 
 
   const limpiarPedido = () => {
