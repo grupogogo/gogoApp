@@ -152,6 +152,30 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                         // Sumar al total general
                                         totalGeneral += totalPorCategoria;
 
+                                        const pedidosOrdenados = [...(detalles?.pedido || [])].sort((a, b) => {
+                                            // Normalizar y asegurar que ambos motivos existen
+                                            const motivoA = (a?.motivo || '').trim().toUpperCase();
+                                            const motivoB = (b?.motivo || '').trim().toUpperCase();
+
+                                            if (!motivoA) return 1;
+                                            if (!motivoB) return -1;
+
+                                            const motivoCompare = motivoA.localeCompare(motivoB, undefined, { numeric: true });
+                                            if (motivoCompare !== 0) return motivoCompare;
+
+                                            // Comparar tallas: extraer el número de la talla tipo "T-12"
+                                            const tallaA = parseInt((a?.nombreInput || '').replace(/\D/g, ''), 10);
+                                            const tallaB = parseInt((b?.nombreInput || '').replace(/\D/g, ''), 10);
+
+                                            // Si no se puede convertir en número, ordenar al final
+                                            if (isNaN(tallaA)) return 1;
+                                            if (isNaN(tallaB)) return -1;
+
+                                            return tallaA - tallaB;
+                                        });
+
+
+
                                         return (
                                             <Card className="shadow p-3 mb-3 rounded" key={`${categoria}-${idx}`}>
                                                 <Card.Title className="ml-2 mt-2">
@@ -179,85 +203,83 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            {detalles?.pedido?.map((pedidoItem, i) => (
-                                                                <>
-                                                                    <tr key={pedidoItem._id || `${categoria}-${idx}-${i}`}
-                                                                        className={`text-center ${selectedRows[`${categoria}-${idx}-${i}`] ? "table-success" : ""}`}
-                                                                    >
-                                                                        <td>
-                                                                            <div className="form-check">
-                                                                                <input
-                                                                                    className="form-check-input"
-                                                                                    type="checkbox"
-                                                                                    onChange={() => handleCheck(`${categoria}-${idx}-${i}`)}
-                                                                                    checked={!!selectedRows[`${categoria}-${idx}-${i}`]}
-                                                                                />
-                                                                            </div>
-                                                                        </td>
-                                                                        <td>
-                                                                            {categoria === 'GUANTES' && (
-                                                                                (pedidoItem?.nombreInput).split('-').pop()
-                                                                            )}
-                                                                            {categoria === 'OTR' && (
-                                                                                pedidoItem?.producto
-                                                                            )}
-                                                                            {(categoria === 'KCG' || categoria === 'CC' || categoria === 'KCP') && (
-                                                                                pedidoItem?.nombreInput.includes('inputSurtidoNino')
-                                                                                    ? (<span dangerouslySetInnerHTML={{
-                                                                                        __html: 'Surtido <span class="badge text-bg-primary">Niño</span>'
-                                                                                    }} />)
-                                                                                    : pedidoItem?.nombreInput.includes('inputSurtidoNina') ? (
-                                                                                        <span dangerouslySetInnerHTML={{
-                                                                                            __html: 'Surtido <span class="badge text-bg-danger">Niña</span>'
-                                                                                        }} />
-                                                                                    )
-                                                                                        : (
-                                                                                            <img
-                                                                                                className="rounded img-fluid"
-                                                                                                src={useImage(obtenerImagen(categoria, pedidoItem.genero), parseInt((pedidoItem.nombreInput).split('-')[1]))}
-                                                                                                style={{ width: "auto", height: "110px" }}
-                                                                                                loading="lazy"
-                                                                                            />
-                                                                                        )
-                                                                            )}
-                                                                            {(categoria === 'KB' || categoria === 'CB') && (
-                                                                                (pedidoItem?.nombreInput.includes('inputSurtidoNino'))
-                                                                                    ? (<span dangerouslySetInnerHTML={{
-                                                                                        __html: 'Surtido <span class="badge text-bg-primary">Niño</span>'
-                                                                                    }} />)
-                                                                                    : pedidoItem?.nombreInput.includes('inputSurtidoNina')
-                                                                                        ? (<span dangerouslySetInnerHTML={{
-                                                                                            __html: 'Surtido <span class="badge text-bg-danger">Niña</span>'
-                                                                                        }} />
-                                                                                        )
-                                                                                        : (<img
+                                                            {pedidosOrdenados.map((pedidoItem, i) => (
+                                                                <tr key={pedidoItem._id || `${categoria}-${idx}-${i}`}
+                                                                    className={`text-center ${selectedRows[`${categoria}-${idx}-${i}`] ? "table-success" : ""}`}
+                                                                >
+                                                                    <td>
+                                                                        <div className="form-check">
+                                                                            <input
+                                                                                className="form-check-input"
+                                                                                type="checkbox"
+                                                                                onChange={() => handleCheck(`${categoria}-${idx}-${i}`)}
+                                                                                checked={!!selectedRows[`${categoria}-${idx}-${i}`]}
+                                                                            />
+                                                                        </div>
+                                                                    </td>
+                                                                    <td>
+                                                                        {categoria === 'GUANTES' && (
+                                                                            (pedidoItem?.nombreInput).split('-').pop()
+                                                                        )}
+                                                                        {categoria === 'OTR' && (
+                                                                            pedidoItem?.producto
+                                                                        )}
+                                                                        {(categoria === 'KCG' || categoria === 'CC' || categoria === 'KCP') && (
+                                                                            pedidoItem?.nombreInput.includes('inputSurtidoNino')
+                                                                                ? (<span dangerouslySetInnerHTML={{
+                                                                                    __html: 'Surtido <span class="badge text-bg-primary">Niño</span>'
+                                                                                }} />)
+                                                                                : pedidoItem?.nombreInput.includes('inputSurtidoNina') ? (
+                                                                                    <span dangerouslySetInnerHTML={{
+                                                                                        __html: 'Surtido <span class="badge text-bg-danger">Niña</span>'
+                                                                                    }} />
+                                                                                )
+                                                                                    : (
+                                                                                        <img
                                                                                             className="rounded img-fluid"
                                                                                             src={useImage(obtenerImagen(categoria, pedidoItem.genero), parseInt((pedidoItem.nombreInput).split('-')[1]))}
                                                                                             style={{ width: "auto", height: "110px" }}
                                                                                             loading="lazy"
-                                                                                        />)
+                                                                                        />
+                                                                                    )
+                                                                        )}
+                                                                        {(categoria === 'KB' || categoria === 'CB') && (
+                                                                            (pedidoItem?.nombreInput.includes('inputSurtidoNino'))
+                                                                                ? (<span dangerouslySetInnerHTML={{
+                                                                                    __html: 'Surtido <span class="badge text-bg-primary">Niño</span>'
+                                                                                }} />)
+                                                                                : pedidoItem?.nombreInput.includes('inputSurtidoNina')
+                                                                                    ? (<span dangerouslySetInnerHTML={{
+                                                                                        __html: 'Surtido <span class="badge text-bg-danger">Niña</span>'
+                                                                                    }} />
+                                                                                    )
+                                                                                    : (<img
+                                                                                        className="rounded img-fluid"
+                                                                                        src={useImage(obtenerImagen(categoria, pedidoItem.genero), parseInt((pedidoItem.nombreInput).split('-')[1]))}
+                                                                                        style={{ width: "auto", height: "110px" }}
+                                                                                        loading="lazy"
+                                                                                    />)
+                                                                        )}
+                                                                    </td>
+                                                                    {(categoria === 'KCG' || categoria === 'GUANTES') && (
+                                                                        (pedidoItem?.talla === 't0') ? <td> Surtido </td> : <td>{capitalize(pedidoItem?.talla || '')}</td>
+                                                                    )}
+                                                                    <td className='fw-semibold'>{pedidoItem?.cantidad || ''}</td>
+                                                                    {pedidoItem?.precioUnitario && (
+                                                                        <td>{formatearPrecio(pedidoItem?.precioUnitario)}</td>
+                                                                    )}
+                                                                    {categoria === 'OTR' && (
+                                                                        <td>{formatearPrecio(pedidoItem?.precio)}</td>
+                                                                    )}
+                                                                    {user.rol !== "planta" && (
+                                                                        <td className="text-right fw-semibold">
+                                                                            {formatearPrecio(
+                                                                                (pedidoItem?.precioUnitario || pedidoItem?.precio) *
+                                                                                (pedidoItem?.cantidad || 0)
                                                                             )}
                                                                         </td>
-                                                                        {(categoria === 'KCG' || categoria === 'GUANTES') && (
-                                                                            (pedidoItem?.talla === 't0') ? <td> Surtido </td> : <td>{capitalize(pedidoItem?.talla || '')}</td>
-                                                                        )}
-                                                                        <td className='fw-semibold'>{pedidoItem?.cantidad || ''}</td>
-                                                                        {pedidoItem?.precioUnitario && (
-                                                                            <td>{formatearPrecio(pedidoItem?.precioUnitario)}</td>
-                                                                        )}
-                                                                        {categoria === 'OTR' && (
-                                                                            <td>{formatearPrecio(pedidoItem?.precio)}</td>
-                                                                        )}
-                                                                        {user.rol !== "planta" && (
-                                                                            <td className="text-right fw-semibold">
-                                                                                {formatearPrecio(
-                                                                                    (pedidoItem?.precioUnitario || pedidoItem?.precio) *
-                                                                                    (pedidoItem?.cantidad || 0)
-                                                                                )}
-                                                                            </td>
-                                                                        )}
-                                                                    </tr>
-                                                                </>
+                                                                    )}
+                                                                </tr>
                                                             ))}
                                                         </tbody>
                                                         <tfoot>

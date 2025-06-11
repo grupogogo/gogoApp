@@ -5,19 +5,18 @@ export const useForm = (initialForm = {}, formValidations = {}) => {
 
     const [formState, setFormState] = useState(initialForm);
     const [formValidation, setFormValidation] = useState({})
-    const { limpiarClienteActivo } = useClientesStore();
     const [showModal, setShowModal] = useState(false);
 
 
     const handleClose = () => setShowModal(false);
     const handleShow = () => {
-        limpiarClienteActivo()
         setShowModal(true);
     }
 
     useEffect(() => { //Se ejecuta cada vez que hay algun cambio en el formState es decir en algun campo del formulario
         createValidators();
     }, [formState])
+
 
     const isFormValid = useMemo(() => {
         for (const formValue of Object.keys(formValidation)) {

@@ -6,18 +6,20 @@ import { useState } from 'react';
 import { ModalImprimirPedido } from './modals/ModalImprimirPedido';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
-import { Button, Col, Row } from 'react-bootstrap';
+import { Col, Row } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useSort } from "@table-library/react-table-library/sort";
 import { useSelector } from 'react-redux';
 
 
-export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, direccionarPedido, abrirModalImprimir, abrirModalGuia }) => {
+export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abrirModalImprimir, abrirModalGuia }) => {
   const [search, setSearch] = useState("");
-  const { capitalize, convertirFecha } = useFuntions();
+  const { capitalize, limpiarFecha, convertirFechaIngles } = useFuntions();
   const [filtroDistribuidor, setFiltroDistribuidor] = useState(null);
   const { user } = useAuthStore();
   const navegar = useNavigate();
+  const [fechaPedido, setFechaPedido] = useState('2025');
+  const [itemsMostrar, setItemsMostrar] = useState(user.rol === "planta" ? 30 : 20);
 
   const pedidos = useSelector(state => state.pedidos.pedidos);
 
@@ -31,11 +33,13 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         // Validar que la fecha sea utilizable
         return pedido.fechaCreacion;
       })
-      .filter((pedido) => pedido.fechaCreacion)
+      .filter((pedido) => pedido.fechaCreacion &&
+        pedido.fechaCreacion.toLowerCase().includes(fechaPedido)
+      )
       .sort((a, b) => {
         // Convertir las fechas para ordenarlas
-        const fechaA = convertirFecha(a.fechaCreacion);
-        const fechaB = convertirFecha(b.fechaCreacion);
+        const fechaA = convertirFechaIngles(a.fechaCreacion);
+        const fechaB = convertirFechaIngles(b.fechaCreacion);
 
         return fechaB - fechaA; // Ordenar de más reciente a más antigua
       })
@@ -76,7 +80,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
     },
     {
       sortFns: {
-        FECHA: (array) => array.sort((a, b) => a.fechaCreacion.localeCompare(b.fechaCreacion)),
+        FECHA: (array) => array.sort((a, b) => convertirFechaIngles(a.fechaCreacion) - convertirFechaIngles(b.fechaCreacion)),
         CLIENTE: (array) => array.sort((a, b) => a.cliente.nombre.localeCompare(b.cliente.nombre)),
         CIUDAD: (array) => array.sort((a, b) => a.cliente.ciudad.localeCompare(b.cliente.ciudad)),
         ESTADO: (array) => array.sort((a, b) => a.estado.localeCompare(b.estado)),
@@ -85,7 +89,6 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
   );
 
   function onSortChange(action, state) {
-    console.log(action, state);
   }
 
   const marginTheme = {
@@ -98,14 +101,12 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
     Table: `
         --data-table-library_grid-template-columns: 
              7%  
-             13%  
-             23% 
-             10% 
-             8%             
-             5.5%
-             5.5%
-             5.5%
-             5.5%
+             8%  
+             28% 
+             16% 
+             7%
+             7%
+             7%
              12%
              5%
     `,
@@ -114,12 +115,12 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
       Table: `
         --data-table-library_grid-template-columns: 
              8%  
-             13% 
+             10% 
              auto 
              7% 
              7%             
-             5%
-             auto
+             7%
+             15%
              8%             
     `,
     }
@@ -130,7 +131,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
   const pagination = usePagination(filteredData, {
     state: {
       page: 0,
-      size: 10,
+      size: itemsMostrar,
     },
   });
 
@@ -151,7 +152,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
       {
         label: 'Fecha',
         renderCell: (item) => (
-          <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{capitalize(item.fechaCreacion)}</span>
+          <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{capitalize(limpiarFecha(item.fechaCreacion))}</span>
         ),
       },
       {
@@ -185,7 +186,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           return (
             <div className="text-center">
               <button
-                className="btn btn-warning text-white"
+                className="btn btn-outline-warning btn-sm py-1"
                 onClick={() => detallePedido(item)}
                 title="Ver detalles del pedido"
               >
@@ -290,7 +291,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
       {
         label: 'Fecha',
         renderCell: (item) => (
-          <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{(capitalize(item.fechaCreacion))}</span>
+          <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{limpiarFecha(item.fechaCreacion)}</span>
         ),
         sort: { sortKey: "FECHA" },
       },
@@ -306,7 +307,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         renderCell: (item) => (
           <div className="text-center">
             <button
-              className="btn"
+              className="btn btn-outline-secondary btn-sm py-1 w-100"
               onClick={() => abrirModalGuia(item)}
               title="Ver detalles del pedido"
             >
@@ -317,25 +318,12 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         sort: { sortKey: "CIUDAD" },
       },
       {
-        label: <i className="fa fa-truck-ramp-box"></i>,
-        renderCell: (item) => {
-          const tipoDespacho = {
-            punto: 'E. Punto',
-            urbano: 'D. Urbano',
-            envio: 'Despacho',
-            recogida: 'E. planta',
-          };
-          const despacho = tipoDespacho[item.tipoDespacho] || 'Desconocido';
-          return <div className="text-center"> <span title={`Tipo de despacho: ${despacho}`}>{despacho}</span></div>
-        },
-      },
-      {
         label: <i className="fa fa-eye"></i>,
         renderCell: (item) => {
           return (
             <div className="text-center">
               <button
-                className="btn btn-warning text-white btn-sm"
+                className="btn btn-outline-warning btn-sm py-1"
                 onClick={() => detallePedido(item)}
                 title="Ver detalles del pedido"
               >
@@ -351,22 +339,22 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           return (
             <div className="text-center">
               <button
-                className="btn btn-info btn-sm"
+                className="btn btn-outline-info py-1"
                 onClick={() => abrirModalImprimir(item)}
                 title="Ver detalles del pedido"
               >
-                <i className="fa fa-print" style={{ color: 'white' }}></i>
+                <i className="fa fa-print"></i>
               </button>
             </div>
           );
         }
       },
-      {
+      /* {
         label: <i className="fa fa-edit"></i>,
         renderCell: (item) => (
           <div className="text-center">
             <button
-              className="btn btn-primary btn-sm"
+              className="btn btn-outline-primary btn-sm py-1"
               onClick={() => direccionarPedido(item)}
               title="Editar pedido"
             >
@@ -374,14 +362,14 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
             </button>
           </div>
         ),
-      },
+      }, */
       {
         label: <i className="fa fa-trash"></i>,
         renderCell: (item) => (
           item.estado === 'pendiente' && (
             <div className="text-center">
               <button
-                className="btn btn-danger btn-sm"
+                className="btn btn-outline-danger btn-sm py-1"
                 onClick={() => eliminarPedido(item)}
                 title="Eliminar pedido"
               >
@@ -397,7 +385,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         label: 'Estado',
         renderCell: (item) => (
           <select
-            style={{ borderWidth: '3px' }}
+            style={{ borderWidth: '2px' }}
             className={`form-select form-select-sm text-center rounded ${item.estado === 'pendiente'
               ? 'border-danger text-danger'
               : item.estado === 'preparado'
@@ -405,7 +393,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
                 : item.estado === 'enviado'
                   ? 'border-info text-info'
                   : item.estado === 'entregado'
-                    ? 'border-warning text-dark'
+                    ? 'border-warning text-warning'
                     : item.estado === 'anulado'
                       ? 'border-dark text-dark'
                       : item.estado === 'devuelto'
@@ -454,6 +442,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
         sort: { sortKey: "ESTADO" },
       },
       {
+        label: 'Items',
         renderCell: (item) => {
           // Crear un mapa para agrupar las cantidades por categoría
           const categorias = {};
@@ -500,12 +489,16 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           return (
             <>
               <OverlayTrigger
-                className='text-left'
+                className='text-center'
                 placement="left"
                 delay={{ show: 250, hide: 400 }}
                 overlay={renderTooltip}
               >
-                <Button className='badge rounded-pill bg-secondary' variant="secondary">{totalProductos}</Button>
+                <span
+                  className='badge rounded-pill bg-secondary w-100 text-center align-items-center'
+                  variant="secondary"
+                  style={{ cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+                >{totalProductos}</span>
               </OverlayTrigger>
             </>
           );
@@ -514,34 +507,32 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
     ];
 
   return (
-    <div className="card shadow-none p-2 mb-5 bg-body-light rounded">
-      <div className="card-header py-3 mb-1">
-        <Row>
-          <Col>
-            <h5 className="m-0 font-weight-bold text-black">Listado Pedidos</h5>
-          </Col>
-          <Col>
-            <div>
-              <div className="text-end">
-                <button
-                  className="btn btn-success"
-                  type="button"
-                  id="dropdownMenuButton1"
-                  data-toggle="dropdown"
-                  aria-haspopup="true"
-                  aria-expanded="false"
-                  onClick={() => navegar('/pedidos')}
-                >
-                  Crear pedido &nbsp;
-                  <i className="fa fa-clipboard-list"></i>
-                </button>
-              </div>
+    <div className="card shadow p-3 rounded">
+      <Row className=' card-header bg-white justify-content-between align-items-middle'>
+        <Col>
+          <h5 className="text-secondary">Listado Pedidos</h5>
+        </Col>
+        <Col>
+          <div>
+            <div className="text-end">
+              <button
+                className="btn btn-outline-success"
+                type="button"
+                id="dropdownMenuButton1"
+                data-toggle="dropdown"
+                aria-haspopup="true"
+                aria-expanded="false"
+                onClick={() => navegar('/pedidos')}
+              >
+                Crear pedido &nbsp;
+                <i className="fa fa-clipboard-list"></i>
+              </button>
             </div>
-          </Col>
-        </Row>
-      </div>
-      <div className="row justify-content-between align-items-center">
-        <div className="col-md-6 col-6 mb-2">
+          </div>
+        </Col>
+      </Row>
+      <Row className="justify-content-between align-items-center">
+        <div className="col-md-6 col-6">
           <select
             className="form-select"
             onChange={handleFilterChange}
@@ -553,8 +544,8 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           </select>
         </div>
 
-        <div className="col-md-5 col-6">
-          <div className="input-group mb-3 mt-3">
+        <div className="col-md-4 col-5">
+          <div className="input-group mt-2">
             <input
               type="text"
               className="form-control"
@@ -566,13 +557,68 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
               onChange={handleSearch}
             />
             <div className="input-group-append">
-              <button className="btn btn-primary" type="button">
+              <span className="btn btn-outline-primary" type="button">
                 <i className="fas fa-search fa-sm" />
-              </button>
+              </span>
             </div>
           </div>
         </div>
-      </div>
+      </Row>
+      <Row className='justify-content-between'>
+        {/* Columna para el select cantidad items a mostrar */}
+        <div className="col-3 align-items-center">
+
+          <div className="input-group form-select-sm">
+            <span className='m-2'>Año a filtrar</span>
+            <select
+              className="form-select form-select-sm w-auto"
+              title='Filtro por año'
+              value={fechaPedido}
+              style={{ maxWidth: 'fit-content' }}
+              onChange={e => {
+                const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                setFechaPedido(value);
+                pagination.fns.onSetPage(0);
+              }}
+            >
+              <option value={'2025'}>2025</option>
+              <option value={'2024'}>2024</option>
+              <option value={'2023'}>2023</option>
+              <option value={'2022'}>2022</option>
+              <option value={'2021'}>2021</option>
+              <option value={'2020'}>2020</option>
+              <option value={'2019'}>2019</option>
+              <option value={'2018'}>2018</option>
+              <option value={'2017'}>2017</option>
+            </select>
+          </div>
+        </div>
+        {/* Columna para el select cantidad items a mostrar */}
+        <div className="col-md-2 align-items-center m-1 text-end">
+          <div className="input-group form-select-sm">
+            <span className='m-2'>
+              Items
+            </span>
+            <select
+              className="form-select form-select-sm w-auto"
+              value={itemsMostrar}
+              title='Cantidad de items a mostrar'
+              style={{ maxWidth: 'fit-content' }}
+              onChange={e => {
+                const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                setItemsMostrar(value);
+                pagination.fns.onSetPage(0);
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={100000}>Todos</option>
+            </select>
+          </div>
+        </div>
+      </Row>
 
       <div className="table-responsive table table-hover text-start w-100 compact-table">
         <CompactTable
@@ -585,15 +631,14 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, dir
           sort={sort}
         />
       </div>
-      <br />
       <div style={{ display: "flex", justifyContent: "space-between", width: "99%" }}>
-        <span className="fw-bold">Total registros: {filteredData.nodes.length}</span>
-        <span className="fw-bold">Páginas: {pagination.state.getTotalPages(filteredData.nodes)}</span>
+        <span>Total registros: {filteredData.nodes.length}</span>
+        <span>Páginas: {pagination.state.getTotalPages(filteredData.nodes)}</span>
         <span>
           Página:{" "}
           {pagination.state.getPages(filteredData.nodes).map((_, index) => (
             <button
-              className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1'}
+              className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1 border'}
               key={index}
               type="button"
               style={{

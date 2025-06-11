@@ -4,9 +4,10 @@ import { ProductsTable } from './forms/ProductsTable';
 import { useForm } from '../../hooks/useForm';
 import Swal from 'sweetalert2';
 import { useProductosStore } from '../../hooks/useProductosStore';
+import { Collapse } from 'react-bootstrap';
 
 
-export const OtrosProductos = ({ agregarPedidoGeneral }) => {
+export const OtrosProductos = ({ agregarPedidoGeneral, resetearPedido }) => {
     const [cantidadItems, setCantidadItems] = useState(0);
     const [pedidoOtros, setPedidoOtros] = useState([]);
     const [band, setBand] = useState(true);
@@ -29,6 +30,20 @@ export const OtrosProductos = ({ agregarPedidoGeneral }) => {
         precioProducto: 0,
         detalleProducto: ''
     });
+    useEffect(() => {
+        if (resetearPedido) {
+            setPedidoOtros([]);
+            setCantidadItems(0);
+            setVTotal(0);
+            setBand(true);
+            setAlternarProducto(false);
+            const collapseElement = document.getElementById('collapseOtros');
+            if (collapseElement) {
+                const bsCollapse = Collapse.getInstance(collapseElement) || new Collapse(collapseElement, { toggle: false });
+                bsCollapse.hide();
+            }
+        }
+    }, [resetearPedido]);
 
     const almacenarPedido = () => {
 

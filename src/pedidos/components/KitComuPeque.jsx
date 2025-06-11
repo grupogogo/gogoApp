@@ -3,16 +3,31 @@ import { ImagesCiriosComunion } from "./ImagesCiriosComunion";
 import { ProductsTable } from "./forms/ProductsTable";
 import { HeadersPedidos } from "./forms/HeadersPedidos";
 import { useForm } from "../../hooks";
+import { Collapse } from 'bootstrap';
 
-export const KitComuPeque = ({ agregarPedidoGeneral }) => {
+export const KitComuPeque = ({ agregarPedidoGeneral, resetearPedido }) => {
     const [cantidadItems, setCantidadItems] = useState(0);
     const [pedidoKCP, setPedidoKCP] = useState([]);
     const { detalle, onInputChange } = useForm();
 
 
-    useEffect(() => {   
+    useEffect(() => {
         agregarPedidoGeneral('KCP', pedidoKCP, detalle); // Llamamos al callback con el pedido y la categoría           
     }, [pedidoKCP, detalle]);
+
+    useEffect(() => {
+        if (resetearPedido) {
+            setPedidoKCP([]);
+            setCantidadItems(0);
+            // Cierra el collapse manualmente con Bootstrap
+            const collapseElement = document.getElementById('collapseTwo');
+            if (collapseElement) {
+                const bsCollapse = Collapse.getInstance(collapseElement) || new Collapse(collapseElement, { toggle: false });
+                bsCollapse.hide();
+            }
+        }
+    }, [resetearPedido]);
+
 
     return (
         <>

@@ -15,6 +15,7 @@ export const pedidosSlice = createSlice({
         },
         onLoadPedidos: (state, { payload }) => {
             state.isLoadingPedidos = false;
+            console.log(payload)
             state.pedidos = payload.pedidos;
         },
         onLoadPedidosActivo: (state, { payload }) => {            

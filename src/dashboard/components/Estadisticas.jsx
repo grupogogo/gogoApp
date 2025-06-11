@@ -1,7 +1,7 @@
 import { useFuntions } from "../../hooks";
 
 
-export const Estadisticas = ({ totales, tipo, gastoUsuarios = 0  }) => {
+export const Estadisticas = ({ totales, tipo, gastoUsuarios = 0 }) => {
     const { number_format } = useFuntions();
     const { formatearPrecio } = useFuntions();
 
@@ -11,106 +11,93 @@ export const Estadisticas = ({ totales, tipo, gastoUsuarios = 0  }) => {
             <div className="row">
                 {(tipo === 1) && (
                     <>
-                        {/* Earnings (Monthly) Card Example */}
-                        <div className="col-xl-3 col-md-6 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#4e73df" }}>
+                        {/* Ventas (Mensual) */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom border-primary" style={{ fontSize: "0.85rem" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-primary text-uppercase mb-1">
-                                                Ventas (Mensual)
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center">
-                                                <span className="badge text-bg-primary text-light">
-                                                    {formatearPrecio(totales.currentMonthSales)
-                                                    }
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small mb-1">Ventas (Mensual)</div>
+                                            <div className="fw-bold text-primary">
+                                                <span className="badge bg-primary text-light">
+                                                    {formatearPrecio(totales.currentMonthSales)}
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-calendar fa-2x text-primary" />
+                                        <div>
+                                            <i className="fas fa-calendar fa-lg text-primary"></i>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {/* Earnings (Anual) Card Example */}
-                        <div className="col-xl-3 col-md-6 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#1cc88a" }}>
+                        {/* Ventas en el año */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom" style={{ fontSize: "0.85rem", borderColor: "#1cc88a" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-success text-uppercase mb-1">
-                                                Ventas en el año
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center">
-                                                <span className="badge text-bg-success text-light">
-                                                    {formatearPrecio(totales.totalSales)}</span>
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small mb-1">Ventas en el año</div>
+                                            <div className="fw-bold text-success">
+                                                <span className="badge bg-success text-light">
+                                                    {formatearPrecio(totales.totalSales)}
+                                                </span>
                                             </div>
                                         </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-dollar-sign fa-2x text-success" />
+                                        <div>
+                                            <i className="fas fa-dollar-sign fa-lg text-success"></i>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {/* Pending Orders Card Example */}
-                        <div className="col-xl-3 col-md-6 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "red" }}>
+                        {/* Pedidos pendientes */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom border-danger" style={{ fontSize: "0.85rem" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-danger text-uppercase mb-1">
-                                                Pedidos pendientes
-                                            </div>
-                                            <div className="row align-items-center">
-                                                <div className="col-auto">
-                                                    <div className="h5 mb-0 fw-bold text-center">
-                                                        <span className="badge text-bg-danger text-light">
-                                                            {number_format((totales.pendientes / totales.totalOrders) * 100)}%
-                                                        </span>
-                                                    </div>
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small">Pedidos pendientes</div>
+
+                                            
+                                            <div className="d-flex align-items-center justify-content-between gap-2">
+                                                <div className="fw-bold text-danger" style={{ whiteSpace: "nowrap" }}>
+                                                    <span className="badge bg-danger text-light">
+                                                        {number_format((totales.pendientes / totales.totalOrders) * 100)}%
+                                                    </span>
                                                 </div>
-                                                <div className="col">
-                                                    <div className="progress">
+                                                <div className="flex-grow-1">
+                                                    <div className="progress" style={{ height: "6px" }}>
                                                         <div
                                                             className="progress-bar progress-bar-striped bg-danger"
                                                             role="progressbar"
                                                             style={{ width: `${(totales.pendientes / totales.totalOrders) * 100}%` }}
-
-                                                            aria-valuenow="50"
+                                                            aria-valuenow={number_format((totales.pendientes / totales.totalOrders) * 100)}
                                                             aria-valuemin="0"
                                                             aria-valuemax="100"
-                                                        >{totales.pendientes}</div>
+                                                        ></div>
                                                     </div>
                                                 </div>
                                             </div>
+
                                         </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-clipboard-list fa-2x text-danger" />
+                                        <div>
+                                            <i className="fas fa-clipboard-list fa-lg text-danger"></i>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {/* Pending Requests Card Example */}
-                        <div className="col-xl-3 col-md-6 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#f6c23e" }}>
+                        {/* Pedidos durante el año */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom" style={{ fontSize: "0.85rem", borderColor: "#f6c23e" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-warning text-uppercase mb-1">
-                                                pedidos durante el año
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center">
-                                                <span className="badge text-bg-warning text-light">
-                                                    {totales.totalOrders}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-list fa-2x text-warning" />
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small mb-1">Pedidos durante el año</div>
+                                            <span className="badge bg-warning text-light">
+                                                {totales.totalOrders}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -120,105 +107,91 @@ export const Estadisticas = ({ totales, tipo, gastoUsuarios = 0  }) => {
                 )}
                 {(tipo === 2) && (
                     <>
-                        {/* Earnings (Monthly) Card Example */}
-                        <div className="col-xl-3 col-md-6 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#4e73df" }}>
+                        {/* Enviado */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom border-primary" style={{ fontSize: "0.85rem" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-primary text-uppercase mb-1">
-                                                Enviado
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center">
-                                                <span className="badge text-bg-primary text-light">
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small mb-1">Enviado</div>
+                                            <div className="fw-bold text-primary">
+                                                <span className="badge bg-primary text-light">
                                                     {totales.enviado}
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-calendar fa-2x text-primary" />
+                                        <div>
+                                            <i className="fas fa-calendar fa-lg text-primary"></i>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {/* Earnings (Anual) Card Example */}
-                        <div className="col-xl-3 col-md-6 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#1cc88a" }}>
+                        {/* Pagado */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom" style={{ fontSize: "0.85rem", borderColor: "#1cc88a" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-success text-uppercase mb-1">
-                                                Pagado
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center">
-                                                <span className="badge text-bg-success text-light">
-                                                    {totales.pagado}</span>
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small mb-1">Pagado</div>
+                                            <div className="fw-bold text-success">
+                                                <span className="badge bg-success text-light">
+                                                    {totales.pagado}
+                                                </span>
                                             </div>
                                         </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-dollar-sign fa-2x text-success" />
+                                        <div>
+                                            <i className="fas fa-dollar-sign fa-lg text-success"></i>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {/* Pending Orders Card Example */}
-                        <div className="col-xl-3 col-md-6 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "red" }}>
+                        {/* Pedidos pendientes */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom" style={{ fontSize: "0.85rem", borderColor: "red" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-danger text-uppercase mb-1">
-                                                Pedidos pendientes
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small mb-1">Pedidos pendientes</div>
+                                            <div className="fw-bold text-danger">
+                                                <span className="badge bg-danger text-light">
+                                                    {totales.pendientes}
+                                                </span>
                                             </div>
-                                            <div className="row align-items-center">
-                                                <div className="col-auto">
-                                                    <div className="h5 mb-0 fw-bold text-center">
-                                                        <span className="badge text-bg-danger text-light">
-                                                            {totales.pendientes}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="col">
-                                                    <div className="progress">
-                                                        <div
-                                                            className="progress-bar progress-bar-striped bg-danger text-black"
-                                                            role="progressbar"
-                                                            style={{ width: `${(totales.pendientes / totales.totalOrders) * 100}%` }}
-                                                            aria-valuenow="50"
-                                                            aria-valuemin="0"
-                                                            aria-valuemax="100"
-                                                        ></div>
-                                                    </div>
-                                                </div>
+                                            <div className="progress mt-1" style={{ height: "6px" }}>
+                                                <div
+                                                    className="progress-bar progress-bar-striped bg-danger"
+                                                    role="progressbar"
+                                                    style={{ width: `${(totales.pendientes / totales.totalOrders) * 100}%` }}
+                                                    aria-valuenow={number_format((totales.pendientes / totales.totalOrders) * 100)}
+                                                    aria-valuemin="0"
+                                                    aria-valuemax="100"
+                                                ></div>
                                             </div>
                                         </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-clipboard-list fa-2x text-danger" />
+                                        <div>
+                                            <i className="fas fa-clipboard-list fa-lg text-danger"></i>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {/* Pending Requests Card Example */}
-                        <div className="col-xl-3 col-md-6 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#f6c23e" }}>
+                        {/* Pedidos realizados 2025 */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom" style={{ fontSize: "0.85rem", borderColor: "#f6c23e" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-warning text-uppercase mb-1">
-                                                Pedidos realizados 2025
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center ">
-                                                <span className="badge text-bg-warning text-light">
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small mb-1">Pedidos realizados 2025</div>
+                                            <div className="fw-bold text-warning">
+                                                <span className="badge bg-warning text-light">
                                                     {totales.totalOrders}
                                                 </span>
                                             </div>
-
                                         </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-list fa-2x text-warning" />
+                                        <div>
+                                            <i className="fas fa-list fa-lg text-warning"></i>
                                         </div>
                                     </div>
                                 </div>
@@ -228,206 +201,90 @@ export const Estadisticas = ({ totales, tipo, gastoUsuarios = 0  }) => {
                 )}
                 {(tipo === 3) && (
                     <>
-                        {/* Earnings (Monthly) Card Example */}
-                        <div className="col-md-2 mb-4 col-6">
-                            <div className="card border-start-custom shadow py-2 border-primary text-center align-middle">
+                        {/* KCG */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom border-primary" style={{ fontSize: "0.85rem" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="fs-3 fw-bold text-primary text-uppercase">
-                                                KCG {' '}
-                                                <span className="badge text-bg-primary text-light">
-                                                    {totales.enviado}
-                                                </span>
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {/* Earnings (Anual) Card Example */}
-                        <div className="col-md-2 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#1cc88a" }}>
-                                <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-success text-uppercase mb-1">
-                                                Pagado
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center">
-                                                <span className="badge text-bg-success text-light">
-                                                    {totales.pagado}</span>
-                                            </div>
-                                        </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-dollar-sign fa-2x text-success" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {/* Pending Orders Card Example */}
-                        <div className="col-md-2 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "red" }}>
-                                <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-danger text-uppercase mb-1">
-                                                Pedidos pendientes
-                                            </div>
-                                            <div className="row align-items-center">
-                                                <div className="col-auto">
-                                                    <div className="h5 mb-0 fw-bold text-center">
-                                                        <span className="badge text-bg-danger text-light">
-                                                            {totales.pendientes}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="col">
-                                                    <div className="progress">
-                                                        <div
-                                                            className="progress-bar progress-bar-striped bg-danger text-black"
-                                                            role="progressbar"
-                                                            style={{ width: `${(totales.pendientes / totales.totalOrders) * 100}%` }}
-                                                            aria-valuenow="50"
-                                                            aria-valuemin="0"
-                                                            aria-valuemax="100"
-                                                        ></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-clipboard-list fa-2x text-danger" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {/* Pending Requests Card Example */}
-                        <div className="col-md-2 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#f6c23e" }}>
-                                <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-warning text-uppercase mb-1">
-                                                Pedidos realizados 2025
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center ">
-                                                <span className="badge text-bg-warning text-light">
-                                                    {totales.totalOrders}
-                                                </span>
-                                            </div>
-
-                                        </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-list fa-2x text-warning" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {/* Earnings (Monthly) Card Example */}
-                        <div className="col-md-2 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#4e73df" }}>
-                                <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-primary text-uppercase mb-1">
-                                                Enviado
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center">
-                                                <span className="badge text-bg-primary text-light">
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small mb-1">KCG</div>
+                                            <div className="fw-bold text-primary">
+                                                <span className="badge bg-primary text-light">
                                                     {totales.enviado}
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-calendar fa-2x text-primary" />
+                                        <div>
+                                            <i className="fas fa-calendar fa-lg text-primary"></i>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {/* Earnings (Anual) Card Example */}
-                        <div className="col-md-2 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#1cc88a" }}>
+                        {/* Pagado */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom" style={{ fontSize: "0.85rem", borderColor: "#1cc88a" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-success text-uppercase mb-1">
-                                                Pagado
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center">
-                                                <span className="badge text-bg-success text-light">
-                                                    {totales.pagado}</span>
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small mb-1">Pagado</div>
+                                            <div className="fw-bold text-success">
+                                                <span className="badge bg-success text-light">
+                                                    {totales.pagado}
+                                                </span>
                                             </div>
                                         </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-dollar-sign fa-2x text-success" />
+                                        <div>
+                                            <i className="fas fa-dollar-sign fa-lg text-success"></i>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        {/* Pending Orders Card Example */}
-                        <div className="col-md-2 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "red" }}>
-                                <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-danger text-uppercase mb-1">
-                                                Pedidos pendientes
-                                            </div>
-                                            <div className="row align-items-center">
-                                                <div className="col-auto">
-                                                    <div className="h5 mb-0 fw-bold text-center">
-                                                        <span className="badge text-bg-danger text-light">
-                                                            {totales.pendientes}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="col">
-                                                    <div className="progress">
-                                                        <div
-                                                            className="progress-bar progress-bar-striped bg-danger text-black"
-                                                            role="progressbar"
-                                                            style={{ width: `${(totales.pendientes / totales.totalOrders) * 100}%` }}
-                                                            aria-valuenow="50"
-                                                            aria-valuemin="0"
-                                                            aria-valuemax="100"
-                                                        ></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-clipboard-list fa-2x text-danger" />
-                                        </div>
+                        {/* Pedidos pendientes */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3">
+                            <div className="card shadow-sm border-start-custom" style={{ fontSize: "0.85rem", borderColor: "red" }}>
+                                <div className="card-body"></div>
+                                <div className="d-flex align-items-center justify-content-between"></div>
+                                <div>
+                                    <div className="text-muted small mb-1">Pedidos pendientes</div>
+                                    <div className="fw-bold text-danger">
+                                        <span className="badge bg-danger text-light">
+                                            {totales.pendientes}
+                                        </span>
                                     </div>
+                                    <div className="progress mt-1" style={{ height: "6px" }}>
+                                        <div
+                                            className="progress-bar progress-bar-striped bg-danger"
+                                            role="progressbar"
+                                            style={{ width: `${(totales.pendientes / totales.totalOrders) * 100}%` }}
+                                            aria-valuenow={number_format((totales.pendientes / totales.totalOrders) * 100)}
+                                            aria-valuemin="0"
+                                            aria-valuemax="100"
+                                        ></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <i className="fas fa-clipboard-list fa-lg text-danger"></i>
                                 </div>
                             </div>
                         </div>
-                        {/* Pending Requests Card Example */}
-                        <div className="col-md-2 mb-4 col-6">
-                            <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#f6c23e" }}>
+
+                        {/* Pedidos realizados 2025 */}
+                        <div className="col-6 col-md-6 col-xl-3 mb-3" >
+                            <div className="card shadow-sm border-start-custom" style={{ fontSize: "0.85rem", borderColor: "#f6c23e" }}>
                                 <div className="card-body">
-                                    <div className="row align-items-center">
-                                        <div className="col">
-                                            <div className="text-xs fw-bold text-warning text-uppercase mb-1">
-                                                Pedidos realizados 2025
-                                            </div>
-                                            <div className="h5 mb-0 fw-bold text-center ">
-                                                <span className="badge text-bg-warning text-light">
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div className="text-muted small mb-1">Pedidos realizados 2025</div>
+                                            <div className="fw-bold text-warning">
+                                                <span className="badge bg-warning text-light">
                                                     {totales.totalOrders}
                                                 </span>
                                             </div>
-
                                         </div>
-                                        <div className="col-auto">
-                                            <i className="fas fa-list fa-2x text-warning" />
+                                        <div>
+                                            <i className="fas fa-list fa-lg text-warning"></i>
                                         </div>
                                     </div>
                                 </div>

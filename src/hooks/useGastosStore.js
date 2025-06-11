@@ -1,5 +1,5 @@
 import { useDispatch, useSelector } from "react-redux";
-import { onSetGastoActivo, onLoadGastos, onSetDefaultActiveGasto } from "../store";
+import { onSetGastoActivo, onLoadGastos, onSetDefaultActiveGasto, onSaveGasto } from "../store";
 import { gogoApi } from "../api";
 
 
@@ -9,6 +9,7 @@ export const useGastosStore = () => {
     const dispatch = useDispatch();
 
     const startLoadingGastos = async () => {
+        dispatch(onSaveGasto())
         try {
             const { data } = await gogoApi.get('/gastos', { user });
             dispatch(onLoadGastos(data))
@@ -32,11 +33,22 @@ export const useGastosStore = () => {
             console.log(error)
         }
     }
+
+    const startDeleteGasto = async (gasto) => {
+        //dispatch(onDeletePedido(pedido.pedido_id));
+        console.log(gasto)
+        try {
+            const { data } = await gogoApi.delete(`/gastos/${gasto.gastos_id}`);
+        } catch (error) {
+            console.log(error)
+        }
+    }
     return {
         gastos,
         startAddNewGasto,
         startLoadingGastos,
         setGastoActivo,
-        limpiarGastoActivo
+        limpiarGastoActivo,
+        startDeleteGasto
     }
 }

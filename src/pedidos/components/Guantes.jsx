@@ -3,15 +3,16 @@ import { ProductsTable } from './forms/ProductsTable';
 import { FormGuantes } from './forms/FormGuantes';
 import { HeadersPedidos } from './forms/HeadersPedidos';
 import { useClientesStore, useForm, usePedidosStore } from '../../hooks';
+import { Collapse } from 'bootstrap';
 
 
-export const Guantes = ({ agregarPedidoGeneral }) => {
+export const Guantes = ({ agregarPedidoGeneral, resetearPedido }) => {
     let total = 0
     const [cantidadItems, setCantidadItems] = useState(0)
     const [pedidoGuantes, setPedidoGuantes] = useState([]);
     const { detalle = '', onInputChange } = useForm();
-    const { clienteActivo } = useClientesStore();        
-    const {startSetGuantes, totalGuantes} = usePedidosStore();
+    const { clienteActivo } = useClientesStore();
+    const { startSetGuantes, totalGuantes } = usePedidosStore();
     const precioGuantes = {
         guantes: {
             BLANCOS: clienteActivo.precios.precioGuantes.gb,
@@ -22,12 +23,24 @@ export const Guantes = ({ agregarPedidoGeneral }) => {
 
 
     useEffect(() => {
+        if (resetearPedido) {
+            setPedidoGuantes([]);
+            setCantidadItems(0);
+            const collapseElement = document.getElementById('collapseSix');
+            if (collapseElement) {
+                const bsCollapse = Collapse.getInstance(collapseElement) || new Collapse(collapseElement, { toggle: false });
+                bsCollapse.hide();
+            }
+        }
+    }, [resetearPedido]);
+
+    useEffect(() => {
         setCantidadItems(pedidoGuantes.reduce((acc, item) => acc + parseInt(item.cantidad), 0));
         total = Object.values(pedidoGuantes).reduce((acc, item) => {
             const precio = precioGuantes.guantes[item.categoria];
             return acc + (parseInt(item.cantidad) * (precio || 0));
         }, 0);
-        agregarPedidoGeneral('GUANTES', pedidoGuantes, detalle);        
+        agregarPedidoGeneral('GUANTES', pedidoGuantes, detalle);
         startSetGuantes(total)
 
     }, [pedidoGuantes, detalle])
@@ -36,7 +49,7 @@ export const Guantes = ({ agregarPedidoGeneral }) => {
         <>
             {/* HEADER*/}
             <div className="">
-                <HeadersPedidos codigo='GUA' titulo='GUANTES  [BLANCOS - NEGROS - MITÓN]' cantidadItems={cantidadItems} collapsed='Six'/>
+                <HeadersPedidos codigo='GUA' titulo='GUANTES  [BLANCOS - NEGROS - MITÓN]' cantidadItems={cantidadItems} collapsed='Six' />
                 <div id="collapseSix" className="collapse mt-2" aria-labelledby="headingSix" data-bs-parent="#accordionExample"
                     style={{ overflow: 'hidden', transition: 'height 0.3s ease' }}>
                     <div className="row">

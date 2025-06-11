@@ -11,7 +11,7 @@ const Navbar = () => {
     };
 
     return (
-        <nav className="navbar navbar-expand navbar-light bg-white shadow" style={{ marginLeft: "80px" }}>
+        <nav className="navbar navbar-expand navbar-light bg-white shadow  main-content  d-flex justify-content-between" style={{ marginLeft: user.rol !== 'planta' ? "80px" : "0px" }}>
             {/* Menú Móvil */}
             <div className="d-md-none">
                 <button
@@ -25,13 +25,31 @@ const Navbar = () => {
                     style={{ left: 10, top: "50px", minWidth: "200px", zIndex: 1000 }}
                 >
                     <li><NavLink className="dropdown-item" to="/dashboard">Dashboard</NavLink></li>
-                    <li><NavLink className="dropdown-item" to="/blur">Budget</NavLink></li>
+                    <li><NavLink className="dropdown-item" to="/gastos">Gastos</NavLink></li>
                     <li><NavLink className="dropdown-item" to="/pedidos">Crear pedido</NavLink></li>
                     <li><NavLink className="dropdown-item" to="/listapedidos">Listar pedidos</NavLink></li>
                     <li><NavLink className="dropdown-item" to="/clientes">Clientes</NavLink></li>
                     <li><NavLink className="dropdown-item" to="/CuentasXCobrar">Cuentas por cobrar</NavLink></li>
                 </ul>
             </div>
+            {user.role === 'planta' && (
+                <div className="align-items-center">
+                    {/* Logo */}
+                    <div className="text-center mb-4 bg-secondary border-2 rounded d-none d-md-block">
+                        <img
+                            src="/images/logos/LOGO GOGO BLANCO.webp"
+                            alt="Logo"
+                            style={{
+                                width: "70px",
+                                height: "auto",
+                                transition: "width 2s ease",
+                                margin: "10px 0",
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
 
             {/* Fecha actual */}
             <div className="text-secondary small mx-3">

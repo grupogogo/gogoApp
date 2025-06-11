@@ -2,25 +2,35 @@ import { useEffect, useState } from 'react';
 import { ImagesCiriosComunion, ProductsTable } from '..';
 import { HeadersPedidos } from './forms/HeadersPedidos';
 import { useForm } from '../../hooks';
+import { Collapse } from 'bootstrap';
 
 
-
-export const KitComungrande = ({ agregarPedidoGeneral }) => {
+export const KitComungrande = ({ agregarPedidoGeneral, resetearPedido }) => {
     const [cantidadItems, setCantidadItems] = useState(0)
     const [pedidoKCG, setPedidoKCG] = useState([]);
     const { detalle = '', onInputChange } = useForm();
 
 
+    useEffect(() => {
+        if (resetearPedido) {           
+            setPedidoKCG([]);
+            setCantidadItems(0);
+            // Cierra el collapse manualmente con Bootstrap
+            const collapseElement = document.getElementById('collapseOne');
+            if (collapseElement) {
+                const bsCollapse = Collapse.getInstance(collapseElement) || new Collapse(collapseElement, { toggle: false });
+                bsCollapse.hide();
+            }
 
+        }
+    }, [resetearPedido]);
 
     useEffect(() => {
-
         agregarPedidoGeneral('KCG', pedidoKCG, detalle); // Llamamos al callback con el pedido y la categoría
     }, [pedidoKCG, detalle]);
     return (
         <>
             {/* HEADER KIT COMUNION */}
-
             <div className="">
                 <HeadersPedidos codigo='KCG' titulo='KIT COMUNION GRANDE' cantidadItems={cantidadItems} collapsed='One' />
                 <div id="collapseOne" className="collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample"

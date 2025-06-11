@@ -1,5 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { useFuntions } from '../../hooks';
+
+// Register the datalabels plugin
+Chart.register(ChartDataLabels);
 
 const number_format = (number, decimals, dec_point, thousands_sep) => {
     number = (number + '').replace(',', '').replace(' ', '');
@@ -26,6 +31,7 @@ const number_format = (number, decimals, dec_point, thousands_sep) => {
 
 export const BarChart = ({ totales }) => {
 
+    const { buscarNombre } = useFuntions();
     const chartRef = useRef(null);
     useEffect(() => {
         totales.sort((a, b) => b.cantidad - a.cantidad);
@@ -35,11 +41,14 @@ export const BarChart = ({ totales }) => {
 
         // Iterar sobre cada objeto y extraer las propiedades
         totales.map(({ categoria, cantidad }) => {
-            categorias.push(categoria);
+            categorias.push(buscarNombre(categoria));
             cantidades.push(cantidad);
         });
 
         const ctx = chartRef.current.getContext('2d');
+        // Mapear las categorías para mostrar el nombre usando buscarNombre
+
+
         const myBarChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -75,18 +84,26 @@ export const BarChart = ({ totales }) => {
                         'rgb(153, 102, 255)',
                         'rgb(201, 203, 207)'
                     ],
-                    borderWidth: 1
+                    borderWidth: 5,
+                    // Elimina el espacio entre columnas
+                    barPercentage: 1.0,
+                    categoryPercentage: 1.0
                 }]
             },
             options: {
                 maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        left: 10,
-                        right: 25,
-                        top: 25,
-                        bottom: 0
-                    }
+                plugins: {
+                    datalabels: {
+                        display: true,
+                        color: 'gray',
+                        font: {
+                            size: 18,
+                            weight: 'bold'
+                        },
+                        anchor: 'end', // ✅ mantener
+                        align: 'end',  // ✅ cambiar de 'start' a 'end'
+                        formatter: (value) => number_format(value)
+                    },
                 },
                 scales: {
                     x: {
@@ -101,7 +118,7 @@ export const BarChart = ({ totales }) => {
                     },
                     y: {
                         ticks: {
-                            min: 0,                            
+                            min: 0,
                             maxTicksLimit: 15,
                             padding: 10,
                             callback: (value) => number_format(value)
@@ -121,7 +138,7 @@ export const BarChart = ({ totales }) => {
                 tooltips: {
                     titleMarginBottom: 10,
                     titleFontColor: '#6e707e',
-                    titleFontSize: 14,
+                    titleFontSize: 20,
                     backgroundColor: "rgb(255,255,255)",
                     bodyFontColor: "#858796",
                     borderColor: '#dddfeb',
@@ -132,12 +149,13 @@ export const BarChart = ({ totales }) => {
                     caretPadding: 10,
                     callbacks: {
                         label: (tooltipItem) => {
+                            console.log(tooltipItem)
                             const datasetLabel = tooltipItem.dataset.label || '';
                             return datasetLabel + ': $' + number_format(tooltipItem.raw);
                         }
                     }
                 }
-            }
+            },
         });
 
         return () => {

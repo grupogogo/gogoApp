@@ -4,18 +4,18 @@ import { useAuthStore, useFuntions, usePedidosStore } from '../../hooks';
 import { Table, Header, HeaderRow, Body, Row, Cell } from "@table-library/react-table-library/table";
 import { useTheme } from "@table-library/react-table-library/theme";
 import { usePagination } from "@table-library/react-table-library/pagination";
-import { Alert, Button } from 'react-bootstrap';
 import { useSort, HeaderCellSort } from "@table-library/react-table-library/sort";
 import { LayoutApp } from '../../layout/LayoutApp';
 import html2canvas from "html2canvas";
 import Swal from 'sweetalert2';
 import jsPDF from "jspdf";
 import { ModalDetallePedido } from '../../pedidos/components/modals/ModalDetallePedido';
+import { Row as Fila } from 'react-bootstrap';
 
 export const CuentasXCobrar = () => {
 
 
-  const { limpiarFecha, calcularTotalesPedidoCxC, formatearPrecio, buscarNombre } = useFuntions();
+  const { limpiarFecha, calcularTotalesPedidoCxC, formatearPrecio, buscarNombre, convertirFechaIngles } = useFuntions();
   const [search, setSearch] = useState("");
   const { user } = useAuthStore();
   const { startLoadingPedidos } = usePedidosStore();
@@ -23,6 +23,8 @@ export const CuentasXCobrar = () => {
   const modalRef = useRef();
   const [pedido, setPedido] = useState({});
   const [showModal, setShowModal] = useState(false)
+  const [fechaPedido, setFechaPedido] = useState('2025');
+  const [itemsMostrar, setItemsMostrar] = useState(10);
 
   const abrirModalDetalle = (pedido) => {
     setPedido(pedido);
@@ -32,6 +34,7 @@ export const CuentasXCobrar = () => {
 
   const pedidos = useSelector(state => state.pedidos.pedidos);
   const data = { nodes: pedidos };
+
 
   const handleEstadoChange = (event) => {
     setEstado(event.target.value);
@@ -46,12 +49,13 @@ export const CuentasXCobrar = () => {
           pedido.cliente.nombre.toLowerCase().includes(search.toLowerCase()) ||
           pedido.fechaCreacion.toLowerCase().includes(search.toLowerCase()) ||
           pedido.pedido_id.toLowerCase().includes(search.toLowerCase())
-        )
+        ) &&
+        pedido.fechaCreacion.toLowerCase().includes(fechaPedido)
       )
       .filter((pedido) => pedido.fechaCreacion) // Validar que la fecha sea utilizable
       .sort((a, b) => {
-        const fechaA = new Date(a.fechaCreacion);
-        const fechaB = new Date(b.fechaCreacion);
+        const fechaA = convertirFechaIngles(a.fechaCreacion);
+        const fechaB = convertirFechaIngles(b.fechaCreacion);
         return fechaB - fechaA; // Ordenar de más reciente a más antigua
       })
       .map((pedido) => ({
@@ -67,7 +71,7 @@ export const CuentasXCobrar = () => {
     },
     {
       sortFns: {
-        FECHA: (array) => array.sort((a, b) => a.fechaCreacion - b.fechaCreacion),
+        FECHA: (array) => array.sort((a, b) => convertirFechaIngles(a.fechaCreacion) - convertirFechaIngles(b.fechaCreacion)),
         CLIENTE: (array) => array.sort((a, b) => a.cliente.nombre.localeCompare(b.cliente.nombre)),
         GASTO: (array) => array.sort((a, b) => a.gasto.localeCompare(b.gasto)),
         CATEGORIA: (array) => array.sort((a, b) => a.subCategoria.localeCompare(b.subCategoria)),
@@ -90,7 +94,7 @@ export const CuentasXCobrar = () => {
   const pagination = usePagination(data, {
     state: {
       page: 0,
-      size: 20,
+      size: itemsMostrar,
     },
   });
   const sizeColumnTheme = {
@@ -161,22 +165,22 @@ export const CuentasXCobrar = () => {
   return (
     <LayoutApp>
       <div className='container'>
-        <div className="card shadow-none p-3 mb-5 bg-body-tertiary rounded">
+        <div className="card shadow-none p-3 mb-5 rounded">
           {/* header */}
-          <div className="card-header py-3">
+          <div className="card-header bg-white py-3">
             <div className="row">
               <div className="col-md-6">
-                <h5 className="m-0 font-weight-bold text-black">Listado de cuentas por estado</h5>
+                <h5 className="m-0 font-weight-bold text-primary">Listado de cuentas por estado</h5>
               </div>
               <div className="col-md-6 d-flex justify-content-end">
-                <Button className='btn-sm d-flex align-items-center gap-2' variant="danger" onClick={handleDownloadPDF}>
+                <button className='btn btn-sm d-flex align-items-center gap-2 btn-outline-danger' onClick={handleDownloadPDF}>
                   <i className="fa-solid fa-file-pdf"></i>
-                  <span>Descargar</span>
-                </Button>
+                  <span>Descargar PDF</span>
+                </button>
               </div>
             </div>
           </div>
-          <div className="row p-3">
+          <Fila className="p-3 justify-content-between">
             {/* Columna para el Select */}
             <div className="col-3">
               <label htmlFor="estadoSelect" className="form-label fw-semibold">Filtrar por estado:</label>
@@ -193,7 +197,6 @@ export const CuentasXCobrar = () => {
                 <option value="preparado">Preparado</option>
               </select>
             </div>
-            <div className='col-4'></div>
             {/* Columna para el input */}
             <div className="col-md-5">
               <label htmlFor="estadoSelect" className="form-label fw-semibold">Buscar:</label>
@@ -206,13 +209,69 @@ export const CuentasXCobrar = () => {
                   onChange={handleSearch}
                 />
                 <div className="input-group-append">
-                  <button className="btn btn-primary" type="button">
+                  <button className="btn border" type="button">
                     <i className="fas fa-search fa-sm" />
                   </button>
                 </div>
               </div>
             </div>
-          </div>
+          </Fila>
+          <Fila className='justify-content-between'>
+            {/* Columna para el select cantidad items a mostrar */}
+            <div className="col-3 align-items-center">
+
+              <div className="input-group form-select-sm">
+                <span className='m-2'>Año a filtrar</span>
+                <select
+                  className="form-select form-select-sm w-auto"
+                  title='Filtro por año'
+                  value={fechaPedido}
+                   style={{ maxWidth: 'fit-content' }}
+                  onChange={e => {
+                    const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                    setFechaPedido(value);
+                    pagination.fns.onSetPage(0);
+                  }}
+                >
+                  <option value={'2025'}>2025</option>
+                  <option value={'2024'}>2024</option>
+                  <option value={'2023'}>2023</option>
+                  <option value={'2022'}>2022</option>
+                  <option value={'2021'}>2021</option>
+                  <option value={'2020'}>2020</option>
+                  <option value={'2019'}>2019</option>
+                  <option value={'2018'}>2018</option>
+                  <option value={'2017'}>2017</option>
+                </select>
+              </div>
+            </div>
+            {/* Columna para el select cantidad items a mostrar */}
+            <div className="col-md-2 align-items-center m-1 text-end">
+              <div className="input-group form-select-sm">
+                <span className='m-2'>
+                  Items
+                </span>
+                <select
+                  className="form-select form-select-sm w-auto"
+                  value={itemsMostrar}
+                  title='Cantidad de items a mostrar'
+                  style={{ maxWidth: 'fit-content' }}
+                  onChange={e => {
+                    const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                    setItemsMostrar(value);
+                    pagination.fns.onSetPage(0);
+                  }}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={100000}>Todos</option>
+                </select>
+              </div>
+            </div>
+          </Fila>
           <div
             ref={modalRef}
             className="table-responsive"
@@ -235,7 +294,9 @@ export const CuentasXCobrar = () => {
                 <>
                   <Header>
                     {/* Fila de encabezados de la tabla */}
-                    <HeaderRow className="table-light text-center">
+                    <HeaderRow className="text-center"
+                      style={{ background: 'red' }}
+                    >
                       <HeaderCellSort sortKey="FECHA" className="text-center fw-semibold">Fecha</HeaderCellSort>
                       <HeaderCellSort className="text-center fw-semibold">Remisión</HeaderCellSort>
                       <HeaderCellSort sortKey="CLIENTE" className="text-center fw-semibold">Cliente</HeaderCellSort>
@@ -277,7 +338,7 @@ export const CuentasXCobrar = () => {
                 Página:{" "}
                 {pagination.state.getPages(filteredData.nodes).map((_, index) => (
                   <button
-                    className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1'}
+                    className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1 border'}
                     key={index}
                     type="button"
                     style={{

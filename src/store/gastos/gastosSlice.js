@@ -13,11 +13,15 @@ export const gastosSlice = createSlice({
             state.gastos = payload;
         },
         onSetGastoActivo: (state, { payload }) => {
+            console.log(payload)
             state.gastoActivo = { ...payload };
         },       
         onSetDefaultActiveGasto: (state) => {
             state.gastoActivo = null;
         },
+        onSaveGasto: (state) => {
+            state.isLoadingGastos = true;
+        },
     }
 });
-export const { onSetDefaultActiveGasto, onLoadGastos, gastos, gastoActivo, onSetGastoActivo } = gastosSlice.actions;
+export const { onSetDefaultActiveGasto, onLoadGastos, gastos, gastoActivo, onSetGastoActivo, onSaveGasto, isLoadingGastos } = gastosSlice.actions;

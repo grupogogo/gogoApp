@@ -3,9 +3,10 @@ import { ImagesCiriosComunion } from "./ImagesCiriosComunion";
 import { ProductsTable } from "./forms/ProductsTable";
 import { HeadersPedidos } from "./forms/HeadersPedidos";
 import { useForm } from "../../hooks";
+import { Collapse } from 'bootstrap';
+// Cierra el collapse manualmente con Bootstrap
 
-
-export const CirioBautizo = ({ agregarPedidoGeneral }) => {
+export const CirioBautizo = ({ agregarPedidoGeneral, resetearPedido }) => {
     const [cantidadItems, setCantidadItems] = useState(0)
     const [pedidoCB, setPedidoCB] = useState([]);
     const { detalle = '', onInputChange } = useForm();
@@ -13,6 +14,19 @@ export const CirioBautizo = ({ agregarPedidoGeneral }) => {
     useEffect(() => {
         agregarPedidoGeneral('CB', pedidoCB, detalle); // Llamamos al callback con el pedido y la categoría
     }, [pedidoCB, detalle]);
+
+    useEffect(() => {
+        if (resetearPedido) {
+            setPedidoCB([]);
+            setCantidadItems(0);
+            const collapseElement = document.getElementById('collapseFive');
+            if (collapseElement) {
+                const bsCollapse = Collapse.getInstance(collapseElement) || new Collapse(collapseElement, { toggle: false });
+                bsCollapse.hide();
+            }
+        }
+    }, [resetearPedido]);
+
     return (
         <>
             <div className="">

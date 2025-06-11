@@ -3,7 +3,6 @@ import { Estadisticas } from "../../dashboard/pages"
 import { useAuthStore, useFuntions, usePedidosStore } from "../../hooks"
 import { LayoutApp } from "../../layout/LayoutApp"
 import { TablaPedidos } from "../components/TablaPedidos"
-import { useNavigate } from "react-router-dom"
 
 
 export const ListaPedidos = () => {
@@ -24,7 +23,7 @@ export const ListaPedidos = () => {
     return (
         <LayoutApp>
             {user.rol !== 'planta' && (
-                <div className="container-fluid card p-2">
+                <div className="container-fluid">
                     <Estadisticas totales={totales} tipo={2} />                    
                     <div>
                         <div>

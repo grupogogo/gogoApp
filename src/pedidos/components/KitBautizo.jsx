@@ -3,13 +3,25 @@ import { ProductsTable } from "./forms/ProductsTable";
 import { ImagesCiriosComunion } from "./ImagesCiriosComunion";
 import { HeadersPedidos } from "./forms/HeadersPedidos";
 import { useForm } from "../../hooks";
+import { Collapse } from 'bootstrap';
 
-export const KitBautizo = ({ agregarPedidoGeneral }) => {
+
+export const KitBautizo = ({ agregarPedidoGeneral, resetearPedido }) => {
     const [cantidadItems, setCantidadItems] = useState(0)
     const [pedidoKB, setPedidoKB] = useState([]);
     const { detalle = '', onInputChange } = useForm();
 
-
+    useEffect(() => {
+        if (resetearPedido) {
+            setPedidoKB([]);
+            setCantidadItems(0);
+            const collapseElement = document.getElementById('collapseThree');
+            if (collapseElement) {
+                const bsCollapse = Collapse.getInstance(collapseElement) || new Collapse(collapseElement, { toggle: false });
+                bsCollapse.hide();
+            }
+        }
+    }, [resetearPedido]);
 
     useEffect(() => {
         agregarPedidoGeneral('KB', pedidoKB, detalle); // Llamamos al callback con el pedido y la categoría

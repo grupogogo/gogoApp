@@ -1,42 +1,49 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux';
 import { useAuthStore, useFuntions } from '../../hooks';
 import { useGastosStore } from '../../hooks/useGastosStore'
 import { Table, Header, HeaderRow, Body, Row, HeaderCell, Cell } from "@table-library/react-table-library/table";
 import { useTheme } from "@table-library/react-table-library/theme";
 import { usePagination } from "@table-library/react-table-library/pagination";
-import { Alert, Button } from 'react-bootstrap';
+import { Alert, Row as Fila } from 'react-bootstrap';
 import { useSort, HeaderCellSort } from "@table-library/react-table-library/sort";
+import Swal from 'sweetalert2';
+import { use } from 'react';
 
-export const ListarGastos = ({ handleShow }) => {
+export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
+    console.log(fechaActual)
     const gastos = useSelector(state => state.gastos.gastos);
-    const { formatearPrecio, buscarNombre, convertirFecha, limpiarFecha, number_format } = useFuntions();
+    const { formatearPrecio, buscarNombre, convertirFechaIngles, limpiarFecha, number_format, capitalize } = useFuntions();
     const [search, setSearch] = useState("");
     const [isHideKits, setHideKits] = useState(false);
     const [isHideGuantes, setHideGuantes] = useState(false);
     const [isHideUser, setHideUser] = useState(false);
-    const { setGastoActivo } = useGastosStore();
+    const { setGastoActivo, startDeleteGasto, startLoadingGastos } = useGastosStore();
     const { user } = useAuthStore();
+    const [fechaGasto, setFechaGasto] = useState('2025');
+    const [itemsMostrar, setItemsMostrar] = useState(10);
 
-    // Ordenar el listado de gastos y calcular total
+
     const filteredGastos = [...gastos]
         .filter((gasto) =>
-            gasto.gasto.toLowerCase().includes(search.toLowerCase()) ||
-            gasto.proveedor.toLowerCase().includes(search.toLowerCase()) ||
-            gasto.tipoGasto.toLowerCase().includes(search.toLowerCase()) ||
-            gasto.fecha.toLowerCase().includes(search.toLowerCase())
+            (
+                gasto.gasto.toLowerCase().includes(search.toLowerCase()) ||
+                gasto.proveedor.toLowerCase().includes(search.toLowerCase()) ||
+                gasto.tipoGasto.toLowerCase().includes(search.toLowerCase()) ||
+                gasto.fecha.toLowerCase().includes(search.toLowerCase())
+            ) &&
+            gasto.fecha.toLowerCase().includes(fechaGasto) // este sí se aplica aparte
         )
-        .filter((gasto) => gasto.fecha) // Validar que la fecha sea utilizable
         .sort((a, b) => {
-            // Convertir las fechas para ordenarlas
-            const fechaA = convertirFecha(a.fecha);
-            const fechaB = convertirFecha(b.fecha);
-            return fechaB - fechaA; // Ordenar de más reciente a más antigua
+            const fechaA = convertirFechaIngles(a.fecha);
+            const fechaB = convertirFechaIngles(b.fecha);
+            return fechaB - fechaA;
         })
         .map((gasto) => ({
             ...gasto,
-            id: gasto.gasto_id || gasto._id, // Identificador único
+            id: gasto.gasto_id || gasto._id,
         }));
+
 
     // Aplicar filtros adicionales
     let finalGastos = filteredGastos;
@@ -59,7 +66,7 @@ export const ListarGastos = ({ handleShow }) => {
         },
         {
             sortFns: {
-                FECHA: (array) => array.sort((a, b) => a.fecha - b.fecha),
+                FECHA: (array) => array.sort((a, b) => convertirFechaIngles(a.fecha) - convertirFechaIngles(b.fecha)),
                 TIPO: (array) => array.sort((a, b) => a.tipoGasto.localeCompare(b.tipoGasto)),
                 PROVEEDOR: (array) => array.sort((a, b) => a.proveedor.localeCompare(b.proveedor)),
                 GASTO: (array) => array.sort((a, b) => a.gasto.localeCompare(b.gasto)),
@@ -83,44 +90,88 @@ export const ListarGastos = ({ handleShow }) => {
     const pagination = usePagination(data, {
         state: {
             page: 0,
-            size: 10,
+            size: itemsMostrar,
         },
     });
     const sizeColumnTheme = {
         Table: `
             --data-table-library_grid-template-columns: 
-                auto 8% auto auto 8% 8% 7% 10% !important;
+                7% 7% 24% 26% 7% 7% 7% 9% 6% !important;
         `,
     };
     const theme = useTheme([sizeColumnTheme]);
 
+    const eliminarGasto = async (gasto) => {
+        if (user.uid === gasto.user) {
+            const result = await Swal.fire({
+                icon: "warning",
+                title: `Está seguro de ELIMINAR el gasto: "${gasto.gasto} | Proveedor: ${gasto.proveedor}"`,
+                showCancelButton: true,
+                cancelButtonColor: "#3085d6",
+                confirmButtonColor: "red",
+                confirmButtonText: "Eliminar",
+            });
+
+            if (result.isConfirmed) {
+                await startDeleteGasto(gasto);  // esperar eliminación
+                await startLoadingGastos();     // recargar gastos
+                Swal.fire("Eliminado!", "", "success");
+            }
+        } else {
+            Swal.fire({
+                title: "El usuario NO tiene permiso para eliminar un gasto que no ha creado",
+                icon: "error",
+                confirmButtonColor: "red",
+            });
+        }
+    };
+
+    useEffect(() => {
+        startLoadingGastos();
+    }, [])
+    useEffect(() => {
+        const nuevoAnio = parseInt(fechaGasto, 10);
+
+        // Asumiendo que tienes acceso a la fecha actual desde otro estado
+        const fecha = new Date(); // fechaActual contiene día y mes correctos
+
+        const nuevaFecha = (fechaGasto === '2025')
+            ? new Date(nuevoAnio, fecha.getMonth(), fecha.getDate(), fecha.getHours(), fecha.getMinutes(), fecha.getSeconds())
+            : new Date(nuevoAnio, fecha.getMonth(), fecha.getDate(), 0, 0, 0);
+
+        setFechaActual(nuevaFecha);    // actualiza la fecha completa
+    }, [fechaGasto])
+
+
+
     return (
-        <div className="">
-            <div className="card shadow-none p-3 mb-5 bg-body-tertiary rounded">
+        <>
+            <div className="card shadow-none p-3 mb-5 rounded">
                 <div className='row'>
-                    <div className="card-header py-3">
+                    <div className="card-header py-3 bg-white">
                         <div className='row'>
                             <div className='col-md-6'>
-
-                                <h5 className="m-0 font-weight-bold text-black">Listado de gastos</h5>
+                                <h5 className="m-0 fw-bold text-primary">Listado de gastos</h5>
                             </div>
-                            <div className='col-md-6 text-end'>
-                                <Button
+                            <div className='col-md-6 text-end align-items-center'>
+                                <button
                                     onClick={handleShow}
-                                    variant='success'> Ingresar nueva Compra / Servicio
-                                    <span className="ml-2">
-                                        <i className="fas fa-user"></i>
+                                    className='btn btn-outline-primary shadow btn-icon-split'>
+                                    <span>
+                                        <i className="fas fa-user fa-lg"></i>
                                     </span>
-                                </Button>
+                                    <span> Ingresar nueva Compra / Servicio
+                                    </span>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div>
-                    <div className="row align-items-center mt-2 mb-3">
+                    <Fila className="justify-content-between align-items-center mt-2 mb-3">
                         {/* Columna para los checkboxes */}
-                        <div className="col-md-6 d-flex gap-3">
-                            <div className="form-check">
+                        <div className="col-md-8 d-flex align-items-center">
+                            <div className="form-check m-1">
                                 <input
                                     type="checkbox"
                                     className="form-check-input"
@@ -136,8 +187,7 @@ export const ListarGastos = ({ handleShow }) => {
                                     Kits
                                 </label>
                             </div>
-
-                            <div className="form-check">
+                            <div className="form-check m-1">
                                 <input
                                     type="checkbox"
                                     className="form-check-input"
@@ -152,7 +202,7 @@ export const ListarGastos = ({ handleShow }) => {
                                     Guantes
                                 </label>
                             </div>
-                            <div className="form-check">
+                            <div className="form-check m-1">
                                 <input
                                     type="checkbox"
                                     className="form-check-input"
@@ -169,8 +219,9 @@ export const ListarGastos = ({ handleShow }) => {
                             </div>
                         </div>
 
-                        {/* Columna para el input */}
-                        <div className="col-md-6">
+
+                        {/* Columna para el filtro */}
+                        <div className="col-md-4 align-items-center">
                             <div className="input-group">
                                 <input
                                     type="text"
@@ -179,18 +230,70 @@ export const ListarGastos = ({ handleShow }) => {
                                     value={search}
                                     onChange={handleSearch}
                                 />
-                                <div className="input-group-append">
-                                    <button className="btn btn-primary" type="button">
-                                        <i className="fas fa-search fa-sm" />
-                                    </button>
-                                </div>
+                                <span className='input-group-text'>
+                                    <i className="fa fa-sliders" />
+                                </span>
                             </div>
                         </div>
-                    </div>
+                    </Fila>
+                    <Fila className='justify-content-between'>
+                        {/* Columna para el select cantidad items a mostrar */}
+                        <div className="col-3 align-items-center">
 
+                            <div className="input-group form-select-sm">
+                                <span className='m-2'>Año a filtrar</span>
+                                <select
+                                    className="form-select form-select-sm"
+                                    title="Filtro por año"
+                                    style={{ maxWidth: 'fit-content' }}
+                                    value={fechaGasto} // solo el año
+                                    onChange={e => {
+                                        setFechaGasto(e.target.value); // actualiza el año como string                                       
+                                        pagination.fns.onSetPage(0);
+                                    }}
+                                >
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2023">2023</option>
+                                    <option value="2022">2022</option>
+                                    <option value="2021">2021</option>
+                                    <option value="2020">2020</option>
+                                    <option value="2019">2019</option>
+                                    <option value="2018">2018</option>
+                                    <option value="2017">2017</option>
+                                </select>
+                            </div>
+
+                        </div>
+                        {/* Columna para el select cantidad items a mostrar */}
+                        <div className="col-md-2 align-items-center m-1">
+                            <div className="input-group form-select-sm">
+                                <span className='m-2'>
+                                    Items
+                                </span>
+                                <select
+                                    className="form-select form-select-sm"
+                                    value={itemsMostrar}
+                                    title='Cantidad de items a mostrar'
+                                    style={{ maxWidth: 'fit-content' }}
+                                    onChange={e => {
+                                        const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                                        setItemsMostrar(value);
+                                        pagination.fns.onSetPage(0);
+                                    }}
+                                >
+                                    <option value={5}>5</option>
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                    <option value={100}>100</option>
+                                    <option value="todos">Todos</option>
+                                </select>
+                            </div>
+                        </div>
+                    </Fila>
                     <Table
-                        className="table table-hover text-start w-100 table table-hover text-start w-100 compact-table"
-                        style={{ maxwidth: "100%" }}
+                        className="table table-hover compact-table"
                         data={data}
                         theme={theme}
                         pagination={pagination}
@@ -198,16 +301,17 @@ export const ListarGastos = ({ handleShow }) => {
                     >
                         {(tableList) => (
                             <>
-                                <Header>
-                                    <HeaderRow className="table-light">
-                                        <HeaderCellSort sortKey={'INGRESO'} className='text-start fw-semibold'>Fecha</HeaderCellSort>
-                                        <HeaderCellSort sortKey={'TIPO'} className='text-start fw-semibold'>Tipo</HeaderCellSort>
-                                        <HeaderCellSort sortKey={'PROVEEDOR'} className='text-start fw-semibold'>Proveedor</HeaderCellSort>
-                                        <HeaderCellSort sortKey={'GASTO'} className='text-start fw-semibold'>P/S</HeaderCellSort>
-                                        <HeaderCellSort sortKey={'CATEGORIA'} className='text-start fw-semibold'>Categoria</HeaderCellSort>
-                                        <HeaderCellSort sortKey={'PRECIO'} className='text-center fw-semibold'>Precio</HeaderCellSort>
-                                        <HeaderCellSort sortKey={'CANTIDAD'} className='text-center fw-semibold'>Cant</HeaderCellSort>
-                                        <HeaderCellSort sortKey={'TOTAL'} className='text-center fw-semibold'>Total</HeaderCellSort>
+                                <Header className="bg-primary">
+                                    <HeaderRow>
+                                        <HeaderCellSort sortKey={'INGRESO'} className='text-start'>Fecha</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'TIPO'} className='text-start'>Tipo</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'PROVEEDOR'} className='text-start'>Proveedor</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'GASTO'} className='text-center'>P/S</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'CATEGORIA'} className='text-start'>Categoria</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'PRECIO'} className='text-center'>Precio</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'CANTIDAD'} className='text-center'>Cant</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'TOTAL'} className='text-center'>Total</HeaderCellSort>
+                                        <HeaderCell className='text-center fw-semibold'></HeaderCell>
                                     </HeaderRow>
                                 </Header>
 
@@ -218,21 +322,41 @@ export const ListarGastos = ({ handleShow }) => {
                                         >
                                             <Cell title={item.fecha} style={{ with: '5%' }}>{limpiarFecha(item.fecha)}</Cell>
                                             <Cell title="" className={item.user === user.uid ? 'border border-3 border-info-subtle' : 'border border-3 border-danger-subtle'}>{item.tipoGasto}</Cell>
-                                            <Cell title={item.proveedor}>{item.proveedor}</Cell>
-                                            <Cell className="fw-semibold text-start"
+                                            <Cell title={item.proveedor}>{capitalize(item.proveedor)}</Cell>
+                                            <Cell className="fw-semibold text-center"
+                                                style={{ cursor: 'pointer', textDecoration: 'underline' }}
                                                 title={item.gasto}
                                             >
-                                                <button onClick={() => {
-                                                    setGastoActivo(item)
-                                                    handleShow();
-                                                }}>
-                                                    {item.gasto}
+                                                <button
+                                                    className="btn btn-outline-secondary btn-sm w-100 py-1"
+                                                    onClick={() => {
+                                                        setGastoActivo(item);
+                                                        const currentYear = new Date().getFullYear().toString();
+                                                        if (fechaGasto !== currentYear) {
+                                                            setFechaActual(convertirFechaIngles(item.fecha));
+                                                        } else {
+                                                            setFechaActual(new Date());
+                                                        }
+                                                        handleShow();
+                                                    }}>
+                                                    {capitalize(item.gasto)}
                                                 </button>
                                             </Cell>
                                             <Cell title={buscarNombre(item.categoria)}>{item.categoria} - {item.subCategoria}</Cell>
                                             <Cell className="text-end">{formatearPrecio(item.precio)}</Cell>
                                             <Cell className="text-end">{number_format(item.cantidad)}</Cell>
                                             <Cell className="text-end fw-semibold">{formatearPrecio((item.cantidad) * (item.precio))}</Cell>
+                                            <Cell className="text-end fw-semibold">
+                                                <div className="text-center">
+                                                    <button
+                                                        className="btn btn-sm btn-outline-danger py-1"
+                                                        onClick={() => eliminarGasto(item)}
+                                                        title="Eliminar gasto"
+                                                    >
+                                                        <i className="fa fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </Cell>
                                         </Row>
                                     ))}
                                 </Body>
@@ -253,7 +377,7 @@ export const ListarGastos = ({ handleShow }) => {
                             Página:{" "}
                             {pagination.state.getPages(data.nodes).map((_, index) => (
                                 <button
-                                    className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1'}
+                                    className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1 border'}
                                     key={index}
                                     type="button"
                                     style={{
@@ -267,7 +391,7 @@ export const ListarGastos = ({ handleShow }) => {
                         </span>
                     </div>
                 </div>
-            </div >
-        </ div>
+            </div>
+        </ >
     )
 }

@@ -15,12 +15,12 @@ export const AreaChart = ({ totales, porValor }) => {
     // Calcular el mes actual (1-12)
     const currentMonth = new Date().getMonth() + 1;
     // Labels hasta el mes actual
-    const allLabels = ['0', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const allLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const labels = allLabels.slice(0, currentMonth + 1);
 
     // Recorta los datos de cada año hasta el mes actual
     const trimData = (data) =>
-      Array.isArray(data) ? data.slice(0, currentMonth + 1) : [];
+      Array.isArray(data) ? data.slice(1, currentMonth + 1) : [];
 
     const myLineChart = new Chart(ctx, {
       type: 'line',

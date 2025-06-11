@@ -76,7 +76,7 @@ export const TablaClientes = ({ handleShow }) => {
     const sizeColumnTheme = {
         Table: `
                 --data-table-library_grid-template-columns: 
-                    9% auto 10% 8% 20% 7% 5.5% !important;
+                    9% auto 10% auto 20% 7% 7% !important;
             `,
     };
     const theme = useTheme(
@@ -102,27 +102,30 @@ export const TablaClientes = ({ handleShow }) => {
     }
 
     return (
-        <div className="card shadow-none p-3 mb-5 bg-body-tertiary rounded mt-1">
-            <div className='row'>
-                <div className="card-header py-3">
+        <div className="card shadow-none p-3 mb-5 rounded mt-1">
+            <div className='row align-items-center'>
+                <div className="card-header py-3 bg-white">
                     <div className='row'>
                         <div className='col-md-6'>
-                            <h5 className="m-0 font-weight-bold text-black">Listado de clientes</h5>
+                            <h5 className="m-0 font-weight-bold text-primary">Listado de clientes</h5>
                         </div>
-                        <div className='col-md-6 text-end'>
-                            <Button
+                        <div className='form-group col-md-6 text-end'>
+                            <button
                                 onClick={handleShow}
-                                variant='success'> Nuevo cliente
+                                className="btn btn-outline-primary"
+                                >
                                 <span className="ml-2">
-                                    <i className="fas fa-user"></i>
+                                    <i className="fas fa-user fa-lg"></i>
                                 </span>
-                            </Button>
+                                <span> Nuevo cliente
+                                </span>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
             <div>
-                <div className="row mt-3 mb-3 text-end">
+                <div className="row mt-3 mb-3 text-end align-items-center">
                     <div className="col text-start d-flex gap-3">
                         <div className="form-check">
                             <input
@@ -164,7 +167,7 @@ export const TablaClientes = ({ handleShow }) => {
                                 onChange={handleSearch}
                             />
                             <div className="input-group-append">
-                                <button className="btn btn-primary" type="button">
+                                <button className="btn border" type="button">
                                     <i className="fas fa-search fa-sm" />
                                 </button>
                             </div>
@@ -199,11 +202,11 @@ export const TablaClientes = ({ handleShow }) => {
                                         <Cell>{limpiarFecha(item.fechaCreacion)}</Cell>
                                         <Cell>{item.nombre}</Cell>
                                         <Cell>{item.nitCC}</Cell>
-                                        <Cell className="fw-bold text-secondary">{capitalize(item.ciudad.toUpperCase())}</Cell>
+                                        <Cell className="text-secondary">{capitalize(item.ciudad.toUpperCase())}</Cell>
                                         <Cell>{(item.direccion)}</Cell>
                                         <Cell className="text-center"><div className="dropdown">
                                             <button
-                                                className="btn btn-success btn-sm"
+                                                className="btn btn-outline-success btn-sm py-1"
                                                 type="button"
                                                 id="dropdownMenuButton1"
                                                 data-toggle="dropdown"
@@ -215,7 +218,7 @@ export const TablaClientes = ({ handleShow }) => {
                                             </button>
                                         </div></Cell>
                                         <Cell className="text-center"><button
-                                            className="btn btn-primary  btn-sm"
+                                            className="btn btn-outline-primary py-1"
                                             onClick={() => editarCliente(item)}
                                         >
                                             <i className="fa fa-edit"></i>
@@ -233,7 +236,7 @@ export const TablaClientes = ({ handleShow }) => {
                         Página:{" "}
                         {pagination.state.getPages(data.nodes).map((_, index) => (
                             <button
-                                className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1'}
+                                className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1 border'}
                                 key={index}
                                 type="button"
                                 style={{

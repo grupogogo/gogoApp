@@ -34,6 +34,28 @@ export const useFuntions = () => {
             return fecha
         }
     }
+    const convertirFechaIngles = (fechaStr) => {
+        const meses = {
+            enero: 'Jan',
+            febrero: 'Feb',
+            marzo: 'Mar',
+            abril: 'Apr',
+            mayo: 'May',
+            junio: 'Jun',
+            julio: 'Jul',
+            agosto: 'Aug',
+            septiembre: 'Sep',
+            octubre: 'Oct',
+            noviembre: 'Nov',
+            diciembre: 'Dec',
+        };
+
+        // Reemplazar el nombre del mes en español por su versión en inglés
+        const regexMes = new RegExp(Object.keys(meses).join("|"), "gi");
+        const fechaIngles = fechaStr.replace(regexMes, (matched) => meses[matched.toLowerCase()]);
+
+        return new Date(fechaIngles);
+    };
     const number_format = (number, decimals, dec_point, thousands_sep) => {
         number = (number + '').replace(',', '').replace(' ', '');
         const n = !isFinite(+number) ? 0 : +number;
@@ -129,9 +151,7 @@ export const useFuntions = () => {
         let totalFabrica = 0;
         if (categorias) {
             categorias.forEach((categoria, index) => {
-                //console.log(`Categoría: ${categoria}, Cantidad: ${cantidad[index]}`);
                 totalFabrica += buscarPrecioxCategoriaAnio(categoria, anio) * (cantidad[index] || 0);
-                //console.log(`Precio Fabrica: ${buscarPrecioxCategoriaAnio(categoria, 2025)}, Cantidad: ${cantidad[index]}`, 'Total', totalFabrica)
             });
         }
         return totalFabrica;
@@ -368,7 +388,6 @@ export const useFuntions = () => {
                     });
                     labels.push(buscarNombre(categoria));
                     data.push(subcategorias.cantidad);
-                    //console.log(`Categoria: ${categoria}, Cantidad: ${subcategorias.cantidad}, Precio: ${subcategorias.totalPrecio}`);
                 }
             }
         });
@@ -671,7 +690,6 @@ export const useFuntions = () => {
         const monthlySales2024 = [0, ...Array(13).fill(0)];
         const monthlySales2025 = [0, ...Array(13).fill(0)];
         const currentYear = new Date().getFullYear();
-        console.log()
         let cont = 0;
         pedidos.forEach(order => {
             if (datosUsuario !== true) {
@@ -871,7 +889,7 @@ export const useFuntions = () => {
             };
         }
     };
-    const totalGastosUsuarios = (gastos, anioComparar, datosUsuario, tipo) => {
+    const totalGastosUsuarios = (gastos, anioComparar, datosUsuario, categoria) => {
         if (gastos) {
             let totalGastos = 0;
             let gastosOG = 0;
@@ -879,22 +897,63 @@ export const useFuntions = () => {
 
             const gastosPorAnio = [];
 
-            gastos.forEach(gasto => {
-                const fechaGasto = convertirFecha(gasto.fecha);
-                const anio = fechaGasto.getFullYear();
-                if (anio === anioComparar) {
-                    totalGastos += gasto.precio * gasto.cantidad;
-                    if (gasto.user === '679fce0ee8d1ed66d21d18c2') {
-                        gastosOG += gasto.precio * gasto.cantidad;
-                        return;
-                    }
-                    if (gasto.user === '6789ce1b48932f890985d1f7') {
-                        gastosLG += gasto.precio * gasto.cantidad;
-                        return;
-                    }
-                }
-            });
 
+            if (datosUsuario) {
+                gastos.forEach(gasto => {
+                    if (gasto.categoria !== categoria) return;
+                    const fechaGasto = convertirFecha(gasto.fecha);
+                    const anio = fechaGasto.getFullYear();
+                    if (anio === anioComparar) {
+                        totalGastos += gasto.precio * gasto.cantidad;
+                        if (gasto.user === '679fce0ee8d1ed66d21d18c2') {
+                            gastosOG += gasto.precio * gasto.cantidad;
+                            return;
+                        }
+                        if (gasto.user === '6789ce1b48932f890985d1f7') {
+                            gastosLG += gasto.precio * gasto.cantidad;
+                            return;
+                        }
+                    }
+                })
+            }
+            else {
+                if (user.uid === '679fce0ee8d1ed66d21d18c2') {
+                    gastos.forEach(gasto => {
+                        const fechaGasto = convertirFecha(gasto.fecha);
+                        const anio = fechaGasto.getFullYear();
+                        if (anio === anioComparar) {
+                            if (gasto.user === '679fce0ee8d1ed66d21d18c2') {
+                                totalGastos += gasto.precio * gasto.cantidad;
+                                if (gasto.categoria === 'K') {
+                                    gastosOG += gasto.precio * gasto.cantidad;
+                                    return;
+                                } else if (gasto.categoria === 'G') {
+                                    gastosLG += gasto.precio * gasto.cantidad;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    );
+                } 
+                if (user.uid === '6789ce1b48932f890985d1f7') {
+                    gastos.forEach(gasto => {
+                        const fechaGasto = convertirFecha(gasto.fecha);
+                        const anio = fechaGasto.getFullYear();
+                        if (anio === anioComparar) {
+                            if (gasto.user === '6789ce1b48932f890985d1f7') {                                
+                                if (gasto.categoria === 'K') {
+                                    totalGastos += gasto.precio * gasto.cantidad;
+                                    return;
+                                } 
+                            }
+                        }
+                    }
+                    );
+                }
+            }
+
+            //console.log(gastosLG, gastosOG, totalGastos);
             gastosPorAnio.push(gastosOG, gastosLG, totalGastos);
             return [
                 totalGastos,
@@ -947,13 +1006,6 @@ export const useFuntions = () => {
             return acc + subTotal;
         }, 0);
 
-        console.log(
-            //'total:' + total,
-            //'totalItems:' + totalItems,
-            //'totalKits:' + totalKits,
-            //'totalGuantes:' + totalGuantes
-            'totalOtros:' + totalOtros
-        )
         return {
             total,
             totalItems,
@@ -992,7 +1044,8 @@ export const useFuntions = () => {
         totalGastosUsuarios,
         buscarPrecioxCategoriaAnio,
         totalizarPreciosFabrica,
-        calcularTotalesPedidoCxC
+        calcularTotalesPedidoCxC,
+        convertirFechaIngles
     }
 
 }

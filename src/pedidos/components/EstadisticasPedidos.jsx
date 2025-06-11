@@ -151,7 +151,7 @@ export const EstadisticasPedidos = () => {
         if (pedidosActivo) { // Si hay pedidos activos
             const { pedidosAnioActual, totalItems, itemsComprados } = countPedidos(pedidosActivo); // Contar los pedidos
             setStats({ pedidosAnioActual, totalItems, itemsComprados, totalGeneral, pendientes }); // Actualizar el estado con las nuevas estadísticas
-           
+
         }
     }, [pedidosActivo]); // Ejecutar el efecto cuando cambien los pedidos activos
 
@@ -160,17 +160,15 @@ export const EstadisticasPedidos = () => {
             <div className="row">
                 {/* Pedidos en Alistamiento Card */}
                 <div className="col-xl-3 col-md-6 mb-4">
-                    <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#1cc88a" }}>
-                        <div className="card-body">
-                            <div className="row align-items-center">
-                                <div className="col">
-                                    <div className="text-xs fw-bold text-success text-uppercase mb-1">
-                                        Pedidos realizados {currentYear}
-                                    </div>
-                                    <div className="h5 mb-0 fw-bold text-center">
-                                        <span className="badge text-bg-success">{stats.pedidosAnioActual || 0}</span>
-
-                                    </div>
+                    <div className="card shadow-sm border-start-custom border-success" style={{ fontSize: "0.6rem" }}>
+                        <div className="card-body"
+                            style={{ minHeight: '80px' }}>
+                            <div className="d-flex align-items-center justify-content-between">
+                                <div className="text-xs fw-bold text-black text-uppercase mb-1">
+                                    Pedidos realizados {currentYear}
+                                </div>
+                                <div className="h5 mb-0 fw-bold text-center">
+                                    <span className="badge text-bg-success">{stats.pedidosAnioActual || 0}</span>
                                 </div>
                                 <div className="col-auto">
                                     <i className="fas fa-file-signature fa-2x text-success" />
@@ -181,20 +179,21 @@ export const EstadisticasPedidos = () => {
                 </div>
                 {/* Pedidos Pendientes Card */}
                 <div className="col-xl-3 col-md-6 mb-4">
-                    <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#4e73df" }}>
-                        <div className="card-body">
-                            <div className="row align-items-center">
-                                <div className="col">
-                                    <div className="text-xs fw-bold text-primary text-uppercase mb-1">
+                    <div className="card shadow-sm border-start-custom border-primary" style={{ fontSize: "0.6rem" }}>
+                        <div className="card-body"
+                            style={{ minHeight: '80px' }}>
+                            <div className="d-flex align-items-center justify-content-between">
+                                <div className="text-xs fw-bold text-black text-uppercase mb-1">
+                                    <div className="text-xs fw-bold text-black text-uppercase mb-1">
                                         cantidad item {currentYear}
                                     </div>
-                                    <div className="h5 mb-0 fw-bold text-center">
+                                    <div className="fs-6 mb-0 fw-bold text-center">
                                         <span className="badge text-bg-primary">
                                             {stats.totalItems}
                                         </span>
                                     </div>
                                 </div>
-                                <div className="col-auto">
+                                <div className="">
                                     <i className="fas fa-list-ol fa-2x text-primary" />
                                 </div>
                             </div>
@@ -203,37 +202,40 @@ export const EstadisticasPedidos = () => {
                 </div>
 
 
-                {/* Pedidos Despachados (Semana) Card */}
                 <div className="col-xl-3 col-md-6 mb-4">
-                    <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "red" }}>
-                        <div className="card-body">
-                            <div className="row align-items-center">
-                                <div className="col">
-                                    <div className="text-xs fw-bold text-danger text-uppercase mb-1">
+                    <div className="card shadow-sm border-start-custom border-danger" style={{ fontSize: "0.6rem" }}>
+                        <div className="card-body"
+                            style={{ minHeight: '80px' }}>
+                            <div className="d-flex align-items-center justify-content-between">
+                                <div className="text-xs fw-bold text-black text-uppercase mb-1">
+                                    <div className="text-xs fw-bold text-black text-uppercase mb-1">
                                         Pedidos pendientes
                                     </div>
-                                    <div className="row align-items-center">
-                                        <div className="col-auto">
-                                            <div className="h5 mb-0 fw-bold text-center">
-                                                <span className="badge text-bg-danger">
-                                                    {number_format((stats.pendientes / stats.pedidosAnioActual) * 100)}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="col">
-                                            <div className="progress">
+
+                                    {/* Fila con porcentaje + barra */}
+                                    <div className="d-flex align-items-center gap-2">
+                                        <span className="badge bg-danger text-light" style={{ whiteSpace: "nowrap" }}>
+                                            {number_format((stats.pendientes / stats.pedidosAnioActual) * 100)}%
+                                        </span>
+
+                                        <div className="flex-grow-1">
+                                            <div className="progress" style={{ height: "15px" }}>
                                                 <div
-                                                    className="progress-bar bg-danger"
-                                                    role="progressbar progress-bar-striped"
+                                                    className="progress-bar bg-danger progress-bar-striped"
+                                                    role="progressbar"
                                                     style={{ width: `${(stats.pendientes / stats.pedidosAnioActual) * 100}%` }}
-                                                    aria-valuenow="50"
+                                                    aria-valuenow={(stats.pendientes / stats.pedidosAnioActual) * 100}
                                                     aria-valuemin="0"
                                                     aria-valuemax="100"
-                                                >{stats.pendientes}</div>
+                                                >
+                                                    {/* Opcional: mostrar valor dentro de la barra */}
+                                                    {/* stats.pendientes */}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+
                                 <div className="col-auto">
                                     <i className="fas fa-clipboard-list fa-2x text-danger" />
                                 </div>
@@ -242,21 +244,26 @@ export const EstadisticasPedidos = () => {
                     </div>
                 </div>
 
+
                 {/* Pedidos Entregados (Mensual) Card */}
                 <div className="col-xl-3 col-md-6 mb-4">
-                    <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#f6c23e" }}>
-                        <div className="card-body">
-                            <div className="row align-items-center">
-                                <div className="col">
-                                    <div className="text-xs fw-bold text-warning text-uppercase mb-1">
+                    <div className="card shadow-sm border-start-custom border-warning" style={{ fontSize: "0.6rem" }}>
+                        <div className="card-body"
+                            style={{ minHeight: '80px' }}>
+                            <div className="d-flex align-items-center justify-content-between">
+                                {/* Contenido textual */}
+                                <div className="d-flex flex-column justify-content-center">
+                                    <div className="text-xs fw-bold text-black text-uppercase mb-1">
                                         Total ventas
                                     </div>
-                                    <div className="h5 mb-0 text-center">
+                                    <div className="fs-6 mb-0 text-center">
                                         <span className="badge text-bg-warning text-light">
                                             {formatearPrecio(stats.totalGeneral)}
                                         </span>
                                     </div>
                                 </div>
+
+                                {/* Ícono */}
                                 <div className="col-auto">
                                     <i className="fas fa-sack-dollar fa-2x text-warning" />
                                 </div>
@@ -264,6 +271,7 @@ export const EstadisticasPedidos = () => {
                         </div>
                     </div>
                 </div>
+
             </div>
 
         </>

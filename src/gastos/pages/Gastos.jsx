@@ -54,7 +54,6 @@ export const Gastos = () => {
     }
 
     const guardarGasto = async () => {
-
         if (proveedor === '' || cantidad === 0 || precio === 0 || gasto === '' || codigo === '') {
             Swal.fire({
                 title: "Datos incompletos",
@@ -76,17 +75,17 @@ export const Gastos = () => {
             precio,
             detalle
         }
-        await startAddNewGasto(gastoTotal)
-        startLoadingGastos();
-        onResetForm()
-        handleClose()
-        setFechaActual(new Date());
         Swal.fire({
             title: "Se han almacenado los datos correctamente!",
             icon: "success",
             draggable: true,
             timer: 1500
         });
+        await startAddNewGasto(gastoTotal)
+        startLoadingGastos();
+        onResetForm()
+        handleClose()
+        setFechaActual(new Date());
     }
 
     const onInputChangeCategoaria = (e) => {
@@ -182,6 +181,7 @@ export const Gastos = () => {
 
     useEffect(() => {
         if (gastoActivo) {
+            console.log(gastoActivo)
             setFormState({
                 proveedor: gastoActivo.proveedor || '',
                 codigo: gastoActivo.codigo || '',
@@ -191,11 +191,11 @@ export const Gastos = () => {
                 precio: gastoActivo.precio || 0,
                 cantidad: gastoActivo.cantidad || 0,
                 detalle: gastoActivo.detalle || '',
-
             });
             setCheck(gastoActivo.tipoGasto === 'Servicio');
         }
     }, [gastoActivo, setFormState]);
+
 
 
     return (
@@ -204,12 +204,12 @@ export const Gastos = () => {
                 <Row>{/* Estadisticas de gastos */}
                     {/* gastos del año usuario logueado */}
                     <div className="col-xl-3 col-md-6 mb-4 col-6">
-                        <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#4e73df" }}>
+                        <div className="card shadow-sm border-start-custom border-primary" style={{ fontSize: "0.5rem" }}>
                             <div className="card-body">
-                                <div className="row align-items-center">
+                                <div className="d-flex align-items-center justify-content-between">
                                     <div className="col">
-                                        <div className="text-xs fw-bold text-primary text-uppercase mb-1">
-                                            Gastos del año {user.name}
+                                        <div className="text-xs fw-bold text-black text-uppercase mb-1">
+                                            Gastos del año {user.name.split('|')[0]}
                                         </div>
                                         <div className="h5 mb-0 fw-bold text-center">
                                             <span className="badge text-bg-primary text-light">
@@ -226,12 +226,12 @@ export const Gastos = () => {
                     </div>
                     {/* Gstos del mes usuario */}
                     <div className="col-xl-3 col-md-6 mb-4 col-6">
-                        <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#f6c23e" }}>
+                        <div className="card shadow-sm border-start-custom border-warning" style={{ fontSize: "0.6rem" }}>
                             <div className="card-body">
-                                <div className="row align-items-center">
+                                <div className="d-flex align-items-center justify-content-between">
                                     <div className="col">
-                                        <div className="text-xs fw-bold text-warning text-uppercase mb-1">
-                                            Gastos del mes de {user.name}
+                                        <div className="text-xs fw-bold text-black text-uppercase mb-1">
+                                            Gastos del mes de {user.name.split('|')[0]}
                                         </div>
                                         <div className="h5 mb-0 fw-bold text-center">
                                             <span className="badge text-bg-warning text-light">
@@ -248,11 +248,11 @@ export const Gastos = () => {
                     </div>
                     {/* Gastos del mes generales */}
                     <div className="col-xl-3 col-md-6 mb-4 col-6">
-                        <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "red" }}>
+                        <div className="card shadow-sm border-start-custom border-danger" style={{ fontSize: "0.6rem" }}>
                             <div className="card-body">
-                                <div className="row align-items-center">
+                                <div className="d-flex align-items-center justify-content-between">
                                     <div className="col">
-                                        <div className="text-xs fw-bold text-danger text-uppercase mb-1">
+                                        <div className="text-xs fw-bold text-black text-uppercase mb-1">
                                             Gastos del mes
                                         </div>
                                         <div className="h5 mb-0 fw-bold text-center">
@@ -270,11 +270,11 @@ export const Gastos = () => {
                     </div>
                     {/* Gastos del año totales */}
                     <div className="col-xl-3 col-md-6 mb-4 col-6">
-                        <div className="card border-start-custom shadow h-100 py-2" style={{ borderColor: "#1cc88a" }}>
+                        <div className="card shadow-sm border-start-custom border-success" style={{ fontSize: "0.6rem" }}>
                             <div className="card-body">
-                                <div className="row align-items-center">
+                                <div className="d-flex align-items-center justify-content-between">
                                     <div className="col">
-                                        <div className="text-xs fw-bold text-success text-uppercase mb-1">
+                                        <div className="text-xs fw-bold text-black text-uppercase mb-1">
                                             Gastos totales
                                         </div>
                                         <div className="h5 mb-0 fw-bold text-center">
@@ -517,7 +517,7 @@ export const Gastos = () => {
                     </Modal>
                 </Row>
                 <Row>
-                    <ListarGastos handleShow={handleShow} />
+                    <ListarGastos handleShow={handleShow} setFechaActual={setFechaActual} fechaActual={fechaActual} />
                 </Row>
             </div>
         </LayoutApp>
