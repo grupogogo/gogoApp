@@ -61,6 +61,9 @@ export const Pedidos = () => {
       return nuevoEstado;
     });
   };
+  useEffect(() => {
+    setClienteActivo([]);
+  }, [])
 
   const guardarPedidoGeneral = () => {
     if (!clienteActivo.cliente_id) {
@@ -408,15 +411,15 @@ export const Pedidos = () => {
                       <>
                         <KitComungrande agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
 
-                        <KitComuPeque agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido}/>
+                        <KitComuPeque agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
 
-                        <KitBautizo agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido}/>
+                        <KitBautizo agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
 
-                        <CirioBautizo agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido}/>
+                        <CirioBautizo agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
 
-                        <CirioComunion agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido}/>
+                        <CirioComunion agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
 
-                        <Guantes agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido}/>
+                        <Guantes agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
 
                         <OtrosProductos agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
                       </>

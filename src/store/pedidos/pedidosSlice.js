@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { o } from "@table-library/react-table-library/styles-492c6342";
 
 
 export const pedidosSlice = createSlice({
@@ -6,26 +7,25 @@ export const pedidosSlice = createSlice({
     initialState: {
         isLoadingPedidos: true,
         pedidos: [],
+        oldOrders: [],
         pedidosActivo: null,
         totalGuantes: 0
     },
     reducers: {
-        setTotalGuantes: (state, {payload}) => {
+        setTotalGuantes: (state, { payload }) => {
             state.totalGuantes = payload
         },
         onLoadPedidos: (state, { payload }) => {
             state.isLoadingPedidos = false;
-            console.log(payload)
             state.pedidos = payload.pedidos;
         },
-        onLoadPedidosActivo: (state, { payload }) => {            
+        onLoadOldOrders: (state, { payload }) => {
             state.isLoadingPedidos = false;
-            state.pedidosActivo = payload;                        
+            state.oldOrders = payload.pedidos;
         },
-        onAddNewPedido: (state, { payload }) => {
-
-        },
-        setActivePedido: (state, { payload }) => {
+        onLoadPedidosActivo: (state, { payload }) => {
+            state.isLoadingPedidos = false;
+            state.pedidosActivo = payload;
         },
         onUpdatePedido: (state, { payload }) => {
             state.pedidos = state.pedidos.map(ped => {
@@ -34,8 +34,6 @@ export const pedidosSlice = createSlice({
                 }
                 return ped;
             });
-            console.log(pedidos)
-
         },
         onDeletePedido: (state, { payload }) => {
             if (payload) {
@@ -46,4 +44,4 @@ export const pedidosSlice = createSlice({
 });
 
 
-export const { onLoadPedidos, pedidos, pedidosActivo, isLoadingPedidos, onUpdatePedido, onDeletePedido, onLoadPedidosActivo, setTotalGuantes, totalGuantes } = pedidosSlice.actions;
+export const { onLoadPedidos, pedidos, pedidosActivo, isLoadingPedidos, onUpdatePedido, onDeletePedido, onLoadPedidosActivo, setTotalGuantes, totalGuantes, onLoadOldOrders } = pedidosSlice.actions;

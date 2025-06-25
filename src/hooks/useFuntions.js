@@ -203,13 +203,17 @@ export const useFuntions = () => {
 
         return (numaletInstance(numero)).replace('MXN', 'PESOS');;
     };
-    const calcularTotalesPedidos = (cat, pedidos, setData, setLables, datosUsuario) => {// label y datas
+    const calcularTotalesPedidos = (cat, pedidos, setData, setLables, datosUsuario, anio) => {// label y datas
         // Objeto para almacenar las sumas por categoría
         const totalesPorCategoria = {};
         const labels = [];
         const data = [];
 
         pedidos.forEach((pedido) => {
+            const idUserPedido = pedido.user._id;
+            const fecha = convertirFecha(pedido.fechaCreacion);
+            const aniofiltro = parseInt(fecha.getFullYear());
+            if (aniofiltro !== anio) { return; }
             if (datosUsuario !== true) {
                 if (pedido.user._id === user.uid) {
                     const items = pedido?.itemPedido || [];
@@ -218,7 +222,6 @@ export const useFuntions = () => {
                             if (categoria === 'GUANTES') {
                                 if (cat === 'guantes' || cat === 'todos') {
                                     const subcategorias = {};
-
                                     pedido.forEach(item => {
                                         const subcategoria = item.categoria;
                                         if (!subcategorias[subcategoria]) {
@@ -285,55 +288,61 @@ export const useFuntions = () => {
                 const items = pedido?.itemPedido || [];
                 items.forEach(({ itemPedido }) => {
                     Object.entries(itemPedido).forEach(([categoria, { pedido }]) => {
+
                         if (categoria === 'GUANTES') {
-                            if (cat === 'guantes' || cat === 'todos') {
-                                const subcategorias = {};
+                            if (idUserPedido === user.uid) {
+                                if (cat === 'guantes' || cat === 'todos') {
+                                    const subcategorias = {};
 
-                                pedido.forEach(item => {
-                                    const subcategoria = item.categoria;
-                                    if (!subcategorias[subcategoria]) {
-                                        subcategorias[subcategoria] = { cantidad: 0, totalPrecio: 0, precioUnitario: item.precioUnitario };
-                                    }
-                                    subcategorias[subcategoria].cantidad += parseInt(item.cantidad || 0);
-                                    subcategorias[subcategoria].totalPrecio += item.precioUnitario * parseInt(item.cantidad || 0);
-                                });
+                                    pedido.forEach(item => {
+                                        const subcategoria = item.categoria;
+                                        if (!subcategorias[subcategoria]) {
+                                            subcategorias[subcategoria] = { cantidad: 0, totalPrecio: 0, precioUnitario: item.precioUnitario };
+                                        }
+                                        subcategorias[subcategoria].cantidad += parseInt(item.cantidad || 0);
+                                        subcategorias[subcategoria].totalPrecio += item.precioUnitario * parseInt(item.cantidad || 0);
+                                    });
 
-                                Object.entries(subcategorias).forEach(([subcategoria, datosSubcategoria]) => {
-                                    if (!totalesPorCategoria[categoria]) {
-                                        totalesPorCategoria[categoria] = {};
-                                    }
+                                    Object.entries(subcategorias).forEach(([subcategoria, datosSubcategoria]) => {
+                                        if (!totalesPorCategoria[categoria]) {
+                                            totalesPorCategoria[categoria] = {};
+                                        }
 
-                                    if (!totalesPorCategoria[categoria][subcategoria]) {
-                                        totalesPorCategoria[categoria][subcategoria] = { cantidad: 0, totalPrecio: 0 };
-                                    }
+                                        if (!totalesPorCategoria[categoria][subcategoria]) {
+                                            totalesPorCategoria[categoria][subcategoria] = { cantidad: 0, totalPrecio: 0 };
+                                        }
 
-                                    totalesPorCategoria[categoria][subcategoria].cantidad += datosSubcategoria.cantidad;
-                                    totalesPorCategoria[categoria][subcategoria].totalPrecio += datosSubcategoria.totalPrecio;
-                                });
+                                        totalesPorCategoria[categoria][subcategoria].cantidad += datosSubcategoria.cantidad;
+                                        totalesPorCategoria[categoria][subcategoria].totalPrecio += datosSubcategoria.totalPrecio;
+                                    });
+                                }
                             }
                         } else if (categoria === 'OTR') {
-                            if (cat === 'otros' || cat === 'todos') {
-                                const productos = {};
+                            if (idUserPedido === user.uid) {
 
-                                pedido.forEach(item => {
-                                    const producto = item.producto;
-                                    if (!productos[producto]) {
-                                        productos[producto] = { cantidad: 0, totalPrecio: 0, precioUnitario: item.precio };
-                                    }
-                                    productos[producto].cantidad += parseInt(item.cantidad || 0);
-                                    productos[producto].totalPrecio += item.precio * parseInt(item.cantidad || 0);
-                                });
-                                Object.entries(productos).forEach(([producto, datosProducto]) => {
-                                    if (!totalesPorCategoria[categoria]) {
-                                        totalesPorCategoria[categoria] = {};
-                                    }
+                                if (cat === 'otros' || cat === 'todos') {
+                                    const productos = {};
 
-                                    if (!totalesPorCategoria[categoria][producto]) {
-                                        totalesPorCategoria[categoria][producto] = { cantidad: 0, totalPrecio: 0 };
-                                    }
-                                    totalesPorCategoria[categoria][producto].cantidad += datosProducto.cantidad;
-                                    totalesPorCategoria[categoria][producto].totalPrecio += datosProducto.totalPrecio;
-                                });
+                                    pedido.forEach(item => {
+                                        const producto = item.producto;
+                                        if (!productos[producto]) {
+                                            productos[producto] = { cantidad: 0, totalPrecio: 0, precioUnitario: item.precio };
+                                        }
+                                        productos[producto].cantidad += parseInt(item.cantidad || 0);
+                                        productos[producto].totalPrecio += item.precio * parseInt(item.cantidad || 0);
+                                    });
+                                    Object.entries(productos).forEach(([producto, datosProducto]) => {
+                                        if (!totalesPorCategoria[categoria]) {
+                                            totalesPorCategoria[categoria] = {};
+                                        }
+
+                                        if (!totalesPorCategoria[categoria][producto]) {
+                                            totalesPorCategoria[categoria][producto] = { cantidad: 0, totalPrecio: 0 };
+                                        }
+                                        totalesPorCategoria[categoria][producto].cantidad += datosProducto.cantidad;
+                                        totalesPorCategoria[categoria][producto].totalPrecio += datosProducto.totalPrecio;
+                                    });
+                                }
                             }
                         } else {
                             if (cat === 'kits' || cat === 'todos') {
@@ -396,7 +405,7 @@ export const useFuntions = () => {
 
         return resultadoTotales;
     };
-    const totalesPedidos = (pedidos, datosUsuario) => {// Esto es para las estadisticas mensuales
+    const totalesPedidos = (pedidos, datosUsuario, anioFiltro) => {// Esto es para las estadisticas mensuales
         let totalSales = 0;
         let totalOrders = 0;
         let currentMonthSales = 0;
@@ -404,68 +413,45 @@ export const useFuntions = () => {
         let pagado = 0;
         let enviado = 0;
         const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
+        const currentYear = anioFiltro;
         const monthlySales2025 = Array(12).fill(0);
         const monthlyProductCounts = Array(12).fill(0);
 
         pedidos.forEach(order => {
-            if (datosUsuario !== true) {
-                if (order.user._id === user.uid) {
-                    const orderDate2 = (convertirFecha(order.fechaCreacion)).getFullYear();
-                    if (orderDate2 === currentYear) {
-                        if (order.estado === "pendiente") { pendientes++ }
-                        if (order.estado === "pagado") { pagado++ }
-                        if (order.estado === 'enviado') { enviado++ }
-                        totalOrders++;
-                        order.itemPedido.forEach(item => {
-                            Object.values(item.itemPedido).forEach(category => {
-                                category.pedido.forEach(product => {
-                                    const price = product.precioUnitario || product.precio;
-                                    const quantity = parseInt(product.cantidad, 10);
-                                    const sale = price * quantity;
-                                    totalSales += sale;
 
-                                    const orderDate = convertirFecha(order.fechaCreacion);
-                                    if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
-                                        currentMonthSales += sale;
-                                    }
-                                    if (orderDate.getFullYear() === currentYear) {
-                                        monthlySales2025[orderDate.getMonth()] += sale;
-                                        monthlyProductCounts[orderDate.getMonth()] += quantity;
-                                    }
-                                });
-                            });
-                        });
-                    }
-                }
-            } else {
-                const orderDate2 = (convertirFecha(order.fechaCreacion)).getFullYear();
-                if (orderDate2 === currentYear) {
-                    if (order.estado === "pendiente") { pendientes++ }
-                    if (order.estado === "pagado") { pagado++ }
-                    if (order.estado === 'enviado') { enviado++ }
-                    totalOrders++;
+            const orderDate = convertirFecha(order.fechaCreacion);
 
-                    order.itemPedido.forEach(item => {
-                        Object.values(item.itemPedido).forEach(category => {
-                            category.pedido.forEach(product => {
-                                const price = product.precioUnitario || product.precio;
-                                const quantity = parseInt(product.cantidad, 10);
-                                const sale = price * quantity;
-                                totalSales += sale;
+            if (orderDate.getFullYear() !== anioFiltro) {
+                return; // Si el año de la orden no coincide con el año filtrado, salta a la siguiente orden
+            }
+            if (order.user._id !== user.uid) return;
 
-                                const orderDate = convertirFecha(order.fechaCreacion);
-                                if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
-                                    currentMonthSales += sale;
-                                }
-                                if (orderDate.getFullYear() === currentYear) {
-                                    monthlySales2025[orderDate.getMonth()] += sale;
-                                    monthlyProductCounts[orderDate.getMonth()] += quantity;
-                                }
-                            });
+            const orderDate2 = (convertirFecha(order.fechaCreacion)).getFullYear();
+            if (orderDate2 === currentYear) {
+                if (order.estado === "pendiente") { pendientes++ }
+                if (order.estado === "pagado") { pagado++ }
+                if (order.estado === 'enviado') { enviado++ }
+                totalOrders++;
+
+                order.itemPedido.forEach(item => {
+                    Object.values(item.itemPedido).forEach(category => {
+                        category.pedido.forEach(product => {
+                            const price = product.precioUnitario || product.precio;
+                            const quantity = parseInt(product.cantidad, 10);
+                            const sale = price * quantity;
+                            totalSales += sale;
+
+                            const orderDate = convertirFecha(order.fechaCreacion);
+                            if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
+                                currentMonthSales += sale;
+                            }
+                            if (orderDate.getFullYear() === currentYear) {
+                                monthlySales2025[orderDate.getMonth()] += sale;
+                                monthlyProductCounts[orderDate.getMonth()] += quantity;
+                            }
                         });
                     });
-                }
+                });
             }
         });
         return {
@@ -479,11 +465,15 @@ export const useFuntions = () => {
             enviado
         };
     }
-    const totalKitsXAnio = (pedidos, datosUsuario, anio = 2025) => {
+    const totalKitsXAnio = (pedidos, datosUsuario, anioFiltro) => {
         let totalSales = 0;
         const monthlySales = Array(12).fill(0); // Inicializa directamente con 12 meses
 
         pedidos.forEach(order => {
+            const orderDate = convertirFecha(order.fechaCreacion);
+            if (orderDate.getFullYear() !== anioFiltro) {
+                return; // Si el año de la orden no coincide con el año filtrado, salta a la siguiente orden
+            }
             const perteneceAlUsuario = datosUsuario !== true
                 ? order.user._id === user.uid
                 : true;
@@ -501,10 +491,8 @@ export const useFuntions = () => {
                             totalSales += sale;
 
                             const orderDate = convertirFecha(order.fechaCreacion);
-                            if (orderDate.getFullYear() === anio) {
-                                const month = orderDate.getMonth();
-                                monthlySales[month] += sale;
-                            }
+                            const month = orderDate.getMonth();
+                            monthlySales[month] += sale;
                         });
                     }
                 });
@@ -517,16 +505,16 @@ export const useFuntions = () => {
         };
     };
 
-    const totalGuantesXAnio = (pedidos, datosUsuario, anio = 2025) => {
+    const totalGuantesXAnio = (pedidos, datosUsuario, anioFiltro) => {
         let totalSales = 0;
         const monthlySales = Array(12).fill(0); // 12 meses, índice 0 = enero
 
         pedidos.forEach(order => {
-            const perteneceAlUsuario = datosUsuario !== true
-                ? order.user._id === user.uid
-                : true;
-
-            if (!perteneceAlUsuario) return;
+            const orderDate = convertirFecha(order.fechaCreacion);
+            if (orderDate.getFullYear() !== anioFiltro) {
+                return; // Si el año de la orden no coincide con el año filtrado, salta a la siguiente orden
+            }
+            if (order.user._id !== user.uid) return;
 
             order.itemPedido.forEach(item => {
                 Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
@@ -538,33 +526,31 @@ export const useFuntions = () => {
 
                             totalSales += sale;
 
-                            const orderDate = convertirFecha(order.fechaCreacion);
-                            if (orderDate.getFullYear() === anio) {
-                                const month = orderDate.getMonth();
-                                monthlySales[month] += sale;
-                            }
+
+                            const month = orderDate.getMonth();
+                            monthlySales[month] += sale;
+
                         });
                     }
                 });
             });
         });
-
         return {
             monthlySales,
             totalSales
         };
     };
 
-    const totalOtrosXAnio = (pedidos, datosUsuario, anio = 2025) => {
+    const totalOtrosXAnio = (pedidos, datosUsuario, anioFiltro) => {
         let totalSales = 0;
         const monthlySales = Array(12).fill(0); // 12 meses
 
         pedidos.forEach(order => {
-            const perteneceAlUsuario = datosUsuario !== true
-                ? order.user._id === user.uid
-                : true;
-
-            if (!perteneceAlUsuario) return;
+            const orderDate = convertirFecha(order.fechaCreacion);
+            if (orderDate.getFullYear() !== anioFiltro) {
+                return; // Si el año de la orden no coincide con el año filtrado, salta a la siguiente orden
+            }
+            if (order.user._id !== user.uid) return;
 
             order.itemPedido.forEach(item => {
                 Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
@@ -577,10 +563,9 @@ export const useFuntions = () => {
                             totalSales += sale;
 
                             const orderDate = convertirFecha(order.fechaCreacion);
-                            if (orderDate.getFullYear() === anio) {
-                                const month = orderDate.getMonth();
-                                monthlySales[month] += sale;
-                            }
+
+                            const month = orderDate.getMonth();
+                            monthlySales[month] += sale;
                         });
                     }
                 });
@@ -903,7 +888,7 @@ export const useFuntions = () => {
                     if (gasto.categoria !== categoria) return;
                     const fechaGasto = convertirFecha(gasto.fecha);
                     const anio = fechaGasto.getFullYear();
-                    if (anio === anioComparar) {
+                    if (parseInt(anio) === anioComparar) {
                         totalGastos += gasto.precio * gasto.cantidad;
                         if (gasto.user === '679fce0ee8d1ed66d21d18c2') {
                             gastosOG += gasto.precio * gasto.cantidad;
@@ -935,24 +920,23 @@ export const useFuntions = () => {
                         }
                     }
                     );
-                } 
+                }
                 if (user.uid === '6789ce1b48932f890985d1f7') {
                     gastos.forEach(gasto => {
                         const fechaGasto = convertirFecha(gasto.fecha);
                         const anio = fechaGasto.getFullYear();
                         if (anio === anioComparar) {
-                            if (gasto.user === '6789ce1b48932f890985d1f7') {                                
+                            if (gasto.user === '6789ce1b48932f890985d1f7') {
                                 if (gasto.categoria === 'K') {
                                     totalGastos += gasto.precio * gasto.cantidad;
                                     return;
-                                } 
+                                }
                             }
                         }
                     }
                     );
                 }
             }
-
             //console.log(gastosLG, gastosOG, totalGastos);
             gastosPorAnio.push(gastosOG, gastosLG, totalGastos);
             return [

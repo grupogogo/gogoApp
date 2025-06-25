@@ -12,6 +12,8 @@ import { grid } from 'ldrs'
 import { Gastos } from "../gastos/pages/Gastos";
 import { C } from "@table-library/react-table-library/Cell-a4350b14";
 import { CuentasXCobrar } from "../cxc/pages/CuentasXCobrar";
+import { OldOrders } from "../pedidos/pages/OldOrders";
+import { ListOldOrders } from "../pedidos/pages/ListOldOrders";
 grid.register()
 
 export const AppRouter = () => {
@@ -55,7 +57,9 @@ export const AppRouter = () => {
                 <>
                   <Route path="/*" element={<MainDashboard />} />
                   <Route path="/calendar/*" element={<CalendarPage />} />
-                  <Route path="/pedidos/*" element={<Pedidos />} />
+                  <Route path="/pedidos" element={<Pedidos />} />
+                  <Route path="/pedidos/old" element={<OldOrders />} />
+                  <Route path="/pedidos/listOldOrders" element={<ListOldOrders />} />
                   <Route path="/gastos/*" element={<Gastos />} />
                   <Route path="/listaPedidos/*" element={<ListaPedidos />} />0
                   <Route path="/budget/*" element={<Budget />} />

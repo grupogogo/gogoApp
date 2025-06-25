@@ -2,6 +2,8 @@ import { NavLink } from "react-router-dom";
 import { useAuthStore } from "../hooks/useAuthStore";
 import { useState } from "react";
 
+
+
 const Navbar = () => {
     const { user, startLogout } = useAuthStore();
     const [isOpen, setIsOpen] = useState(false);
@@ -32,7 +34,7 @@ const Navbar = () => {
                     <li><NavLink className="dropdown-item" to="/CuentasXCobrar">Cuentas por cobrar</NavLink></li>
                 </ul>
             </div>
-            {user.role === 'planta' && (
+            {user.rol === 'planta' && (
                 <div className="align-items-center">
                     {/* Logo */}
                     <div className="text-center mb-4 bg-secondary border-2 rounded d-none d-md-block">
@@ -86,7 +88,7 @@ const Navbar = () => {
                         aria-labelledby="userDropdown"
                     >
                         <button className="dropdown-item" onClick={startLogout}>
-                            <i className="fas fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400" />
+                            <i className="fa fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400" />
                             Salir
                         </button>
                     </div>

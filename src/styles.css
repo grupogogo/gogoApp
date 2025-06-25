@@ -328,3 +328,26 @@ button:focus-visible {
 .card-hover:hover {
   box-shadow: 0 0.75rem 1.5rem rgb(18 38 63 / 0.33) !important;
 }
+
+/* Evita que filas se corten */
+tr,
+.table-row,
+.row {
+  page-break-inside: avoid !important;
+  break-inside: avoid;
+}
+
+/* Si usas contenedores principales */
+.container {
+  overflow: visible !important;
+}
+
+/* Evita márgenes invisibles */
+body,
+html {
+  margin: 0;
+  padding: 0;
+}
+.page-break {
+  page-break-after: always;
+}

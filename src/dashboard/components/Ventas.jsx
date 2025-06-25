@@ -6,13 +6,13 @@ import { useGastosStore } from "../../hooks/useGastosStore";
 
 export const Ventas = ({ datosUsuario }) => {
 
-  const [filtroAnio, setfiltroAnio] = useState(2025)
-  const {startLoadingPedidos } = usePedidosStore();
+  const { startLoadingPedidos } = usePedidosStore();
   const user = useSelector(state => state.auth)
   const gastos = useSelector(state => state.gastos.gastos);
-  const pedidos = useSelector(state=> state.pedidos.pedidos);
+  const pedidos = useSelector(state => state.pedidos.pedidos);
   const [filtroCategoria, setFiltroCategoria] = useState('KCG');
   const { startLoadingGastos } = useGastosStore();
+  const [anioFiltro, setAnioFiltro] = useState(2025);
 
   const [dashboardState, setDashboardState] = useState({
     lablesKits: [],
@@ -70,11 +70,11 @@ export const Ventas = ({ datosUsuario }) => {
   // Procesar pedidos cuando llegan
   useEffect(() => {
     if (pedidos !== undefined && pedidos.length > 0) {
-      const { monthlySales, totalSales } = totalKitsXAnio(pedidos, datosUsuario);
-      const { monthlySales: monthlyGuantes, totalSales: totalSalesGuantes } = totalGuantesXAnio(pedidos, datosUsuario);
-      const { monthlySales: monthlyOtros, totalSales: totalSalesOtros } = totalOtrosXAnio(pedidos, datosUsuario);
+      const { monthlySales, totalSales } = totalKitsXAnio(pedidos, datosUsuario, anioFiltro);
+      const { monthlySales: monthlyGuantes, totalSales: totalSalesGuantes } = totalGuantesXAnio(pedidos, datosUsuario, anioFiltro);
+      const { monthlySales: monthlyOtros, totalSales: totalSalesOtros } = totalOtrosXAnio(pedidos, datosUsuario, anioFiltro);
       updateDashboardState({
-        totales: totalesPedidos(pedidos, datosUsuario), // Datos de usuario estado que controla si mostrar todo o solo el usuario logueado - totales de estadisticas
+        totales: totalesPedidos(pedidos, datosUsuario, anioFiltro), // Datos de usuario estado que controla si mostrar todo o solo el usuario logueado - totales de estadisticas
         totalxAnio: totalesPedidosAnuales(pedidos, datosUsuario),
         monthlySales,
         totalSalesKits: totalSales, // Nueva variable para almacenar totalSales
@@ -86,25 +86,29 @@ export const Ventas = ({ datosUsuario }) => {
       calcularTotalesPedidos('kits', pedidos,
         (data) => updateDashboardState({ dataKits: data }),
         (labels) => updateDashboardState({ lablesKits: labels }),
-        datosUsuario
+        datosUsuario,
+        anioFiltro
       );
 
       calcularTotalesPedidos('guantes', pedidos,
         (data) => updateDashboardState({ dataGuantes: data }),
         (labels) => updateDashboardState({ lablesGuantes: labels }),
-        datosUsuario
+        datosUsuario,
+        anioFiltro
       );
 
       calcularTotalesPedidos('otros', pedidos,
         (data) => updateDashboardState({ dataOtros: data }),
         (labels) => updateDashboardState({ lablesOtros: labels }),
-        datosUsuario
+        datosUsuario,
+        anioFiltro
       );
 
       calcularTotalesPedidos('todos', pedidos,
         (data) => updateDashboardState({ dataTodos: data }),
         (labels) => updateDashboardState({ lablesTodos: labels }),
-        datosUsuario
+        datosUsuario,
+        anioFiltro
       );
 
       updateDashboardState({
@@ -115,27 +119,52 @@ export const Ventas = ({ datosUsuario }) => {
     if (gastos.length > 0) {
       const categoriaKits = 'K'; // Cambiar a 'guantes' o 'otros' según sea necesario
       const categoriaGuantes = 'G'; // Cambiar a 'guantes' o 'otros' según sea necesario
-      const gastosTotalesKits = totalGastosUsuarios(gastos, filtroAnio, datosUsuario, categoriaKits);
-      const gastosTotalesGuantes = totalGastosUsuarios(gastos, filtroAnio, datosUsuario, categoriaGuantes);
+      const gastosTotalesKits = totalGastosUsuarios(gastos, anioFiltro, datosUsuario, categoriaKits);
+      const gastosTotalesGuantes = totalGastosUsuarios(gastos, anioFiltro, datosUsuario, categoriaGuantes);
       updateDashboardState({ gastosTotalesKits });
       updateDashboardState({ gastosTotalesGuantes });
 
     }
 
-  }, [pedidos, datosUsuario, gastos]);
+  }, [pedidos, datosUsuario, gastos, anioFiltro]);
 
   // Cambio de categoría
-  useEffect(() => {
+  useEffect(() => { //Llena el barchar final del dashboard
     if (pedidos.length > 0) {
       updateDashboardState({
         totalCategoriaxAnio: totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, filtroCategoria),
       });
     }
-  }, [datosUsuario, filtroCategoria]);
+  }, [datosUsuario, filtroCategoria, anioFiltro]);
 
   return (
     <>
-
+      <div className="row">
+        <div className="col-3 align-items-center">
+          <div className="input-group form-select-sm">
+            <span className='m-2'>Año a filtrar</span>
+            <select
+              className="form-select form-select-sm"
+              title="Filtro por año"
+              style={{ maxWidth: 'fit-content' }}
+              value={anioFiltro} // solo el año
+              onChange={e => {
+                setAnioFiltro(parseInt(e.target.value)); // actualiza el año como string                                                     
+              }}
+            >
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2021">2021</option>
+              <option value="2020">2020</option>
+              <option value="2019">2019</option>
+              <option value="2018">2018</option>
+              <option value="2017">2017</option>
+            </select>
+          </div>
+        </div>
+      </div>
       <div className="row g-3 mb-4">
         <div className="col-xl-6 col-lg-6 col-md-12">
           <div className="card card-hover border-0 shadow-lg">
@@ -166,7 +195,7 @@ export const Ventas = ({ datosUsuario }) => {
             </div>
           </div>
         </div>
-
+        {/* GUANTES */}
         <div className="col-xl-3 col-lg-4 col-md-6">
           <div className="card card-hover border-0 shadow-lg">
             <div className="d-flex justify-content-between align-items-center">

@@ -11,7 +11,6 @@ import Swal from 'sweetalert2';
 import { use } from 'react';
 
 export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
-    console.log(fechaActual)
     const gastos = useSelector(state => state.gastos.gastos);
     const { formatearPrecio, buscarNombre, convertirFechaIngles, limpiarFecha, number_format, capitalize } = useFuntions();
     const [search, setSearch] = useState("");
@@ -21,7 +20,7 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
     const { setGastoActivo, startDeleteGasto, startLoadingGastos } = useGastosStore();
     const { user } = useAuthStore();
     const [fechaGasto, setFechaGasto] = useState('2025');
-    const [itemsMostrar, setItemsMostrar] = useState(10);
+    const [itemsMostrar, setItemsMostrar] = useState(20);
 
 
     const filteredGastos = [...gastos]
@@ -87,7 +86,7 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
     const handleSearch = (event) => {
         setSearch(event.target.value);
     };
-    const pagination = usePagination(data, {
+    const pagination = usePagination(finalGastos, {
         state: {
             page: 0,
             size: itemsMostrar,
@@ -100,6 +99,7 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
         `,
     };
     const theme = useTheme([sizeColumnTheme]);
+
 
     const eliminarGasto = async (gasto) => {
         if (user.uid === gasto.user) {
@@ -140,6 +140,7 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
             : new Date(nuevoAnio, fecha.getMonth(), fecha.getDate(), 0, 0, 0);
 
         setFechaActual(nuevaFecha);    // actualiza la fecha completa
+        console.log("data tipo:", typeof data, data);
     }, [fechaGasto])
 
 
@@ -237,9 +238,8 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
                         </div>
                     </Fila>
                     <Fila className='justify-content-between'>
-                        {/* Columna para el select cantidad items a mostrar */}
+                        {/* Columna para el select año */}
                         <div className="col-3 align-items-center">
-
                             <div className="input-group form-select-sm">
                                 <span className='m-2'>Año a filtrar</span>
                                 <select
@@ -263,7 +263,6 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
                                     <option value="2017">2017</option>
                                 </select>
                             </div>
-
                         </div>
                         {/* Columna para el select cantidad items a mostrar */}
                         <div className="col-md-2 align-items-center m-1">

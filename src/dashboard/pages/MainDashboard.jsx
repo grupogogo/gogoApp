@@ -43,9 +43,7 @@ export const MainDashboard = () => {
             </div>
           </div>
         </div>
-
         <hr className="border border-primary border-3 opacity-80 mt-0" />
-
         <Ventas datosUsuario={datosUsuario} />
       </div>
     </LayoutApp>

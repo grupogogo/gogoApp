@@ -31,7 +31,6 @@ export const CuentasXCobrar = () => {
     setShowModal(true);
   }
 
-
   const pedidos = useSelector(state => state.pedidos.pedidos);
   const data = { nodes: pedidos };
 
@@ -91,7 +90,7 @@ export const CuentasXCobrar = () => {
   const handleSearch = (event) => {
     setSearch(event.target.value);
   };
-  const pagination = usePagination(data, {
+  const pagination = usePagination(filteredData, {
     state: {
       page: 0,
       size: itemsMostrar,
@@ -104,6 +103,7 @@ export const CuentasXCobrar = () => {
           `,
   };
   const theme = useTheme([sizeColumnTheme]);
+  
   const handleDownloadPDF = () => {
     let timerInterval;
     Swal.fire({

@@ -1,13 +1,12 @@
 import { useDispatch, useSelector } from 'react-redux'
 import { gogoApi } from '../api';
-import { onLoadPedidos, onDeletePedido, onUpdatePedido, onLoadPedidosActivo, setTotalGuantes, totalGuantes } from '../store';
+import { onLoadPedidos, onDeletePedido, onUpdatePedido, onLoadPedidosActivo, setTotalGuantes, totalGuantes, onLoadOldOrders } from '../store';
 
 
 
 export const usePedidosStore = () => {
 
     const { pedidos, pedidosActivo } = useSelector(state => state.pedidos);
-    const { user } = useSelector(state => state.auth)
     const dispatch = useDispatch();
 
     const comenzarGuardarPedido = async (pedido) => {
@@ -22,6 +21,14 @@ export const usePedidosStore = () => {
         try {
             const { data } = await gogoApi.get('/pedidos');
             dispatch(onLoadPedidos(data));
+        } catch (error) {
+            console.log(error);
+        }
+    }
+    const startLoadingOldOrders = async () => {
+        try {
+            const { data } = await gogoApi.get('/pedidos/oldOrders');
+            dispatch(onLoadOldOrders(data)); 
         } catch (error) {
             console.log(error);
         }
@@ -72,6 +79,7 @@ export const usePedidosStore = () => {
         startDeletePedido,
         getPedidosCliente,
         startSetGuantes,
+        startLoadingOldOrders
     }
 
 }
