@@ -102,6 +102,9 @@ export const useFuntions = () => {
         // Crear objeto Date con la información
         return new Date(anio, meses[mes], dia, hora, minutos);
     };
+    function capitalizarPrimeraLetra(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    }
     function obtenerImagen(categoria, genero) {
         if (categoria === 'kcg' || categoria === 'kcp' || categoria === 'cc' || categoria === 'KCG' || categoria === 'KCP' || categoria === 'CC') {
             return 'comunion-nin' + (genero === '0' ? 'o' : 'a')
@@ -177,7 +180,6 @@ export const useFuntions = () => {
 
         return precioProducto;
     }
-
     const buscarNombre = (categoria) => { //Busca el nombre de la categoria por la categoria que llegue
         const nombre = (categoria === 'KCG') ? 'KIT COMUNIÓN GRANDE' :
             (categoria === 'KCP') ? 'KIT COMUNIÓN PEQUEÑO' :
@@ -402,7 +404,6 @@ export const useFuntions = () => {
         });
         setLables(labels);
         setData(data);
-
         return resultadoTotales;
     };
     const totalesPedidos = (pedidos, datosUsuario, anioFiltro) => {// Esto es para las estadisticas mensuales
@@ -467,7 +468,7 @@ export const useFuntions = () => {
     }
     const totalKitsXAnio = (pedidos, datosUsuario, anioFiltro) => {
         let totalSales = 0;
-        const monthlySales = Array(12).fill(0); // Inicializa directamente con 12 meses
+        const monthlySales = [...Array(11).fill(0)]; // Inicializa directamente con 12 meses
 
         pedidos.forEach(order => {
             const orderDate = convertirFecha(order.fechaCreacion);
@@ -492,22 +493,20 @@ export const useFuntions = () => {
 
                             const orderDate = convertirFecha(order.fechaCreacion);
                             const month = orderDate.getMonth();
-                            monthlySales[month] += sale;
+                            monthlySales[month + 1] += sale;
                         });
                     }
                 });
             });
         });
-
         return {
             monthlySales,
             totalSales
         };
     };
-
     const totalGuantesXAnio = (pedidos, datosUsuario, anioFiltro) => {
         let totalSales = 0;
-        const monthlySales = Array(12).fill(0); // 12 meses, índice 0 = enero
+        const monthlySales = [...Array(11).fill(0)]; // 12 meses, índice 0 = enero
 
         pedidos.forEach(order => {
             const orderDate = convertirFecha(order.fechaCreacion);
@@ -523,12 +522,9 @@ export const useFuntions = () => {
                             const price = Number(product.precioUnitario || product.precio || 0);
                             const quantity = parseInt(product.cantidad, 10) || 0;
                             const sale = price * quantity;
-
                             totalSales += sale;
-
-
                             const month = orderDate.getMonth();
-                            monthlySales[month] += sale;
+                            monthlySales[month + 1] += sale;
 
                         });
                     }
@@ -540,7 +536,6 @@ export const useFuntions = () => {
             totalSales
         };
     };
-
     const totalOtrosXAnio = (pedidos, datosUsuario, anioFiltro) => {
         let totalSales = 0;
         const monthlySales = Array(12).fill(0); // 12 meses
@@ -577,7 +572,6 @@ export const useFuntions = () => {
             totalSales
         };
     };
-
     const totalesPedidosAnuales = (pedidos, datosUsuario) => { //Para calculos por años
         let totalSales = 0;
 
@@ -844,36 +838,6 @@ export const useFuntions = () => {
             return formatearPrecio(total + costoEnvio);
         }
     }
-    function capitalizarPrimeraLetra(str) {
-        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-    }
-    const totalGastosXAnio = (gastos) => {
-
-        if (gastos) {
-            let totalGastos = 0;
-            const gastosPorAnio = {
-                2021: Array(12).fill(0),
-                2022: Array(12).fill(0),
-                2023: Array(12).fill(0),
-                2024: Array(12).fill(0),
-                2025: Array(12).fill(0),
-            };
-
-            gastos.forEach(gasto => {
-                const fechaGasto = convertirFecha(gasto.fecha);
-                const anio = fechaGasto.getFullYear();
-                const mes = fechaGasto.getMonth();
-                if (gastosPorAnio[anio]) {
-                    gastosPorAnio[anio][mes] += gasto.precio * gasto.cantidad;
-                    totalGastos += gasto.precio * gasto.cantidad;
-                }
-            });
-            return {
-                gastosPorAnio,
-                totalGastos,
-            };
-        }
-    };
     const totalGastosUsuarios = (gastos, anioComparar, datosUsuario, categoria) => {
         if (gastos) {
             let totalGastos = 0;
@@ -946,7 +910,6 @@ export const useFuntions = () => {
             ];
         }
     };
-
     const calcularTotalesPedidoCxC = (pedido) => { /* retorna el total de cantidades y de venta por pedido */
         if (!pedido?.itemPedido) return;
 
@@ -1006,30 +969,30 @@ export const useFuntions = () => {
 
 
         //*Methods
-        buscarPrecio,
-        formatearPrecio,
-        obtenerImagen,
-        capitalize,
-        handleBlur,
-        convertirFecha,
         buscarNombre,
-        convertirNumeroATexto,
+        buscarPrecio,
+        buscarPrecioxCategoriaAnio,
+        calcularTotalesPedidoCxC,
         calcularTotalesPedidos,
+        calculaTotalPedido,
+        capitalizarPrimeraLetra,
+        capitalize,
+        convertirFecha,
+        convertirFechaIngles,
+        convertirNumeroATexto,
+        formatearPrecio,
+        handleBlur,
+        limpiarFecha,
+        number_format,
+        obtenerImagen,
         totalesPedidos,
         totalesPedidosAnuales,
         totalesPedidosAnualesPorCategoria,
-        number_format,
-        calculaTotalPedido,
-        capitalizarPrimeraLetra,
-        limpiarFecha,
-        totalKitsXAnio,
-        totalGuantesXAnio,
-        totalOtrosXAnio,
         totalGastosUsuarios,
-        buscarPrecioxCategoriaAnio,
+        totalGuantesXAnio,
         totalizarPreciosFabrica,
-        calcularTotalesPedidoCxC,
-        convertirFechaIngles
+        totalKitsXAnio,
+        totalOtrosXAnio,
     }
 
 }

@@ -10,7 +10,7 @@ import html2canvas from "html2canvas";
 import Swal from 'sweetalert2';
 import jsPDF from "jspdf";
 import { ModalDetallePedido } from '../../pedidos/components/modals/ModalDetallePedido';
-import { Row as Fila } from 'react-bootstrap';
+import { Button, Row as Fila } from 'react-bootstrap';
 
 export const CuentasXCobrar = () => {
 
@@ -103,7 +103,7 @@ export const CuentasXCobrar = () => {
           `,
   };
   const theme = useTheme([sizeColumnTheme]);
-  
+
   const handleDownloadPDF = () => {
     let timerInterval;
     Swal.fire({
@@ -157,6 +157,69 @@ export const CuentasXCobrar = () => {
   };
   const totalesAgrupados = calcularTotalesAgrupados(filteredData.nodes);
 
+  // Escapa adecuadamente las celdas para evitar errores con caracteres especiales
+  const escapeCsvCell = (cell) => {
+    if (cell == null) {
+      return "";
+    }
+    const sc = cell.toString().trim();
+    if (sc === "" || sc === '""') {
+      return sc;
+    }
+    if (
+      sc.includes('"') ||
+      sc.includes(";") || // También escapa el nuevo delimitador
+      sc.includes("\n") ||
+      sc.includes("\r")
+    ) {
+      return '"' + sc.replace(/"/g, '""') + '"';
+    }
+    return sc;
+  };
+
+  // Genera los datos CSV usando ";" como delimitador de columnas
+  const makeCsvData = (columns, data) => {
+    const delimiter = ";"; // ← CAMBIO CLAVE
+
+    // Encabezado
+    const header = columns.map(({ name }) => escapeCsvCell(name)).join(delimiter) + "\r\n";
+
+    // Filas de datos
+    const rows = data.map((rowItem) =>
+      columns.map(({ accessor }) => escapeCsvCell(accessor(rowItem))).join(delimiter)
+    ).join("\r\n");
+
+    return header + rows + "\r\n";
+  };
+
+  // Descarga el archivo CSV generado
+  const downloadAsCsv = (columns, data, filename) => {
+    const csvData = makeCsvData(columns, data);
+    const csvFile = new Blob(["\uFEFF" + csvData], { type: "text/csv;charset=utf-8;" });
+    const downloadLink = document.createElement("a");
+
+    downloadLink.style.display = "none";
+    downloadLink.download = filename;
+    downloadLink.href = URL.createObjectURL(csvFile);
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  };
+
+  // Llama esta función cuando quieras generar y descargar el archivo CSV
+  const handleDownloadCsv = () => {
+    const columns = [
+      { accessor: (item) => item.fechaCreacion, name: "FECHA" },
+      { accessor: (item) => (item.pedido_id).slice(-6), name: "REMISION" },
+      { accessor: (item) => item.cliente.nombre, name: "CLIENTE" },
+      { accessor: (item) => (calcularTotalesPedidoCxC(item).totalItems), name: "ITEMS" },
+      { accessor: (item) => (calcularTotalesPedidoCxC(item).total), name: "TOTAL" },
+    ];
+
+    downloadAsCsv(columns, filteredData.nodes, "Tabla CXC.csv");
+  };
+
+
   useEffect(() => {
     startLoadingPedidos();
   }, [])
@@ -169,14 +232,18 @@ export const CuentasXCobrar = () => {
           {/* header */}
           <div className="card-header bg-white py-3">
             <div className="row">
-              <div className="col-md-6">
+              <div className="col">
                 <h5 className="m-0 font-weight-bold text-primary">Listado de cuentas por estado</h5>
               </div>
-              <div className="col-md-6 d-flex justify-content-end">
-                <button className='btn btn-sm d-flex align-items-center gap-2 btn-outline-danger' onClick={handleDownloadPDF}>
+              <div className="col d-flex justify-content-end">
+                <Button variant='danger-outline' className='btn btn-sm d-flex align-items-center gap-2 btn-outline-success m-1' onClick={handleDownloadCsv}>
+                  <i className="fa-solid fa-file-csv"></i>
+                  <span>Descargar CSV</span>
+                </Button>
+                <Button variant='danger-outline' className='btn btn-sm d-flex align-items-center gap-2 btn-outline-danger m-1' onClick={handleDownloadPDF}>
                   <i className="fa-solid fa-file-pdf"></i>
                   <span>Descargar PDF</span>
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -226,7 +293,7 @@ export const CuentasXCobrar = () => {
                   className="form-select form-select-sm w-auto"
                   title='Filtro por año'
                   value={fechaPedido}
-                   style={{ maxWidth: 'fit-content' }}
+                  style={{ maxWidth: 'fit-content' }}
                   onChange={e => {
                     const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
                     setFechaPedido(value);

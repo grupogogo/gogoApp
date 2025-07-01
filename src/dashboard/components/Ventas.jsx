@@ -112,7 +112,12 @@ export const Ventas = ({ datosUsuario }) => {
       );
 
       updateDashboardState({
-        totalesPorCategoria: calcularTotalesPedidos('todos', pedidos, () => { }, () => { }, datosUsuario),
+        totalesPorCategoria: calcularTotalesPedidos('todos', pedidos,
+          (data) => updateDashboardState({ dataTodos: data }),
+          (labels) => updateDashboardState({ lablesTodos: labels }),
+          datosUsuario,
+          anioFiltro
+        )
       });
 
     }
@@ -135,6 +140,7 @@ export const Ventas = ({ datosUsuario }) => {
         totalCategoriaxAnio: totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, filtroCategoria),
       });
     }
+    console.log(dashboardState.totalesPorCategoria);
   }, [datosUsuario, filtroCategoria, anioFiltro]);
 
   return (

@@ -5,7 +5,7 @@ import { useFuntions } from "../../../hooks"
 export const CargaImagesTipo = ({ onInputChangeCont, pedido, imagen, talla = 't-1', genero, categoria }) => {
 
     const gen = (genero === '0') ? '-O' : '-A';
-    const list = (categoria === 'kcg' || categoria === 'kcp' || categoria === 'cc') ? (gen === '-A') ? 6 : 5 : 4
+    const list = (categoria === 'kcg' || categoria === 'kcp' || categoria === 'cc') ? (gen === '-A') ? 6 : 5 : 5
     const { obtenerImagen } = useFuntions();
 
 

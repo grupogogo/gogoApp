@@ -5,6 +5,7 @@ import Table from 'react-bootstrap/Table';
 import { useFuntions } from '../../../hooks/useFuntions';
 import useImage from '../../../hooks/useImage';
 
+
 export const ModalDetallePedido = ({ setShow, show, pedido }) => {
     const { user } = useAuthStore();
     const { capitalize, formatearPrecio, obtenerImagen } = useFuntions();
