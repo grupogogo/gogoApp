@@ -30,8 +30,6 @@ const number_format = (number, decimals, dec_point, thousands_sep) => {
 };
 
 export const BarChart = ({ totales }) => {
-
-    console.log(totales)
     const { buscarNombre } = useFuntions();
     const chartRef = useRef(null);
     useEffect(() => {

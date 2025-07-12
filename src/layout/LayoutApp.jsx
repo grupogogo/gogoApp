@@ -22,7 +22,9 @@ export const LayoutApp = ({ children }) => {
             overflowX: "hidden" // <- Esto evita que el contenido se desborde en X
           }}
         >
+          <div className="container-fluid">
           {children}
+          </div>
         </main>
         <Footer />
       </div>

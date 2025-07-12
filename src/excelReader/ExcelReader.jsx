@@ -96,7 +96,6 @@ const ExcelReader = () => {
           `,
     };
     const theme = useTheme([sizeColumnTheme]);
-    console.log(filteredData.nodes);
 
     return (
         <>

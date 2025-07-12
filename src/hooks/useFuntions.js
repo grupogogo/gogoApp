@@ -3,12 +3,10 @@ import { useAuthStore } from './useAuthStore';
 import { useClientesStore } from './useClientesStore';
 import numalet from 'numalet';
 
-
 export const useFuntions = () => {
     const { clienteActivo } = useClientesStore();
     const { user } = useAuthStore();
     const precios = useSelector(state => state.precios);
-
 
     const {
         precioKits: {
@@ -34,6 +32,12 @@ export const useFuntions = () => {
             return fecha
         }
     }
+    const convertirOldFecha = (fechaStr) => {
+        // Asegúrate de que el string tenga exactamente el formato esperado
+        const [dia, mes, anio] = fechaStr.split('/').map(Number);
+        return new Date(anio, mes - 1, dia); // JavaScript cuenta los meses desde 0 (enero)
+    };
+
     const convertirFechaIngles = (fechaStr) => {
         const meses = {
             enero: 'Jan',
@@ -55,6 +59,21 @@ export const useFuntions = () => {
         const fechaIngles = fechaStr.replace(regexMes, (matched) => meses[matched.toLowerCase()]);
 
         return new Date(fechaIngles);
+    };
+
+    const formatearFechaConNombreMes = (fechaStr) => {
+        if (!fechaStr) return "";
+
+        const [dia, mes] = fechaStr.split('/');
+
+        const nombresMeses = [
+            "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+            "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
+        ];
+
+        const nombreMes = nombresMeses[parseInt(mes, 10) - 1];
+
+        return `${nombreMes} ${dia}`;
     };
     const number_format = (number, decimals, dec_point, thousands_sep) => {
         number = (number + '').replace(',', '').replace(' ', '');
@@ -85,23 +104,40 @@ export const useFuntions = () => {
             julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
         };
 
-        // Dividir fecha en partes (mes, día y resto)
-        const partes = fechaStr.split(' ');
-        const mes = partes[0].toLowerCase(); // Primer elemento es el mes
-        const dia = parseInt(partes[1].replace(',', ''), 10); // Día sin coma
-        const anio = parseInt(partes[2], 10); // Año
+        // Si viene en formato dd-mm-yyyy o dd-mm-yyyy hh:mm
+        const regexFechaGuiones = /^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{1,2}))?$/;
 
-        // Verificar si hay hora
+        if (regexFechaGuiones.test(fechaStr)) {
+            const match = fechaStr.match(regexFechaGuiones);
+            const dia = parseInt(match[1], 10);
+            const mes = parseInt(match[2], 10) - 1; // JavaScript usa meses 0-11
+            const anio = parseInt(match[3], 10);
+            const hora = match[4] ? parseInt(match[4], 10) : 0;
+            const minutos = match[5] ? parseInt(match[5], 10) : 0;
+            return new Date(anio, mes, dia, hora, minutos);
+        }
+
+        // Formato con nombre del mes: junio 24, 2025 18:38
+        const partes = fechaStr.trim().split(' ');
+        const mesNombre = partes[0]?.toLowerCase();
+        const dia = parseInt(partes[1]?.replace(',', ''), 10);
+        const anio = parseInt(partes[2], 10);
         let hora = 0, minutos = 0;
+
         if (partes.length > 3) {
-            const [h, m] = partes[3].split(':'); // Separar hora y minutos
+            const [h, m] = partes[3].split(':');
             hora = parseInt(h, 10);
             minutos = parseInt(m, 10);
         }
 
-        // Crear objeto Date con la información
-        return new Date(anio, meses[mes], dia, hora, minutos);
+        if (mesNombre in meses && !isNaN(dia) && !isNaN(anio)) {
+            return new Date(anio, meses[mesNombre], dia, hora, minutos);
+        }
+
+        // Si nada coincide, retornar fecha inválida
+        return new Date('Invalid Date');
     };
+
     function capitalizarPrimeraLetra(str) {
         return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
     }
@@ -466,7 +502,7 @@ export const useFuntions = () => {
             enviado
         };
     }
-    const totalKitsXAnio = (pedidos, datosUsuario, anioFiltro) => {
+    const totalKitsXAnio = (pedidos, datosUsuario, anioFiltro = 2025) => {
         let totalSales = 0;
         const monthlySales = [...Array(11).fill(0)]; // Inicializa directamente con 12 meses
 
@@ -499,9 +535,38 @@ export const useFuntions = () => {
                 });
             });
         });
+        console.log(monthlySales)
         return {
             monthlySales,
             totalSales
+        };
+    };
+    const totalKitsXAnio2025 = (pedidos) => {
+        const monthlySales = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
+
+        pedidos.forEach(order => {
+            const orderDate = convertirFecha(order.fechaCreacion);
+            if (orderDate.getFullYear() !== 2025) {
+                return; // Si el año de la orden no coincide con el año filtrado, salta a la siguiente orden
+            }
+            order.itemPedido.forEach(item => {
+                Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
+                    if (['KCG', 'KCP', 'KB', 'CC', 'CB'].includes(categoriaItem)) {
+                        category.pedido.forEach(product => {
+                            const price = Number(product.precioUnitario || product.precio || 0);
+                            const quantity = parseInt(product.cantidad, 10) || 0;
+                            const sale = price * quantity;
+
+                            const orderDate = convertirFecha(order.fechaCreacion);
+                            const month = orderDate.getMonth();
+                            monthlySales[month] += sale;
+                        });
+                    }
+                });
+            });
+        });
+        return {
+            monthlySales,
         };
     };
     const totalGuantesXAnio = (pedidos, datosUsuario, anioFiltro) => {
@@ -660,16 +725,19 @@ export const useFuntions = () => {
             monthlySales2021,
         };
     }
-    const totalesPedidosAnualesPorCategoria = (pedidos, datosUsuario, categoria) => { //Para calculos por años
+    const totalesPedidosAnualesPorCategoria = (pedidos, datosUsuario, categoria, oldOrders) => { //Para calculos por años
 
         let totalSales = 0;
-        const monthlySales2021 = [0, ...Array(13).fill(0)];
-        const monthlySales2022 = [0, ...Array(13).fill(0)];
-        const monthlySales2023 = [0, ...Array(13).fill(0)];
-        const monthlySales2024 = [0, ...Array(13).fill(0)];
-        const monthlySales2025 = [0, ...Array(13).fill(0)];
+        const monthlySales2019 = [0, ...Array(11).fill(0)];
+        const monthlySales2020 = [0, ...Array(11).fill(0)];
+        const monthlySales2021 = [0, ...Array(11).fill(0)];
+        const monthlySales2022 = [0, ...Array(11).fill(0)];
+        const monthlySales2023 = [0, ...Array(11).fill(0)];
+        const monthlySales2024 = [0, ...Array(11).fill(0)];
+        const monthlySales2025 = [0, ...Array(11).fill(0)];
         const currentYear = new Date().getFullYear();
         let cont = 0;
+
         pedidos.forEach(order => {
             if (datosUsuario !== true) {
                 if (order.user._id === user.uid) {
@@ -767,9 +835,11 @@ export const useFuntions = () => {
                                     monthlySales2022[month] += quantity;
                                 } else if (year === currentYear - 4) {
                                     monthlySales2021[month] += quantity;
+                                } else if (year === currentYear - 5) {
+                                    monthlySales2020[month] += quantity;
+                                } else if (year === currentYear - 6) {
+                                    monthlySales2019[month] += quantity;
                                 }
-
-                                //console.log('cont:', cont, '-', 'categoria: ', categoriaItem, '-', 'quantity: ', quantity, '- price: ', price, '- orderDate: ', orderDate);
                                 cont++;
                             });
                         } else {
@@ -811,7 +881,15 @@ export const useFuntions = () => {
                 });
             }
         });
-        //console.log(monthlySales2025);
+
+        /*    if (oldOrders) {
+               console.log(oldOrders);
+               oldOrders.forEach(oldOrder => {
+                   oldOrder.items.forEach(item => {
+                       console.log(item.CODIGO)
+                   })
+               })
+           } */
         return {
             monthlySales2025,
             monthlySales2024,
@@ -910,6 +988,34 @@ export const useFuntions = () => {
             ];
         }
     };
+    const mensualGastosUsuarios = (gastos, anioComparar, categoria) => {
+        if (!gastos) return;
+
+        // Inicializa 12 meses en 0
+        const gastosMensualesO = new Array(12).fill(0);
+        const gastosMensualesL = new Array(12).fill(0);
+
+        gastos.forEach(gasto => {
+            const fechaGasto = convertirFecha(gasto.fecha);
+            const anio = fechaGasto.getFullYear();
+            const mes = fechaGasto.getMonth(); // 0 = Enero, 11 = Diciembre
+
+            if (anio !== anioComparar) return;
+            if (gasto.categoria !== categoria) return;
+
+            const subtotal = gasto.precio * gasto.cantidad;
+            if (gasto.user === '679fce0ee8d1ed66d21d18c2') {
+                gastosMensualesO[mes] += subtotal;
+                return;
+            }
+            if (gasto.user === '6789ce1b48932f890985d1f7') {
+                gastosMensualesL[mes] += subtotal;
+                return;
+            }
+        });
+        return { gastosMensualesO, gastosMensualesL };
+    };
+
     const calcularTotalesPedidoCxC = (pedido) => { /* retorna el total de cantidades y de venta por pedido */
         if (!pedido?.itemPedido) return;
 
@@ -992,7 +1098,11 @@ export const useFuntions = () => {
         totalGuantesXAnio,
         totalizarPreciosFabrica,
         totalKitsXAnio,
+        totalKitsXAnio2025,
         totalOtrosXAnio,
+        formatearFechaConNombreMes,
+        convertirOldFecha,
+        mensualGastosUsuarios
     }
 
 }

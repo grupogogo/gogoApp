@@ -178,8 +178,8 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
 
 
                                         return (
-                                            <Card className="shadow p-3 mb-3 rounded" key={`${categoria}-${idx}`}>
-                                                <Card.Title className="ml-2 mt-2">
+                                            <Card className="shadow p-3 mb-1 rounded" key={`${categoria}-${idx}`}>
+                                                <Card.Title className="">
                                                     <figure>
                                                         <blockquote className="blockquote">
                                                             <p className="fw-bold text-secondary">{buscarNombre(categoria)}</p>
@@ -199,7 +199,10 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                                 <th>Cantidad</th>
                                                                 {categoria === 'OTR' && <th>Precio Unitario</th>}
                                                                 {user.rol !== "planta" && (
-                                                                    <th>SubTotal</th>
+                                                                    <>
+                                                                        <th>SubTotal</th>
+                                                                        <th>Total</th>
+                                                                    </>
                                                                 )}
                                                             </tr>
                                                         </thead>
@@ -305,7 +308,7 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                                     {(categoria === 'CC' || categoria === 'KCP' || categoria === 'CB' || categoria === 'KB') && (
                                                                         <>
                                                                             <td colSpan={4}>
-                                                                                Total {buscarNombre(categoria)}
+                                                                                Total {(buscarNombre(categoria))}
                                                                             </td>
                                                                             <td className='text-right'>{formatearPrecio(totalPorCategoria)}</td>
                                                                         </>

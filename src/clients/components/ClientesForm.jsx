@@ -8,24 +8,23 @@ export const ClientesForm = ({ setCliente, cliente }) => {
   const [checkPrecios, setCheckPrecios] = useState(false);
   const [clienteTipo, setClienteTipo] = useState(true);
 
-  const { nombre, email, nitCC, telefono, direccion, ciudad, detalle, distribuidor,
-    precios: { precioKits: {
-      kcg,
-      kcp,
-      kb
-    }, precioCirios: {
-      cc,
-      cb
-    },
-      precioGuantes: {
-        gb,
-        gn,
-        gm
-      }
-    },
+  const {
+    nombre,
+    email,
+    nitCC,
+    telefono,
+    direccion,
+    ciudad,
+    detalle,
+    distribuidor,
+    precios: {
+      precioKits: { kcg = 0, kcp = 0, kb = 0 } = {},
+      precioCirios: { cc = 0, cb = 0 } = {},
+      precioGuantes: { gb = 0, gn = 0, gm = 0 } = {}
+    } = {},
     onInputChange,
     formState
-  } = useForm(clienteActivo);
+  } = useForm(clienteActivo || {});
 
   const cargarPrecios = (event) => {
     setCheckPrecios(event.target.checked);

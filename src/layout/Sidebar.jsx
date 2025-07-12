@@ -17,7 +17,7 @@ const Sidebar = () => {
 
                     style={{
                         width: isHovered ? '250px' : '80px',
-                        transition: 'width 1s ease',
+                        transition: 'width 0.2s ease',
                         zIndex: 1050, // aseguramos que esté sobrepuesto
                         background: '#232E3C'
                     }}
@@ -30,7 +30,7 @@ const Sidebar = () => {
                             style={{
                                 width: isHovered ? "70px" : "70px",
                                 height: "auto",
-                                transition: "width 2s ease"
+                                transition: "width 0.5s ease"
                             }}
                         />
                     </div>

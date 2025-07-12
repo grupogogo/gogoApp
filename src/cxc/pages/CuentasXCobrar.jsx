@@ -13,8 +13,6 @@ import { ModalDetallePedido } from '../../pedidos/components/modals/ModalDetalle
 import { Button, Row as Fila } from 'react-bootstrap';
 
 export const CuentasXCobrar = () => {
-
-
   const { limpiarFecha, calcularTotalesPedidoCxC, formatearPrecio, buscarNombre, convertirFechaIngles } = useFuntions();
   const [search, setSearch] = useState("");
   const { user } = useAuthStore();
@@ -24,7 +22,7 @@ export const CuentasXCobrar = () => {
   const [pedido, setPedido] = useState({});
   const [showModal, setShowModal] = useState(false)
   const [fechaPedido, setFechaPedido] = useState('2025');
-  const [itemsMostrar, setItemsMostrar] = useState(10);
+  const [itemsMostrar, setItemsMostrar] = useState(20);
 
   const abrirModalDetalle = (pedido) => {
     setPedido(pedido);

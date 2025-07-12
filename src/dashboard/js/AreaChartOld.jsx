@@ -2,11 +2,11 @@ import React, { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import { useFuntions } from '../../hooks';
 
-export const AreaChart = ({ totales, porValor }) => {
-  const { number_format } = useFuntions();
-  const monthlySales2025 = Array.isArray(totales?.monthlySales2025) && totales.monthlySales2025.length > 0
-    ? totales.monthlySales2025
-    : totales.monthlySales;
+export const AreaChartOld = ({ totales, porValor, ventas }) => {
+  if (!totales || !totales.gastosMensualesO || !totales.gastosMensualesL || !ventas || !ventas.data) { return }
+  const { number_format, formatearPrecio } = useFuntions();
+
+  console.log(ventas)
 
   const chartRef = useRef(null);
   useEffect(() => {
@@ -19,15 +19,15 @@ export const AreaChart = ({ totales, porValor }) => {
 
     // Recorta los datos de cada año hasta el mes actual
     const trimData = (data) =>
-      Array.isArray(data) ? data.slice(1, currentMonth + 1) : [];
+      Array.isArray(data) ? data.slice(0, currentMonth) : [];
 
     const myLineChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels,
+        labels: allLabels,
         datasets: [
           {
-            label: '2025',
+            label: 'Gastos O: ' + formatearPrecio((totales.gastosMensualesO).reduce((a, b) => a + b, 0)),
             tension: 0.3,
             backgroundColor: "rgba(78, 115, 223, 0.05)",
             borderColor: ['rgb(54, 162, 235)'],
@@ -38,7 +38,7 @@ export const AreaChart = ({ totales, porValor }) => {
             pointHoverBorderColor: "rgba(54, 162, 235, 1)",
             pointHitRadius: 10,
             pointBorderWidth: 1,
-            data: trimData(monthlySales2025),
+            data: (totales.gastosMensualesO),
             datalabels: {
               align: 'end',
               anchor: 'end',
@@ -51,7 +51,7 @@ export const AreaChart = ({ totales, porValor }) => {
             },
           },
           {
-            label: '2024',
+            label: 'Gastos L: ' + formatearPrecio((totales.gastosMensualesL).reduce((a, b) => a + b, 0)),
             tension: 0.3,
             backgroundColor: "rgba(78, 115, 223, 0.05)",
             borderColor: ['rgb(255, 99, 132)'],
@@ -59,56 +59,44 @@ export const AreaChart = ({ totales, porValor }) => {
             pointBorderColor: ['rgb(255, 99, 132)'],
             pointHoverRadius: 3,
             pointHoverBackgroundColor: "rgba(255, 99, 132, 1)",
-            pointHoverBorderColor: "rgba(78, 115, 223, 1)",
+            pointHoverBorderColor: "rgba(255, 99, 132, 1)",
             pointHitRadius: 10,
             pointBorderWidth: 1,
-            data: trimData(totales.monthlySales2024),
-            hidden: true,
+            data: (totales.gastosMensualesL),
+            datalabels: {
+              align: 'end',
+              anchor: 'end',
+              formatter: (value) => number_format(value),
+              color: 'rgb(255, 99, 132)',
+              font: {
+                size: 10,
+                weight: 'semibold',
+              },
+            },
           },
           {
-            label: '2023',
+            label: 'Ventas: ' + formatearPrecio((totales.gastosMensualesL).reduce((a, b) => a + b, 0)),
             tension: 0.3,
             backgroundColor: "rgba(78, 115, 223, 0.05)",
-            borderColor: ['rgb(75, 192, 192)'],
+            borderColor: ['rgba(11, 216, 90, 1)'],
             pointRadius: 4,
-            pointBorderColor: ['rgb(75, 192, 192)'],
+            pointBorderColor: ['rgb(11, 216, 90, 1)'],
             pointHoverRadius: 3,
-            pointHoverBackgroundColor: "rgba(75, 192, 192, 1)",
-            pointHoverBorderColor: "rgba(75, 192, 192, 1)",
+            pointHoverBackgroundColor: "rgba(11, 216, 90, 1)",
+            pointHoverBorderColor: "rgba(11, 216, 90, 1)",
             pointHitRadius: 10,
             pointBorderWidth: 1,
-            data: trimData(totales.monthlySales2023),
-            hidden: true,
-          },
-          {
-            label: '2022',
-            tension: 0.3,
-            backgroundColor: "rgba(17, 42, 119, 0.05)",
-            borderColor: ['rgb(153, 102, 255)'],
-            pointRadius: 4,
-            pointBorderColor: ['rgb(153, 102, 255)'],
-            pointHoverRadius: 3,
-            pointHoverBackgroundColor: "rgba(153, 102, 255, 1)",
-            pointHoverBorderColor: "rgba(153, 102, 255, 1)",
-            pointHitRadius: 10,
-            pointBorderWidth: 1,
-            data: trimData(totales.monthlySales2022),
-            hidden: true,
-          },
-          {
-            label: '2021',
-            tension: 0.3,
-            backgroundColor: "rgba(78, 115, 223, 0.05)",
-            borderColor: ['rgb(255, 159, 64)'],
-            pointRadius: 4,
-            pointBorderColor: ['rgb(255, 159, 64)'],
-            pointHoverRadius: 3,
-            pointHoverBackgroundColor: "rgba(255, 159, 64, 1)",
-            pointHoverBorderColor: "rgba(255, 159, 64, 1)",
-            pointHitRadius: 10,
-            pointBorderWidth: 1,
-            data: trimData(totales.monthlySales2021),
-            hidden: true,
+            data: (ventas.data),
+            datalabels: {
+              align: 'end',
+              anchor: 'end',
+              formatter: (value) => number_format(value),
+              color: 'rgb(11, 216, 90, 1)',
+              font: {
+                size: 10,
+                weight: 'semibold',
+              },
+            },
           }
         ],
       },
@@ -133,21 +121,22 @@ export const AreaChart = ({ totales, porValor }) => {
             }
           },
           y: {
+            beginAtZero: true,
             ticks: {
-              maxTicksLimit: 30,
-              padding: 10,
-              callback: function (value) {
-                return ((porValor) ? '' : '$') + number_format(value);
-              }
+              display: false // ❌ Oculta los valores numéricos del eje Y
             },
             grid: {
-              color: "rgb(234, 236, 244)",
-              zeroLineColor: "rgb(234, 236, 244)",
-              drawBorder: true,
-              borderDash: [2],
-              zeroLineBorderDash: [2]
+              display: false // ❌ Oculta las líneas horizontales
             },
-            suggestedMax: Math.max(...trimData(monthlySales2025)) * 1.1 // Ajusta el límite superior del eje Y
+            title: {
+              display: true,
+              text: porValor ? 'Gastos Totales' : 'Gastos en $',
+              color: '#858796',
+              font: {
+                size: 14,
+                weight: 'bold'
+              }
+            }
           }
         },
         plugins: {
@@ -205,8 +194,9 @@ export const AreaChart = ({ totales, porValor }) => {
 
   return (
     <>
-      {/* Card Body */}
-      <canvas ref={chartRef} />
+      <div style={{ height: '620px', width: '100%' }} className='border rounded shadow-sm p-2'>
+        <canvas ref={chartRef} style={{ width: '100%', height: '100%' }} />
+      </div>
 
     </>
   )

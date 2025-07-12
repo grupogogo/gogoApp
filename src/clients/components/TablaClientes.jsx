@@ -70,7 +70,7 @@ export const TablaClientes = ({ handleShow }) => {
     const pagination = usePagination(data, {
         state: {
             page: 0,
-            size: 10,
+            size: 20,
         },
     });
     const sizeColumnTheme = {

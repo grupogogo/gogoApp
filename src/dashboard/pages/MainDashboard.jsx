@@ -19,14 +19,11 @@ export const MainDashboard = () => {
     <LayoutApp>
       <div className="m-3">
         <div className="row mb-3">
-          <div className="col-md-12">
+          <div className="col-md-6 border">
             <div
-              className="d-flex align-item-center"
+              className="d-flex align-items-center  justify-content-middle"
               alt="Click para ver los datos del usuario logueado"
             >
-              <span className="me-2 fs-5">
-                Datos {datosUsuario ? `globales ${anioActual}` : user.name}
-              </span>
               <input
                 className="form-check-input"
                 type="checkbox"
@@ -36,10 +33,14 @@ export const MainDashboard = () => {
                 checked={datosUsuario}
                 onChange={selTipoCliente}
               />
+              <span className="fs-5 ms-2">
+                Datos {datosUsuario ? `globales ${anioActual}` : user.name}
+              </span>
               <label
                 className="form-check-label"
                 htmlFor="flexSwitchCheckClienteDistribuidor"
-              ></label>
+              >
+              </label>
             </div>
           </div>
         </div>

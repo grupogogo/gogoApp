@@ -4,6 +4,7 @@ import { AreaChart, BarChart, PieChart } from "../js";
 import { useSelector } from "react-redux";
 import { useGastosStore } from "../../hooks/useGastosStore";
 
+
 export const Ventas = ({ datosUsuario }) => {
 
   const { startLoadingPedidos } = usePedidosStore();
@@ -13,6 +14,8 @@ export const Ventas = ({ datosUsuario }) => {
   const [filtroCategoria, setFiltroCategoria] = useState('KCG');
   const { startLoadingGastos } = useGastosStore();
   const [anioFiltro, setAnioFiltro] = useState(2025);
+  const oldOrders = useSelector(state => state.pedidos.oldOrders) || [];
+  const { startLoadingOldOrders } = usePedidosStore();
 
   const [dashboardState, setDashboardState] = useState({
     lablesKits: [],
@@ -47,6 +50,8 @@ export const Ventas = ({ datosUsuario }) => {
 
   // Cargar datos
   useEffect(() => {
+    startLoadingOldOrders();
+    startLoadingOldOrders();
     cargarPedidos();
     startLoadingGastos();
   }, []);
@@ -282,12 +287,12 @@ export const Ventas = ({ datosUsuario }) => {
                 <div className="card-body p-3">
                   <div className="chartArea">
                     <AreaChart
-                      totales={totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria)}
+                      totales={totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria, oldOrders)}
                       porValor={true}
                     />
                   </div>
                   <hr className="my-3" />
-                  <small className="text-muted">Ventas {buscarNombre(categoria)}</small>
+                  <small className="text-muted">Ventas hasta {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} | {(buscarNombre(categoria)).toLocaleLowerCase()} {totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria, oldOrders).monthlySales2025.reduce((a, b) => a + b, 0)}</small>
                 </div>
               </div>
             </div>
@@ -307,6 +312,4 @@ export const Ventas = ({ datosUsuario }) => {
       </div>
     </>
   );
-
-
 }

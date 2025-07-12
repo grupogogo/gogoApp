@@ -24,7 +24,7 @@ const formInicial = {
     subCategoria: 'G',
 }
 export const Gastos = () => {
-    const { formatearPrecio } = useFuntions()
+    const { formatearPrecio, limpiarFecha } = useFuntions()
     const [fechaActual, setFechaActual] = useState(new Date());
     const [show, setShow] = useState(false)
     const [check, setCheck] = useState(false);

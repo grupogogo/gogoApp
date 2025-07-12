@@ -32,6 +32,7 @@ const Navbar = () => {
                     <li><NavLink className="dropdown-item" to="/listapedidos">Listar pedidos</NavLink></li>
                     <li><NavLink className="dropdown-item" to="/clientes">Clientes</NavLink></li>
                     <li><NavLink className="dropdown-item" to="/CuentasXCobrar">Cuentas por cobrar</NavLink></li>
+                    <li><NavLink className="dropdown-item" to="/pedidos/listOldOrders">Listar old orders</NavLink></li>
                 </ul>
             </div>
             {user.rol === 'planta' && (

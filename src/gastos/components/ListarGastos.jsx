@@ -12,7 +12,7 @@ import { use } from 'react';
 
 export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
     const gastos = useSelector(state => state.gastos.gastos);
-    const { formatearPrecio, buscarNombre, convertirFechaIngles, limpiarFecha, number_format, capitalize } = useFuntions();
+    const { formatearPrecio, buscarNombre, convertirFechaIngles, limpiarFecha, number_format, capitalize, convertirFecha } = useFuntions();
     const [search, setSearch] = useState("");
     const [isHideKits, setHideKits] = useState(false);
     const [isHideGuantes, setHideGuantes] = useState(false);
@@ -140,7 +140,6 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
             : new Date(nuevoAnio, fecha.getMonth(), fecha.getDate(), 0, 0, 0);
 
         setFechaActual(nuevaFecha);    // actualiza la fecha completa
-        console.log("data tipo:", typeof data, data);
     }, [fechaGasto])
 
 
@@ -168,10 +167,9 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
                         </div>
                     </div>
                 </div>
-                <div>
-                    <Fila className="justify-content-between align-items-center mt-2 mb-3">
+                 <div className="row d-flex  align-items-center mt-2 mb-2 justify-content-between">
                         {/* Columna para los checkboxes */}
-                        <div className="col-md-8 d-flex align-items-center">
+                        <div className="col-md-5 d-flex align-items-center justify-content-between border rounded ml-3">
                             <div className="form-check m-1">
                                 <input
                                     type="checkbox"
@@ -236,7 +234,9 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
                                 </span>
                             </div>
                         </div>
-                    </Fila>
+                    </div>
+                <div>
+                   
                     <Fila className='justify-content-between'>
                         {/* Columna para el select año */}
                         <div className="col-3 align-items-center">
