@@ -167,76 +167,76 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
                         </div>
                     </div>
                 </div>
-                 <div className="row d-flex  align-items-center mt-2 mb-2 justify-content-between">
-                        {/* Columna para los checkboxes */}
-                        <div className="col-md-5 d-flex align-items-center justify-content-between border rounded ml-3">
-                            <div className="form-check m-1">
-                                <input
-                                    type="checkbox"
-                                    className="form-check-input"
-                                    id="soloKits"
-                                    checked={isHideKits}
-                                    onChange={() => {
-                                        setHideKits(!isHideKits);
-                                        setHideGuantes(isHideKits);
-                                    }}
-                                    onDoubleClick={() => setHideKits(false)}
-                                />
-                                <label className="form-check-label" htmlFor="soloKits">
-                                    Kits
-                                </label>
-                            </div>
-                            <div className="form-check m-1">
-                                <input
-                                    type="checkbox"
-                                    className="form-check-input"
-                                    checked={isHideGuantes}
-                                    onChange={() => {
-                                        setHideGuantes(!isHideGuantes);
-                                        setHideKits(isHideGuantes);
-                                    }}
-                                    onDoubleClick={() => setHideGuantes(false)}
-                                />
-                                <label className="form-check-label" htmlFor="soloGuantes">
-                                    Guantes
-                                </label>
-                            </div>
-                            <div className="form-check m-1">
-                                <input
-                                    type="checkbox"
-                                    className="form-check-input"
-                                    checked={isHideUser}
-                                    onChange={() => {
-                                        setHideUser(!isHideUser);
-                                        //setHideKits(isHideUser);
-                                    }}
-                                    onDoubleClick={() => setHideUser(false)}
-                                />
-                                <label className="form-check-label" htmlFor="soloGuantes">
-                                    Propios
-                                </label>
-                            </div>
+                <div className="row d-flex  align-items-center mt-2 mb-2 justify-content-between">
+                    {/* Columna para los checkboxes */}
+                    <div className="col-md-5 d-flex align-items-center justify-content-between border rounded ml-3">
+                        <div className="form-check m-1">
+                            <input
+                                type="checkbox"
+                                className="form-check-input"
+                                id="soloKits"
+                                checked={isHideKits}
+                                onChange={() => {
+                                    setHideKits(!isHideKits);
+                                    setHideGuantes(isHideKits);
+                                }}
+                                onDoubleClick={() => setHideKits(false)}
+                            />
+                            <label className="form-check-label" htmlFor="soloKits">
+                                Kits
+                            </label>
                         </div>
-
-
-                        {/* Columna para el filtro */}
-                        <div className="col-md-4 align-items-center">
-                            <div className="input-group">
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder="Filtro (Tipo, proveedor, gasto o fecha)"
-                                    value={search}
-                                    onChange={handleSearch}
-                                />
-                                <span className='input-group-text'>
-                                    <i className="fa fa-sliders" />
-                                </span>
-                            </div>
+                        <div className="form-check m-1">
+                            <input
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={isHideGuantes}
+                                onChange={() => {
+                                    setHideGuantes(!isHideGuantes);
+                                    setHideKits(isHideGuantes);
+                                }}
+                                onDoubleClick={() => setHideGuantes(false)}
+                            />
+                            <label className="form-check-label" htmlFor="soloGuantes">
+                                Guantes
+                            </label>
+                        </div>
+                        <div className="form-check m-1">
+                            <input
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={isHideUser}
+                                onChange={() => {
+                                    setHideUser(!isHideUser);
+                                    //setHideKits(isHideUser);
+                                }}
+                                onDoubleClick={() => setHideUser(false)}
+                            />
+                            <label className="form-check-label" htmlFor="soloGuantes">
+                                Propios
+                            </label>
                         </div>
                     </div>
+
+
+                    {/* Columna para el filtro */}
+                    <div className="col-md-4 align-items-center">
+                        <div className="input-group">
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Filtro (Tipo, proveedor, gasto o fecha)"
+                                value={search}
+                                onChange={handleSearch}
+                            />
+                            <span className='input-group-text'>
+                                <i className="fa fa-sliders" />
+                            </span>
+                        </div>
+                    </div>
+                </div>
                 <div>
-                   
+
                     <Fila className='justify-content-between'>
                         {/* Columna para el select año */}
                         <div className="col-3 align-items-center">
@@ -341,7 +341,7 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
                                                     {capitalize(item.gasto)}
                                                 </button>
                                             </Cell>
-                                            <Cell title={buscarNombre(item.categoria)}>{item.categoria} - {item.subCategoria}</Cell>
+                                            <Cell title={item.categoria + ' - ' + item.subCategoria}>{item.categoria} - {item.subCategoria}</Cell>
                                             <Cell className="text-end">{formatearPrecio(item.precio)}</Cell>
                                             <Cell className="text-end">{number_format(item.cantidad)}</Cell>
                                             <Cell className="text-end fw-semibold">{formatearPrecio((item.cantidad) * (item.precio))}</Cell>
@@ -390,7 +390,7 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
                         </span>
                     </div>
                 </div>
-            </div>
+            </div >
         </ >
     )
 }

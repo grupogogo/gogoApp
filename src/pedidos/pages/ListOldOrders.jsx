@@ -9,7 +9,7 @@ import html2pdf from 'html2pdf.js';
 import { useMemo } from 'react';
 import { useTheme } from '@table-library/react-table-library/theme';
 import Form from 'react-bootstrap/Form';
-import { StackedChart, AreaChartOld } from '../../dashboard/js';
+import { StackedChart, AreaChartOld, AreaChartOldYear } from '../../dashboard/js';
 
 
 import React, { Fragment } from 'react';
@@ -17,7 +17,9 @@ import Button from 'react-bootstrap/Button';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Popover from 'react-bootstrap/Popover';
 import { useGastosStore } from '../../hooks/useGastosStore';
+import { AreaChartOldYearAcumulada } from '../../dashboard/js/AreaChartOldYearAcumulada';
 
+const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 export const ListOldOrders = () => {
     const modalRef = useRef();
@@ -28,14 +30,17 @@ export const ListOldOrders = () => {
     const oldOrders = useSelector(state => state.pedidos.oldOrders) || [];
     const pedidos = useSelector(state => state.pedidos.pedidos);
     const gastos = useSelector(state => state.gastos.gastos);
-    const { formatearPrecio, convertirOldFecha, totalKitsXAnio2025, mensualGastosUsuarios } = useFuntions();
+    const { formatearPrecio, convertirOldFecha, totalKitsXAnio2025, pastelColors, parsearFechaGasto, mensualGastosUsuarios } = useFuntions();
     const [fechaPedido, setFechaPedido] = useState('2024');
     const [showColumns, setShowColumns] = useState('12');
     const [excluirCliente, setExcluirCliente] = useState(false);
     const [ventas2025, setVentas2025] = useState();
     const [stackedChartData, setStackedChartData] = useState({ labels: [], datasets: [] });
+    const [stackedChartDataBrand, setStackedChartDataBrand] = useState({ labels: [], datasets: [] });
+    const [stackedChartDataOtros, setStackedChartDataOtros] = useState({ labels: [], datasets: [] });
     const [stackedChartDataCategory, setStackedChartDataCategory] = useState({ labels: [], datasets: [] });
     const [stackedChartDataCategoryQuantity, setStackedChartDataCategoryQuantity] = useState({ labels: [], datasets: [] });
+    const [gastosPorMesYAnio, setGastosPorMesYAnio] = useState({ labels: [], datasets: [] });
     const [yearlySalesChartData, setYearlySalesChartData] = useState({ labels: [], datasets: [] });
     const [totalCategorias, setTotalCategorias] = useState({
         KCGA: 0,
@@ -55,20 +60,17 @@ export const ListOldOrders = () => {
         startLoadingOldOrders();
         startLoadingGastos();
     }, []);
-    useEffect(() => {
-        //const resultado = mensualGastosUsuarios(gastos, parseInt(fechaPedido), 'K');
-    }, [fechaPedido]);
 
     const filteredData = useMemo(() => {
         const nodes = oldOrders
             .filter((item) =>
                 (
                     excluirCliente
-                        ? !item.CLIENTE.toLowerCase().includes(search.toLowerCase())
-                        : item.CLIENTE.toLowerCase().includes(search.toLowerCase())
+                        ? !item.CLIENTE?.toLowerCase().includes(search.toLowerCase())
+                        : item.CLIENTE?.toLowerCase().includes(search.toLowerCase())
                 ) ||
-                item.FECHA.toLowerCase().includes(search.toLowerCase()) ||
-                item.REMISION.toLowerCase().includes(search.toLowerCase())
+                item.FECHA?.toLowerCase().includes(search.toLowerCase()) ||
+                item.REMISION?.toLowerCase().includes(search.toLowerCase())
             )
             .filter((item) => item.FECHA?.toLowerCase().includes(fechaPedido)) // asegurar coincidencia con `fechaPedido`
             .sort((a, b) => {
@@ -78,7 +80,6 @@ export const ListOldOrders = () => {
             });
         return { nodes };
     }, [oldOrders, search, fechaPedido, excluirCliente]);
-
 
     const sort = useSort(
         filteredData,
@@ -169,15 +170,12 @@ export const ListOldOrders = () => {
                 backgroundColor: 'rgba(99, 255, 203, 1)', // You can choose a different color
             });
         }
-        //console.log((stackedChartData.labels));
-        //console.log((newDatasets));
 
         setStackedChartData({
             labels: stackedChartData.labels,
             datasets: newDatasets,
         });
     };
-
 
     const resize = { resizerHighlight: '#0a0a0aff' };
 
@@ -228,7 +226,6 @@ export const ListOldOrders = () => {
         return 0;
     }
 
-
     // Descarga el archivo CSV generado
     const downloadAsCsv = (columns, data, filename) => {
         const csvData = makeCsvData(columns, data);
@@ -257,12 +254,40 @@ export const ListOldOrders = () => {
         downloadAsCsv(columns, filteredData.nodes, "Tabla Pedidos Antiguos.csv");
     };
 
+    function agruparGastosPorAnioYMese(gastos, parsearFechaGasto) {
+        const agrupados = {};
+
+        gastos.forEach((gasto) => {
+            const fecha = parsearFechaGasto(gasto.fecha);
+            if (!fecha) return;
+
+            const year = fecha.getFullYear();
+            const month = fecha.getMonth(); // 0–11
+
+            if (!agrupados[year]) {
+                agrupados[year] = Array(12).fill(0);
+            }
+
+            const total = (gasto.precio || 0) * (gasto.cantidad || 1);
+            agrupados[year][month] += total;
+        });
+
+        return Object.entries(agrupados)
+            .sort(([a], [b]) => a - b)
+            .map(([year, data]) => ({
+                label: year,
+                data
+            }));
+    }
+
+
     useEffect(() => { // Concatenar las ventas de 2025 al gráfico de ventas mensuales
 
         if (ventas2025 && stackedChartData.datasets.length > 0) {
             handleConcatSales();
         }
     }, [ventas2025, stackedChartData.datasets.length]); // Trigger when ventas2025 or stackedChartData changes
+
     useEffect(() => { // TOTALES CANTIDAD PRODUCTOS POR CATEGORIA
         if (!filteredData?.nodes) return;
 
@@ -396,105 +421,187 @@ export const ListOldOrders = () => {
 
     }, [filteredData.nodes]);
 
-    useEffect(() => { // VENTAS ANUALES 2019 A2025
+    useEffect(() => {
         if (!oldOrders || oldOrders.length === 0) return;
+        if (!pedidos || pedidos.length === 0) return;
 
-        const salesByYearMonth = {};
+        const NIT_BRAND_DESIGN = '900879470';
+
+        const ventas2025Local = totalKitsXAnio2025(pedidos);
+        const totalSales2025 = ventas2025Local.monthlySales.reduce((a, b) => a + b, 0);
+        setVentas2025(ventas2025Local);
+
+        const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+        const salesBD = {};     // Brand Design
+        const salesOtros = {};  // Otros
+        const salesTotal = {};  // Total por año
 
         oldOrders.forEach(order => {
-            const orderDate = convertirOldFecha(order.FECHA);
-            if (isNaN(orderDate.getTime())) return; // Skip invalid dates
+            const rawFecha = order.FECHA || order.fecha;
+            if (!rawFecha || typeof rawFecha !== 'string') return;
+
+            const orderDate = convertirOldFecha(rawFecha);
+            if (isNaN(orderDate.getTime())) return;
 
             const year = orderDate.getFullYear();
-            const month = orderDate.getMonth(); // 0-11
+            const month = orderDate.getMonth();
+            const total = order.TOTAL || 0;
+            const nit = order.NIT || order.nit || '';
 
-            if (!salesByYearMonth[year]) {
-                salesByYearMonth[year] = Array(12).fill(0);
-            }
-            salesByYearMonth[year][month] += order.TOTAL || 0;
+            const target = fechaPedido !== '2025' ? (nit === NIT_BRAND_DESIGN ? salesBD : salesOtros) : salesTotal;
+
+
+            if (!target[year]) target[year] = Array(12).fill(0);
+            if (!salesTotal[year]) salesTotal[year] = 0;
+
+            target[year][month] += total;
+            salesTotal[year] += total;
         });
 
-        const years = Object.keys(salesByYearMonth).sort();
-        const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        const backgroundColors = [
-            'rgba(255, 99, 132, 1)',
-            'rgba(54, 162, 235, 1)',
-            'rgba(255, 206, 86, 1)',
-            'rgba(75, 192, 192, 1)',
-            'rgba(153, 102, 255, 1)',
-            'rgba(255, 159, 64, 1)',
-        ];
+        // Agregar 2025 manualmente
+        salesOtros['2025'] = ventas2025Local.monthlySales; // Suponiendo que no es Brand Design
+        salesTotal['2025'] = (salesTotal['2025'] || 0) + totalSales2025;
 
-        const datasets = years.map((year, index) => ({
+        const years = Object.keys(salesTotal).sort();
+
+        const pastel = (i) => pastelColors[i % pastelColors.length];
+
+        // 🔵 Dataset general (todos juntos)
+        const datasetsByMonth = years.map((year, i) => ({
             label: year,
-            data: salesByYearMonth[year],
-            backgroundColor: backgroundColors[index % backgroundColors.length],
+            data: (salesBD[year] || Array(12).fill(0)).map((v, idx) =>
+                v + ((salesOtros[year] && salesOtros[year][idx]) || 0)
+            ),
+            backgroundColor: pastel(i),
         }));
 
-        setStackedChartData({
-            labels: monthLabels,
-            datasets: datasets,
-        });
-    }, [oldOrders, fechaPedido]);
+        // 🔵 Solo Brand Design
+        const datasetsBrandDesign = Object.keys(salesBD).sort().map((year, i) => (
+            {
+                label: year,
+                data: salesBD[year],
+            }));
 
-    useEffect(() => { // Calcula las ventas totales por cada año desde 2019 hasta 2024
-        setVentas2025(totalKitsXAnio2025(pedidos));
+        // 🔵 Solo Otros
+        const datasetsOtros = Object.keys(salesOtros).sort().map((year, i) => ({
+            label: year,
+            data: salesOtros[year],
+        }));
 
-        if (!oldOrders || oldOrders.length === 0) return;
+        // ⬇️ Guardar todo por separado
+        setStackedChartData({ labels: monthLabels, datasets: datasetsByMonth });
 
-        const salesByYear = oldOrders.reduce((acc, order) => {
-            const orderDate = convertirOldFecha(order.FECHA);
-            if (isNaN(orderDate.getTime())) return acc;
+        if (fechaPedido === 2025) {
+            setStackedChartDataBrand({
+                labels: monthLabels,
+                datasets: {
+                    label: '2025',
+                    data: ventas2025Local.monthlySalesBrand
+                }
+            });
 
-            const year = orderDate.getFullYear();
-            acc[year] = (acc[year] || 0) + (order.TOTAL || 0);
-            return acc;
-        }, {});
+            setStackedChartDataOtros({
+                labels: monthLabels,
+                datasets: {
+                    label: '2025',
+                    data: ventas2025Local.monthlySalesOscar
+                }
+            });
+        } else {
+            setStackedChartDataBrand({
+                labels: monthLabels,
+                datasets: datasetsBrandDesign
+            });
 
-        // Add 2025 sales from `ventas2025` if available
-        if (ventas2025 && ventas2025.totalSales2025) {
-            salesByYear['2025'] = (salesByYear['2025'] || 0) + ventas2025.totalSales2025;
+            setStackedChartDataOtros({
+                labels: monthLabels,
+                datasets: datasetsOtros
+            });
         }
 
-        const years = Object.keys(salesByYear).sort();
-        const salesData = years.map(year => salesByYear[year]);
+
+        // Anual general
+        const totalYears = Object.keys(salesTotal).sort();
+        const totalData = totalYears.map(year => salesTotal[year]);
 
         setYearlySalesChartData({
-            labels: years,
+            labels: totalYears,
             datasets: [{
                 label: 'Ventas Anuales',
-                data: salesData,
-                backgroundColor: 'rgba(75, 192, 192, 1)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 0,
+                data: totalData,
+                backgroundColor: 'rgba(22, 97, 97, 1)',
             }]
         });
 
-    }, [oldOrders]);
+    }, [oldOrders, pedidos, fechaPedido]);
+
+    useEffect(() => {
+        if (!gastos || gastos.length === 0) return;
+
+        const agrupados = agruparGastosPorAnioYMese(gastos, parsearFechaGasto);
+        setGastosPorMesYAnio({
+            labels: monthLabels,
+            datasets: agrupados
+        });
+
+    }, [gastos]);
+
+    const getDatasetByYear = (datasets, year) => {
+        const index = parseInt(year) - 2019;
+        return datasets && datasets[index] ? datasets[index] : [];
+    };
 
     return (
         <LayoutApp>
             <div className="container-fluid">
-                <div className="col text-end">
-                    <div className="input-group form-select-sm">
-                        <span className='m-2'>Columnas a mostrar</span>
-                        <select
-                            className="form-select form-select-sm w-auto rounded"
-                            title='Columnas a mostrr'
-                            value={showColumns}
-                            style={{ maxWidth: 'fit-content' }}
-                            onChange={e => {
-                                const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
-                                setShowColumns(value);
-                            }}
-                        >
-                            <option value={'12'}>1</option>
-                            <option value={'6'}>2</option>
-                            <option value={'6'}>3</option>
-                            <option value={'3'}>4</option>
-                        </select>
+                <div className='card p-3 mb-2'>
+                    <div className='row justify-content-between g-3'>
+                        <div className="col text-end">
+                            <div className="input-group form-select-sm d-flex align-items-center">
+                                <span className='me-2'>Columnas a mostrar</span>
+                                <select
+                                    className="form-select form-select-sm w-auto rounded"
+                                    value={showColumns}
+                                    style={{ maxWidth: 'fit-content' }}
+                                    onChange={e => {
+                                        const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                                        setShowColumns(value);
+                                    }}
+                                >
+                                    <option value={'12'}>1</option>
+                                    <option value={'6'}>2</option>
+                                    <option value={'6'}>3</option>
+                                    <option value={'3'}>4</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="col text-start">
+                            <div className="input-group form-select-sm d-flex align-items-center">
+                                <span className='me-2'>Año a filtrar</span>
+                                <select
+                                    className="form-select form-select-sm w-auto rounded"
+                                    value={fechaPedido}
+                                    style={{ maxWidth: 'fit-content' }}
+                                    onChange={e => {
+                                        const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                                        setFechaPedido(value);
+                                    }}
+                                >
+                                    <option value={'2024'}>2024</option>
+                                    <option value={'2023'}>2023</option>
+                                    <option value={'2022'}>2022</option>
+                                    <option value={'2021'}>2021</option>
+                                    <option value={'2020'}>2020</option>
+                                    <option value={'2019'}>2019</option>
+                                    <option value={'2025'}>2025</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
                 {/* DIV PARA LOS GRÁFICOS */}
                 <div className='row'>
                     <div className={`col-${showColumns}`}>
@@ -503,7 +610,7 @@ export const ListOldOrders = () => {
                             <StackedChart
                                 labels={stackedChartData.labels}
                                 datasets={stackedChartData.datasets}
-                                title="Ventas mensuales desde 2019 a 2024"
+                                title="Ventas mensuales desde 2019 a 2025"
                             />
                         </div>
                     </div>
@@ -519,10 +626,10 @@ export const ListOldOrders = () => {
                     </div>
                 </div>
 
-                <div className='row'>
+                <div className='row mb-4'>
                     {/* StackedChart */}
-                    <div className={`col-${showColumns}`}>
-                        <div className='card mb-4'>
+                    <div className={`col-${showColumns} mb-4`}>
+                        <div className='card'>
                             <StackedChart
                                 labels={stackedChartDataCategoryQuantity.labels}
                                 datasets={stackedChartDataCategoryQuantity.datasets}
@@ -532,12 +639,62 @@ export const ListOldOrders = () => {
                     </div>
                     {/* Area old Chart */}
                     <div className={`col-${showColumns}`}>
+                        <div className='card'>
+                            {(stackedChartData.datasets?.length > 0) && (
+                                <AreaChartOld
+                                    gastos={mensualGastosUsuarios(gastos, parseInt(fechaPedido), 'K')}
+                                    ventas={
+                                        fechaPedido === 2025
+                                            ? { data: ventas2025.monthlySales }
+                                            : getDatasetByYear(stackedChartData.datasets, fechaPedido)
+                                    }
+                                    ventasBrandDesign={
+                                        fechaPedido === 2025
+                                            ? stackedChartDataBrand.datasets
+                                            : getDatasetByYear(stackedChartDataBrand.datasets, fechaPedido)
+                                    }
+
+                                    ventasOtros={
+                                        fechaPedido === 2025
+                                            ? stackedChartDataOtros.datasets
+                                            : getDatasetByYear(stackedChartDataOtros.datasets, fechaPedido)
+                                    }
+                                    porValor={false}
+                                />
+                            )}
+
+                        </div>
+                    </div>
+                </div>
+                {/* Area old Chart */}
+                <div className='row mb-4'>
+                    <div className={`col-${showColumns} mb-4`}>
                         <div className=' card'>
-                            <AreaChartOld
-                                totales={mensualGastosUsuarios(gastos, parseInt(fechaPedido), 'K')}
-                                ventas={(fechaPedido === '2019') ? stackedChartData.datasets[0] : fechaPedido === '2020' ? stackedChartData.datasets[1] : fechaPedido === '2021' ? stackedChartData.datasets[2] : fechaPedido === '2022' ? stackedChartData.datasets[3] : fechaPedido === '2023' ? stackedChartData.datasets[4] : fechaPedido === '2024' ? stackedChartData.datasets[5] : []}
-                                porValor={false}
+                            <AreaChartOldYear
+                                data={stackedChartData}
                             />
+                        </div>
+                    </div>
+                    <div className={`col-${showColumns}`}>
+                        <div className=' card'>
+                            <AreaChartOldYear
+                                data={(gastosPorMesYAnio) ? gastosPorMesYAnio : []} />
+                        </div>
+                    </div>
+                </div>
+                {/* Area old Chart */}
+                <div className='row mb-4'>
+                    <div className={`col-${showColumns} mb-4`}>
+                        <div className=' card'>
+                            <AreaChartOldYearAcumulada
+                                data={stackedChartData}
+                            />
+                        </div>
+                    </div>
+                    <div className={`col-${showColumns}`}>
+                        <div className=' card'>
+                            <AreaChartOldYearAcumulada
+                                data={(gastosPorMesYAnio) ? gastosPorMesYAnio : []} />
                         </div>
                     </div>
                 </div>
@@ -553,12 +710,15 @@ export const ListOldOrders = () => {
                                 <table className="table table-bordered table-sm text-center align-middle w-100 mx-auto">
                                     <thead className="table-secondary">
                                         <tr>
-                                            {['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'].map((codigo) => (
-                                                <th key={codigo}>{codigo}</th>
-                                            ))}
-                                            <th>Total</th> {/* Columna adicional */}
+                                            {[
+                                                'KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA',
+                                                'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO',
+                                                'LBC', 'CTC', 'LBCP'
+                                            ].map((codigo) => <th key={codigo}>{codigo}</th>)}
+                                            <th>Total</th>
                                         </tr>
                                     </thead>
+
                                     <tbody>
                                         <tr>
                                             {['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'].map((codigo) => (
@@ -653,8 +813,7 @@ export const ListOldOrders = () => {
                         </div>
                     </div>
                 </div>
-
-                <div className="card mt-4">
+                <div className="card mt-4 p-2">
                     <div className="row mt-4 d-flex justify-content-between align-items-center m-2">
                         <div className="col-auto">
                             <h5 className="fw-bold text-secondary">Listado pedidos antiguos</h5>
@@ -699,34 +858,12 @@ export const ListOldOrders = () => {
                             />
                         </div>
 
-                        {/* Columna para el select cantidad items a mostrar */}
-                        <div className="col text-end">
-                            <div className="input-group form-select-sm">
-                                <span className='m-2'>Año a filtrar</span>
-                                <select
-                                    className="form-select form-select-sm w-auto rounded"
-                                    title='Filtro por año'
-                                    value={fechaPedido}
-                                    style={{ maxWidth: 'fit-content' }}
-                                    onChange={e => {
-                                        const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
-                                        setFechaPedido(value);
-                                    }}
-                                >
-                                    <option value={'2024'}>2024</option>
-                                    <option value={'2023'}>2023</option>
-                                    <option value={'2022'}>2022</option>
-                                    <option value={'2021'}>2021</option>
-                                    <option value={'2020'}>2020</option>
-                                    <option value={'2019'}>2019</option>
-                                </select>
-                            </div>
-                        </div>
+
                     </div>
 
                     {/* TABLA DE DATOS */}
-                    <div className='row m-4'>
-                        <div className="col-7 table-responsive" ref={modalRef} style={{ maxHeight: "none", overflow: "visible" }}>
+                    <div className='row'>
+                        <div className="col-6 table-responsive" ref={modalRef} style={{ maxHeight: "none", overflow: "visible" }}>
                             <Table
                                 className="table table-hover text-start w-100 compact-table table avoid-break shadow-lg p-4"
                                 style={{ maxWidth: "100%" }}
@@ -839,26 +976,27 @@ export const ListOldOrders = () => {
                                                     </Row>
                                                 </React.Fragment>
                                             ))}
+                                            {filteredData.nodes.length === 0 && (
+                                                <Row>
+                                                    <Cell colSpan={6} className="text-center text-muted">
+                                                        No hay pedidos antiguos que coincidan con los criterios de búsqueda.
+                                                    </Cell>
+                                                </Row>
+                                            )}
                                         </Body>
 
-                                        {filteredData.nodes.length === 0 && (
-                                            <Row>
-                                                <Cell colSpan={6} className="text-center text-muted">
-                                                    No hay pedidos antiguos que coincidan con los criterios de búsqueda.
-                                                </Cell>
-                                            </Row>
-                                        )}
                                     </>
                                 )}
                             </Table>
                         </div>
-                        <div className='col-5'>
-                            <div className='row'>
-                                <div className='col-11'>
+                        <div className='col-6'>
+                            <div className='row mr-2'>
+                                <div className='col-12'>
                                     <StackedChart
                                         labels={yearlySalesChartData.labels}
                                         datasets={yearlySalesChartData.datasets}
                                         title="Ventas Totales por Año"
+                                        formato={true}
                                     />
                                 </div>
                             </div>

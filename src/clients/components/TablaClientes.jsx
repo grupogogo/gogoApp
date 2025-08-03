@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore, useClientesStore, useFuntions } from "../../hooks";
@@ -8,12 +8,13 @@ import { usePagination } from "@table-library/react-table-library/pagination";
 import { Table, Header, HeaderRow, Body, Row, HeaderCell, Cell } from "@table-library/react-table-library/table";
 import { Button } from "react-bootstrap";
 import { useSort, HeaderCellSort } from "@table-library/react-table-library/sort";
+import Swal from "sweetalert2";
 
 
 
 export const TablaClientes = ({ handleShow }) => {
     const [showModal, setShowModal] = useState(false);
-    const { limpiarClienteActivo, setClienteActivo, startSavingClient } = useClientesStore();
+    const { limpiarClienteActivo, setClienteActivo, startSavingClient, startDeleteClient, startLoadingClientes, onSetDefaultActiveClient } = useClientesStore();
     const navegar = useNavigate();
     const { limpiarFecha, capitalize } = useFuntions();
     const { user } = useAuthStore()
@@ -57,11 +58,37 @@ export const TablaClientes = ({ handleShow }) => {
     const handleClose = () => {
         setShowModal(false);
         limpiarClienteActivo()
+        startLoadingClientes();
     }
     const editarCliente = (cliente) => {
         startSavingClient(cliente);
         setClienteActivo(cliente);
         setShowModal(true);
+    }
+    const eliminarCliente = async (cliente) => {
+        const respuesta = await startDeleteClient(cliente);
+        console.log(respuesta)
+
+        if (respuesta.ok) {
+            Swal.fire({
+                position: "center",
+                cancelButtonColor: "#3085d6",
+                confirmButtonColor: "red",
+                icon: "success",
+                title: "Cliente eliminado satisfactoriamente",
+                timer: 1400
+            });
+            startLoadingClientes();
+        } else {
+            Swal.fire({
+                position: "center",
+                cancelButtonColor: "#3085d6",
+                confirmButtonColor: "red",
+                icon: "danger",
+                title: "El cliente no se puede eliminar porque contiene pedidos realizados",
+                timer: 1400
+            });
+        }
     }
     const direccionarPedido = (cliente) => {
         setClienteActivo(cliente);
@@ -76,7 +103,7 @@ export const TablaClientes = ({ handleShow }) => {
     const sizeColumnTheme = {
         Table: `
                 --data-table-library_grid-template-columns: 
-                    9% auto 10% auto 20% 7% 7% !important;
+                    9% auto 10% auto 20% 7% 7% 7% !important;
             `,
     };
     const theme = useTheme(
@@ -101,6 +128,11 @@ export const TablaClientes = ({ handleShow }) => {
         console.log(action, state);
     }
 
+    useEffect(() => {
+        startLoadingClientes();
+    }, [clientes])
+
+
     return (
         <div className="card shadow-none p-3 mb-5 rounded mt-1">
             <div className='row align-items-center'>
@@ -111,9 +143,13 @@ export const TablaClientes = ({ handleShow }) => {
                         </div>
                         <div className='form-group col-md-6 text-end'>
                             <button
-                                onClick={handleShow}
+                                onClick={() => {
+                                    handleShow();
+                                    onSetDefaultActiveClient()
+                                }
+                                }
                                 className="btn btn-outline-primary"
-                                >
+                            >
                                 <span className="ml-2">
                                     <i className="fas fa-user fa-lg"></i>
                                 </span>
@@ -189,6 +225,7 @@ export const TablaClientes = ({ handleShow }) => {
                                     <HeaderCell className='text-start fw-semibold'>Dirección</HeaderCell>
                                     <HeaderCell className='text-center fw-semibold'>Pedido</HeaderCell>
                                     <HeaderCell className='text-center fw-semibold'>Editar</HeaderCell>
+                                    <HeaderCell className='text-center fw-semibold'>Eliminar</HeaderCell>
                                 </HeaderRow>
                             </Header>
 
@@ -222,6 +259,12 @@ export const TablaClientes = ({ handleShow }) => {
                                             onClick={() => editarCliente(item)}
                                         >
                                             <i className="fa fa-edit"></i>
+                                        </button></Cell>
+                                        <Cell className="text-center"><button
+                                            className="btn btn-outline-danger py-1"
+                                            onClick={() => eliminarCliente(item)}
+                                        >
+                                            <i className="fa fa-trash"></i>
                                         </button></Cell>
                                     </Row>
                                 ))}

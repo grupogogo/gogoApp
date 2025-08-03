@@ -402,8 +402,10 @@ export const Gastos = () => {
                                                             <option value="KCG">KCG</option>
                                                             <option value="KCP">KCP</option>
                                                             <option value="KB">KB</option>
+                                                            <option value="KCE">KCE</option>
                                                             <option value="CC">CC</option>
                                                             <option value="CB">CB</option>
+                                                            <option value="CINTA-CO">CINTA CO</option>
                                                         </>
                                                     )}
                                                     {selCategoria === 1 && (

@@ -97,7 +97,7 @@ export const CuentasXCobrar = () => {
   const sizeColumnTheme = {
     Table: `
               --data-table-library_grid-template-columns: 
-                  auto auto auto auto auto !important;
+                  auto auto auto auto auto auto !important;
           `,
   };
   const theme = useTheme([sizeColumnTheme]);
@@ -365,6 +365,7 @@ export const CuentasXCobrar = () => {
                       <HeaderCellSort sortKey="FECHA" className="text-center fw-semibold">Fecha</HeaderCellSort>
                       <HeaderCellSort className="text-center fw-semibold">Remisión</HeaderCellSort>
                       <HeaderCellSort sortKey="CLIENTE" className="text-center fw-semibold">Cliente</HeaderCellSort>
+                      <HeaderCellSort className="text-center fw-semibold">Ciudad</HeaderCellSort>
                       <HeaderCellSort sortKey="CANTIDAD" className="text-center fw-semibold">Items</HeaderCellSort>
                       <HeaderCellSort sortKey="TOTAL" className="text-center fw-semibold">Total $</HeaderCellSort>
                     </HeaderRow>
@@ -378,6 +379,7 @@ export const CuentasXCobrar = () => {
                           onClick={() => abrirModalDetalle(item)}
                         >{(item.pedido_id).slice(-6)}</Cell>
                         <Cell title={item.cliente.nombre}>{item.cliente.nombre}</Cell>
+                        <Cell title={item.ciudad?.ciudad}>{(item.cliente?.ciudad).toUpperCase()}</Cell>
                         <Cell className='text-center' title={item.cliente.nombre}>{(calcularTotalesPedidoCxC(item).totalItems)}</Cell>
                         <Cell className='text-end fw-semibold' title={item.cliente.nombre}>{formatearPrecio(calcularTotalesPedidoCxC(item).total)}</Cell>
                       </Row>
@@ -425,7 +427,7 @@ export const CuentasXCobrar = () => {
           <div className="card-body">
             <div className="progress-stacked ">
               <div className="progress" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                <div className="progress-bar fw-bold bg-primary" title={`${buscarNombre('GB')}: (${formatearPrecio(totalesAgrupados.guantes[0])}) ${`${parseInt((totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>GN {`${parseInt((totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
+                <div className="progress-bar fw-bold bg-primary" title={`${buscarNombre('GB')}: (${formatearPrecio(totalesAgrupados.guantes[0])}) ${`${parseInt((totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>GB {`${parseInt((totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
               </div>
               <div className="progress" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
                 <div className="progress-bar fw-bold bg-success" title={`${buscarNombre('GN')}: (${formatearPrecio(totalesAgrupados.guantes[1])}) ${`${parseInt((totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>GN {`${parseInt((totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>

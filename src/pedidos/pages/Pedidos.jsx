@@ -40,7 +40,9 @@ export const Pedidos = () => {
   }, [selAnioPedido])
 
   const limpiarPedido = () => {
+
     handleShow();
+    limpiarClienteActivo();
   }
   const formattedDate = format(fechaActual, "MMMM d, yyyy HH:mm", { locale: es });
 

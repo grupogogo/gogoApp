@@ -36,7 +36,7 @@ export const useGastosStore = () => {
 
     const startDeleteGasto = async (gasto) => {
         //dispatch(onDeletePedido(pedido.pedido_id));
-        console.log(gasto)
+        //console.log(gasto)
         try {
             const { data } = await gogoApi.delete(`/gastos/${gasto.gastos_id}`);
         } catch (error) {

@@ -7,25 +7,27 @@ import Swal from 'sweetalert2';
 
 
 export const ReusableModal = ({ show, handleClose }) => {
-    const { startSavingClient, clienteActivo } = useClientesStore();
+    const { startSavingClient, clienteActivo, startLoadingClientes } = useClientesStore();
     const [cliente, setCliente] = useState({});
 
     const saveClient = async () => {
+
         try {
 
             await startSavingClient(cliente);
             Swal.fire({
                 title: "Cliente almacenado correctamente!",
                 icon: "success",
-                draggable: true,                
+                draggable: true,
             });
 
+            startLoadingClientes();
         } catch (error) {
             Swal.fire({
                 icon: "error",
                 title: error,
-                text: "Something went wrong!",                
-              });
+                text: "Something went wrong!",
+            });
         }
         handleClose();
     }
@@ -53,17 +55,18 @@ export const ReusableModal = ({ show, handleClose }) => {
                     <Button variant="secondary" onClick={handleClose}>
                         Cerrar
                     </Button>
-                    {(!clienteActivo.cliente_id)
-                        ?
-                        <Button variant="primary" onClick={saveClient}>
-                            Guardar cliente
-                        </Button>
-                        :
-                        <Button variant="primary" onClick={editClient}>
-                            Editar cliente
-                        </Button>
+                    {(!clienteActivo)
+                        ? (
+                            <Button variant="primary" onClick={saveClient}>
+                                Guardar cliente
+                            </Button>
+                        )
+                        : (
+                            <Button variant="primary" onClick={editClient}>
+                                Guardar cliente
+                            </Button>
+                        )
                     }
-
                 </Modal.Footer>
             </Modal>
         </>

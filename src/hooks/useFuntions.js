@@ -8,6 +8,19 @@ export const useFuntions = () => {
     const { user } = useAuthStore();
     const precios = useSelector(state => state.precios);
 
+    const pastelColors = [
+        'rgba(0, 123, 255, 0.8)',   // primary
+        'rgba(40, 167, 69, 0.8)',   // success
+        'rgba(255, 193, 7, 0.8)',   // warning
+        'rgba(220, 53, 69, 0.8)',   // danger
+        'rgba(23, 162, 184, 0.8)',  // info
+        'rgba(108, 117, 125, 0.8)', // secondary
+        'rgba(102, 16, 242, 0.8)',  // purple-like
+        'rgba(255, 102, 204, 0.8)', // pink
+        'rgba(0, 255, 204, 0.8)',   // turquoise
+        'rgba(255, 153, 102, 0.8)', // peach
+    ];
+
     const {
         precioKits: {
             kcg = 0,
@@ -37,6 +50,53 @@ export const useFuntions = () => {
         const [dia, mes, anio] = fechaStr.split('/').map(Number);
         return new Date(anio, mes - 1, dia); // JavaScript cuenta los meses desde 0 (enero)
     };
+    function parsearFechaGasto(fechaStr) {
+        if (!fechaStr || typeof fechaStr !== 'string') return null; // ✅ más seguro
+
+        // Caso 1: "30-11-2019"
+        const regexFecha1 = /^(\d{2})-(\d{2})-(\d{4})$/;
+        const match1 = fechaStr.match(regexFecha1);
+        if (match1) {
+            const [_, dia, mes, anio] = match1;
+            return new Date(`${anio}-${mes}-${dia}T00:00:00`);
+        }
+
+        // Caso 2: "julio 8, 2025 13:20"
+        const mesesES = {
+            enero: 'January',
+            febrero: 'February',
+            marzo: 'March',
+            abril: 'April',
+            mayo: 'May',
+            junio: 'June',
+            julio: 'July',
+            agosto: 'August',
+            septiembre: 'September',
+            octubre: 'October',
+            noviembre: 'November',
+            diciembre: 'December'
+        };
+
+        try {
+            const partes = fechaStr.toLowerCase().split(' ');
+            const nombreMes = partes[0];
+
+            if (mesesES[nombreMes]) {
+                const fechaTraducida = fechaStr.replace(
+                    new RegExp(nombreMes, 'i'),
+                    mesesES[nombreMes]
+                );
+                const fecha = new Date(fechaTraducida);
+                return isNaN(fecha.getTime()) ? null : fecha;
+            }
+        } catch (e) {
+            console.warn('Error al parsear fecha:', fechaStr, e);
+            return null;
+        }
+
+        return null;
+    }
+
 
     const convertirFechaIngles = (fechaStr) => {
         const meses = {
@@ -535,18 +595,22 @@ export const useFuntions = () => {
                 });
             });
         });
-        console.log(monthlySales)
+        //console.log(monthlySales)
         return {
             monthlySales,
             totalSales
         };
     };
-    const totalKitsXAnio2025 = (pedidos) => {
+    const totalKitsXAnio2025 = (pedidos, selectFecha = 2025) => {
+        if (pedidos.length === 0) return;
+
         const monthlySales = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
+        const monthlySalesBrand = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
+        const monthlySalesOscar = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
 
         pedidos.forEach(order => {
             const orderDate = convertirFecha(order.fechaCreacion);
-            if (orderDate.getFullYear() !== 2025) {
+            if (orderDate.getFullYear() !== selectFecha) {
                 return; // Si el año de la orden no coincide con el año filtrado, salta a la siguiente orden
             }
             order.itemPedido.forEach(item => {
@@ -560,14 +624,27 @@ export const useFuntions = () => {
                             const orderDate = convertirFecha(order.fechaCreacion);
                             const month = orderDate.getMonth();
                             monthlySales[month] += sale;
+                            if (order.user._id === '679fce0ee8d1ed66d21d18c2') {
+                                monthlySalesOscar[month] += sale;
+                            }
+                            if (order.user._id === '6789ce1b48932f890985d1f7') {
+                                monthlySalesBrand[month] += sale;
+                            }
                         });
                     }
                 });
             });
         });
+
+        //console.log('Brand ', monthlySalesBrand, 'oscar', monthlySalesOscar);
+
         return {
             monthlySales,
+            monthlySalesBrand,
+            monthlySalesOscar,
+            totalSales2025: monthlySales.reduce((a, b) => a + b, 0)
         };
+
     };
     const totalGuantesXAnio = (pedidos, datosUsuario, anioFiltro) => {
         let totalSales = 0;
@@ -726,7 +803,7 @@ export const useFuntions = () => {
         };
     }
     const totalesPedidosAnualesPorCategoria = (pedidos, datosUsuario, categoria, oldOrders) => { //Para calculos por años
-
+        if (!pedidos || pedidos === null) return null;
         let totalSales = 0;
         const monthlySales2019 = [0, ...Array(11).fill(0)];
         const monthlySales2020 = [0, ...Array(11).fill(0)];
@@ -768,7 +845,6 @@ export const useFuntions = () => {
                                         monthlySales2021[month] += quantity;
                                     }
 
-                                    //console.log('cont:', cont, '-', 'categoria: ', categoriaItem, '-', 'quantity: ', quantity, '- price: ', price, '- orderDate: ', orderDate);
                                     cont++;
                                 });
                             } else {
@@ -881,15 +957,6 @@ export const useFuntions = () => {
                 });
             }
         });
-
-        /*    if (oldOrders) {
-               console.log(oldOrders);
-               oldOrders.forEach(oldOrder => {
-                   oldOrder.items.forEach(item => {
-                       console.log(item.CODIGO)
-                   })
-               })
-           } */
         return {
             monthlySales2025,
             monthlySales2024,
@@ -1015,7 +1082,6 @@ export const useFuntions = () => {
         });
         return { gastosMensualesO, gastosMensualesL };
     };
-
     const calcularTotalesPedidoCxC = (pedido) => { /* retorna el total de cantidades y de venta por pedido */
         if (!pedido?.itemPedido) return;
 
@@ -1072,7 +1138,7 @@ export const useFuntions = () => {
 
     return {
         //*Parameters
-
+        pastelColors,
 
         //*Methods
         buscarNombre,
@@ -1085,6 +1151,7 @@ export const useFuntions = () => {
         capitalize,
         convertirFecha,
         convertirFechaIngles,
+        parsearFechaGasto,
         convertirNumeroATexto,
         formatearPrecio,
         handleBlur,

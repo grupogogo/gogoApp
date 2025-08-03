@@ -23,29 +23,14 @@ Chart.register(
     ChartDataLabels
 );
 
-export const StackedChart = ({ labels, datasets, title, stacked = true, barPercentage = 1, categoryPercentage = 1 }) => {
+export const StackedChart = ({ labels, datasets, title, stacked = true, formato = false }) => {
+    if (!labels || labels.length === 0) return null;
+    if (!datasets || datasets.length === 0) return null;
+
     const chartRef = useRef(null);
-    const { formatearPrecio } = useFuntions();
-    const number_format = (number, decimals = 0, dec_point = '.', thousands_sep = ',') => {
-        number = (number + '').replace(',', '').replace(' ', '');
-        const n = !isFinite(+number) ? 0 : +number;
-        const prec = !isFinite(+decimals) ? 0 : Math.abs(decimals);
-        const sep = thousands_sep;
-        const dec = dec_point;
-        const toFixedFix = (n, prec) => {
-            const k = Math.pow(10, prec);
-            return '' + Math.round(n * k) / k;
-        };
-        let s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
-        if (s[0].length > 3) {
-            s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
-        }
-        if ((s[1] || '').length < prec) {
-            s[1] = s[1] || '';
-            s[1] += new Array(prec - s[1].length + 1).join('0');
-        }
-        return s.join(dec);
-    };
+    const { formatearPrecio, number_format } = useFuntions();
+
+   
 
     const normalizeDatasetsTo100 = (datasets) => {
         if (!datasets || datasets.length === 0) return [];
@@ -71,7 +56,9 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, barPerce
         }));
     };
 
-    const normalizedDatasets = normalizeDatasetsTo100(datasets);
+    const processedDatasets = formato ? datasets : normalizeDatasetsTo100(datasets);
+
+
     useEffect(() => {
         if (!chartRef.current || !datasets || !labels) return;
 
@@ -85,7 +72,7 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, barPerce
             type: 'bar',
             data: {
                 labels,
-                datasets: normalizedDatasets,
+                datasets: processedDatasets,
                 barThickness: 20,
             },
             options: {
@@ -102,7 +89,15 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, barPerce
                         },
                         formatter: (value, context) => {
                             const original = context.dataset.originalData?.[context.dataIndex];
-                            if (!original || original === 0) return ''; // ⬅️ Oculta si es 0 o undefined
+
+                            if (formato) {
+                                // Mostrar el valor directamente si estás usando los datos reales
+                                if (!value || value === 0) return '';
+                                return number_format(value);
+                            }
+
+                            // Modo normalizado (porcentaje)
+                            if (!original || original === 0) return '';
                             return number_format(original);
                         }
                     },
@@ -128,8 +123,8 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, barPerce
                 scales: {
                     x: {
                         stacked,
-                        barPercentage,
-                        categoryPercentage,
+                        barPercentage: 0.9,
+                        categoryPercentage: 0.8,
                         ticks: {
                             maxRotation: 0,
                             autoSkip: false,
@@ -141,14 +136,12 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, barPerce
                     y: {
                         stacked,
                         beginAtZero: true,
-                        ticks: {
-                            display: false // ❌ Oculta los valores numéricos del eje Y
-                        },
+                        max: formato ? undefined : 100, // ✅ solo limitar a 100 si estás normalizando
                         grid: {
-                            display: false // ❌ Oculta las líneas horizontales
+                            display: false
                         },
                         border: {
-                            display: false // ❌ Oculta el eje Y (la línea del eje)
+                            display: false
                         }
                     }
                 }
@@ -160,11 +153,11 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, barPerce
         return () => {
             myChart.destroy();
         };
-    }, [labels, datasets, title, stacked, barPercentage, categoryPercentage]);
+    }, [datasets]);
 
     return (
-        <div className="border rounded shadow-sm p-2" style={{ height: '620px', width: '100%' }}>
-            <div style={{ height: '600px', width: '100%' }}>
+        <div className="border rounded shadow-sm p-2" style={{ height: '820px', width: '100%' }}>
+            <div style={{ height: '800px', width: '100%' }}>
                 <canvas ref={chartRef} style={{ width: '100%', height: '100%' }}></canvas>
             </div>
         </div>

@@ -145,7 +145,7 @@ export const Ventas = ({ datosUsuario }) => {
         totalCategoriaxAnio: totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, filtroCategoria),
       });
     }
-    console.log(dashboardState.totalesPorCategoria);
+    //console.log(dashboardState.totalesPorCategoria);
   }, [datosUsuario, filtroCategoria, anioFiltro]);
 
   return (
@@ -176,7 +176,9 @@ export const Ventas = ({ datosUsuario }) => {
           </div>
         </div>
       </div>
+      {/* !PIECHARTS */}
       <div className="row g-3 mb-4">
+        {/* GENERAL */}
         <div className="col-xl-6 col-lg-6 col-md-12">
           <div className="card card-hover border-0 shadow-lg">
             <div className="d-flex justify-content-between align-items-center">
@@ -221,7 +223,7 @@ export const Ventas = ({ datosUsuario }) => {
             </div>
           </div>
         </div>
-
+        {/* OTROS */}
         <div className="col-xl-3 col-lg-4 col-md-6">
           <div className="card card-hover border-0 shadow-lg">
             <div className="d-flex justify-content-between align-items-center">
@@ -236,7 +238,7 @@ export const Ventas = ({ datosUsuario }) => {
             </div>
           </div>
         </div>
-
+        {/* GASTOS KITS */}
         <div className="col-xl-6 col-lg-4 col-md-12">
           <div className="card card-hover border-0 shadow-lg">
             <div className="d-flex justify-content-between align-items-center">
@@ -252,7 +254,9 @@ export const Ventas = ({ datosUsuario }) => {
           </div>
         </div>
       </div>
+      {/* AREA CHARTS */}
       <div className="row g-3 mb-4">
+        {/* GENERAL */}
         <div className="col-md-6">
           <div className="card card-hover border-0 shadow-lg">
             <div className="card-body p-3">
@@ -260,11 +264,13 @@ export const Ventas = ({ datosUsuario }) => {
                 <AreaChart totales={dashboardState.totalxAnio} />
               </div>
               <hr className="my-3" />
-              <small className="text-muted">GENERAL {formatearPrecio(dashboardState.totales.totalSales)}</small>
+              <div className="d-flex justify-content-between align-items-center">
+                <small className="text-center bg-primary text-white p-1 rounded w-100">GENERAL <span className="fw-bold">{formatearPrecio(dashboardState.totales.totalSales)}</span></small>
+              </div>
             </div>
           </div>
         </div>
-
+        {/* KITS */}
         <div className="col-md-6">
           <div className="card card-hover border-0 shadow-lg">
             <div className="card-body p-3">
@@ -272,7 +278,9 @@ export const Ventas = ({ datosUsuario }) => {
                 <AreaChart totales={dashboardState} />
               </div>
               <hr className="my-3" />
-              <small className="text-muted">KITS: ${number_format(dashboardState.totalSalesKits)}</small>
+              <div className="d-flex justify-content-between align-items-center">
+                <small className="text-center bg-primary text-white p-1 rounded w-100">KITS: $ <span className="fw-bold">{formatearPrecio(dashboardState.totalSalesKits)}</span></small>
+              </div>
             </div>
           </div>
         </div>
@@ -292,7 +300,9 @@ export const Ventas = ({ datosUsuario }) => {
                     />
                   </div>
                   <hr className="my-3" />
-                  <small className="text-muted">Ventas hasta {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} | {(buscarNombre(categoria)).toLocaleLowerCase()} {totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria, oldOrders).monthlySales2025.reduce((a, b) => a + b, 0)}</small>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <small className="text-center bg-primary text-white p-1 rounded w-100">Hasta {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} | <span className="fw-semibold"> {(buscarNombre(categoria)).toLocaleLowerCase()} </span> | Unidades:  <span className="fw-bold"> {totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria, oldOrders).monthlySales2025.reduce((a, b) => a + b, 0)} </span></small>
+                  </div>
                 </div>
               </div>
             </div>
