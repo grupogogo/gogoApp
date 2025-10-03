@@ -44,11 +44,14 @@ const Sidebar = () => {
                             <i className="fas fa-tachometer-alt fa-2x me-3" />
                             {isHovered && <span>Dashboard</span>}
                         </NavLink>
-
-                        <NavLink to="/gastos" className="nav-link text-white d-flex align-items-center mb-1">
-                            <i className="fas fa-sack-dollar fa-2x me-3" />
-                            {isHovered && <span>Gastos</span>}
-                        </NavLink>
+                        {(user.rol !== "vendedor") && (
+                            <>
+                                <NavLink to="/gastos" className="nav-link text-white d-flex align-items-center mb-1">
+                                    <i className="fas fa-sack-dollar fa-2x me-3" />
+                                    {isHovered && <span>Gastos</span>}
+                                </NavLink>
+                            </>
+                        )}
                         <hr />
                         <NavLink to="/pedidos" onClick={limpiarClienteActivo} className="nav-link text-white d-flex align-items-center mb-1">
                             <i className="fas fa-clipboard-list fa-2x me-3" />
@@ -62,15 +65,21 @@ const Sidebar = () => {
                             <i className="fas fa-table fa-2x me-3" />
                             {isHovered && <span>Cuentas por cobrar</span>}
                         </NavLink>
-                        <hr />
-                        <NavLink to="/pedidos/old" onClick={limpiarClienteActivo} className="nav-link text-white d-flex align-items-center mb-1">
-                            <i className="fas fa-folder-tree fa-2x me-3" />
-                            {isHovered && <span>OLD Orders</span>}
-                        </NavLink>
-                        <NavLink to="/pedidos/listOldOrders" onClick={limpiarClienteActivo} className="nav-link text-white d-flex align-items-center mb-1">
-                            <i className="fas fa-folder fa-2x me-3" />
-                            {isHovered && <span>List OLD Orders</span>}
-                        </NavLink>
+                        {(user.rol !== "vendedor") && (
+                            <>
+                                <hr />
+
+                                <NavLink to="/pedidos/old" onClick={limpiarClienteActivo} className="nav-link text-white d-flex align-items-center mb-1">
+                                    <i className="fas fa-folder-tree fa-2x me-3" />
+                                    {isHovered && <span>OLD Orders</span>}
+                                </NavLink>
+                                <NavLink to="/pedidos/listOldOrders" onClick={limpiarClienteActivo} className="nav-link text-white d-flex align-items-center mb-1">
+                                    <i className="fas fa-folder fa-2x me-3" />
+                                    {isHovered && <span>List OLD Orders</span>}
+                                </NavLink>
+                            </>
+                        )}
+
                         <hr />
                         <NavLink to="/clientes" className="nav-link text-white d-flex align-items-center mb-1">
                             <i className="fas fa-address-book fa-2x me-3" />

@@ -32,6 +32,7 @@ export const useClientesStore = () => {//* 3. Crear el hook que expone propiedad
             try {
                 const { data } = await gogoApi.put(`/clientes/${cliente.id}`, cliente)
                 dispatch(onUpdateClient(cliente));
+                return data;
             } catch (error) {
                 console.log(error)
             }
@@ -39,11 +40,13 @@ export const useClientesStore = () => {//* 3. Crear el hook que expone propiedad
             try {
                 const { data } = await gogoApi.post('/clientes', cliente);
                 dispatch(onAddNewClient({ ...cliente, cliente_id: data.cliente.cliente_id, user }));
+                return data;
             } catch (error) {
                 console.log(error)
             }
         }
     }
+
 
 
     const startDeleteClient = async (cliente) => {
@@ -52,8 +55,9 @@ export const useClientesStore = () => {//* 3. Crear el hook que expone propiedad
         if (cliente.cliente_id) {
             try {
                 const { data } = await gogoApi.delete(`/clientes/${cliente.cliente_id}`);
-            } catch (error) {                
-                return error.response.data;
+                return data;
+            } catch (error) {
+                return error.response?.data || { ok: false, message: 'Error al eliminar' }; // ✅ Manejo de error seguro
             }
         }
     }

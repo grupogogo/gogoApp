@@ -53,7 +53,6 @@ export const AppRouter = () => {
           : (
             <>
               {(user.rol === 'superAdmin' || user.rol === 'admin') && (
-
                 <>
                   <Route path="/*" element={<MainDashboard />} />
                   <Route path="/calendar/*" element={<CalendarPage />} />
@@ -61,6 +60,18 @@ export const AppRouter = () => {
                   <Route path="/pedidos/old" element={<OldOrders />} />
                   <Route path="/pedidos/listOldOrders" element={<ListOldOrders />} />
                   <Route path="/gastos/*" element={<Gastos />} />
+                  <Route path="/listaPedidos/*" element={<ListaPedidos />} />0
+                  <Route path="/budget/*" element={<Budget />} />
+                  <Route path="/clientes/*" element={<Clientes />} />
+                  <Route path="/CuentasXCobrar/*" element={<CuentasXCobrar />} />
+                  <Route path="/*" element={<Navigate to={"/"} />}> </Route>
+                </>
+              )}
+              {(user.rol === 'vendedor') && (
+                <>
+                  <Route path="/*" element={<MainDashboard />} />
+                  <Route path="/calendar/*" element={<CalendarPage />} />
+                  <Route path="/pedidos" element={<Pedidos />} />                  
                   <Route path="/listaPedidos/*" element={<ListaPedidos />} />0
                   <Route path="/budget/*" element={<Budget />} />
                   <Route path="/clientes/*" element={<Clientes />} />

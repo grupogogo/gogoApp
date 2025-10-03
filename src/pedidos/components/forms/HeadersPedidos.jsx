@@ -8,7 +8,7 @@ export const HeadersPedidos = ({ codigo, titulo, cantidadItems, collapsed, vTota
     const { totalGuantes } = useSelector((state) => state.pedidos);
     const { formatearPrecio } = useFuntions()
     const {
-        precioKits: { kcg, kcp, kb },
+        precioKits: { kcg, kcp, kb, kce },
         precioCirios: { cc, cb },
         precioGuantes: {
             gb,
@@ -26,6 +26,9 @@ export const HeadersPedidos = ({ codigo, titulo, cantidadItems, collapsed, vTota
                 break;
             case 'KCP':
                 valorMultiplicado = cantidad * kcp;
+                break;
+            case 'KCE':
+                valorMultiplicado = cantidad * kce;
                 break;
             case 'KB':
                 valorMultiplicado = cantidad * kb;
@@ -59,7 +62,7 @@ export const HeadersPedidos = ({ codigo, titulo, cantidadItems, collapsed, vTota
                 >
                     <div className="d-flex align-items-center">
                         <div className="font-weight-bold me-2">{codigo} |</div>
-                        <div>{titulo}</div>
+                        <div>{titulo} {codigo === 'KCE' ? <span className='text-danger fw-semibold'>(New product)</span> : ''}</div>
                     </div>
 
                     {cantidadItems !== 0 && (

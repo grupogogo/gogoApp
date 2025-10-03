@@ -6,6 +6,10 @@ export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, vent
 
 
   if (!ventas?.data || !ventasBrandDesign?.data || !ventasOtros?.data || !gastos?.gastosMensualesO) return null;
+  const gastosPorcentualO = (gastos?.gastosMensualesO).reduce((a, b) => a + b, 0) * 100 / ((gastos?.gastosMensualesO).reduce((a, b) => a + b, 0) + (gastos?.gastosMensualesL).reduce((a, b) => a + b, 0));
+  const gastosPorcentualL = (gastos?.gastosMensualesL).reduce((a, b) => a + b, 0) * 100 / ((gastos?.gastosMensualesO).reduce((a, b) => a + b, 0) + (gastos?.gastosMensualesL).reduce((a, b) => a + b, 0));
+  const ventasPorcentualL = (ventasBrandDesign?.data).reduce((a, b) => a + b, 0) * 100 / ((ventasBrandDesign?.data).reduce((a, b) => a + b, 0) + (ventasOtros?.data).reduce((a, b) => a + b, 0));
+  const ventasPorcentualO = (ventasOtros?.data).reduce((a, b) => a + b, 0) * 100 / ((ventasBrandDesign?.data).reduce((a, b) => a + b, 0) + (ventasOtros?.data).reduce((a, b) => a + b, 0));
 
   const [hiddenDatasets, setHiddenDatasets] = useState([
     true, // Gastos O
@@ -474,6 +478,12 @@ export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, vent
 
   return (
     <>
+      <div className='card-header'>
+        <span className='text-center'>Porcentaje gastos O: {gastosPorcentualO.toFixed(2)}% </span>
+        <span className='text-center'>Porcentaje gastos L: {gastosPorcentualL.toFixed(2)}%</span>
+        <span className='text-center'>Porcentaje Ventas L: {ventasPorcentualL.toFixed(2)}%</span>
+        <span className='text-center'>Porcentaje Ventas O: {ventasPorcentualO.toFixed(2)}%</span>
+      </div>
       <div style={{ height: '820px', width: '100%' }} className='border rounded shadow-sm p-2'>
         <canvas ref={chartRef} style={{ width: '100%', height: '90%' }} />
       </div>

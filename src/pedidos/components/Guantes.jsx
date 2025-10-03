@@ -49,7 +49,7 @@ export const Guantes = ({ agregarPedidoGeneral, resetearPedido }) => {
         <>
             {/* HEADER*/}
             <div className="">
-                <HeadersPedidos codigo='GUA' titulo='GUANTES  [BLANCOS - NEGROS - MITÓN]' cantidadItems={cantidadItems} collapsed='Six' />
+                <HeadersPedidos codigo='GUA' titulo='GUANTES  [BLANCOS - NEGROS - MITÓN - ESPECIAL]' cantidadItems={cantidadItems} collapsed='Six' />
                 <div id="collapseSix" className="collapse mt-2" aria-labelledby="headingSix" data-bs-parent="#accordionExample"
                     style={{ overflow: 'hidden', transition: 'height 0.3s ease' }}>
                     <div className="row">
@@ -58,6 +58,7 @@ export const Guantes = ({ agregarPedidoGeneral, resetearPedido }) => {
                             <FormGuantes categoria="BLANCOS" tallaInicial={4} cantTallas={9} setPedidoGuantes={setPedidoGuantes} pedidoGuantes={pedidoGuantes} />
                             <FormGuantes categoria="NEGROS" tallaInicial={6} cantTallas={7} setPedidoGuantes={setPedidoGuantes} pedidoGuantes={pedidoGuantes} />
                             <FormGuantes categoria="MITON" tallaInicial={7} cantTallas={4} setPedidoGuantes={setPedidoGuantes} pedidoGuantes={pedidoGuantes} />
+                            {/* <FormGuantes categoria="ESPECIAL" tallaInicial={7} cantTallas={4} setPedidoGuantes={setPedidoGuantes} pedidoGuantes={pedidoGuantes} /> */}
                             <hr />
                             <div className="row">
                                 <div className="col-md">

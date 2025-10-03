@@ -69,17 +69,18 @@ export const preciosSlice = createSlice({
         },
         A2025: {
             precioKits: {
-                kcg: 19000,
-                kcp: 14000,
-                kb: 14000
+                kcg: 19500,
+                kcp: 14500,
+                kb: 14500,
+                kce: 8400
             },
             precioCirios: {
-                cc: 7500,
-                cb: 7500
+                cc: 7800,
+                cb: 7800
             },
             precioGuantes: {
-                gb: 17000,
-                gn: 18000,
+                gb: 23000,
+                gn: 24000,
                 gm: 36000,
             },
         },

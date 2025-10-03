@@ -11,6 +11,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { es } from 'date-fns/locale/es';
 import { format } from "date-fns"; // Funciones para formato y parseo
 import { Col, Row } from "react-bootstrap";
+import { KitComunionECO } from "../components/KitComunionECO";
 
 
 export const Pedidos = () => {
@@ -40,9 +41,11 @@ export const Pedidos = () => {
   }, [selAnioPedido])
 
   const limpiarPedido = () => {
-
     handleShow();
     limpiarClienteActivo();
+    setResetearPedido(prev => prev + 1);
+    setPedidoGeneral([]);
+    setDetallesPorCategoria([]);
   }
   const formattedDate = format(fechaActual, "MMMM d, yyyy HH:mm", { locale: es });
 
@@ -63,9 +66,6 @@ export const Pedidos = () => {
       return nuevoEstado;
     });
   };
-  useEffect(() => {
-    setClienteActivo([]);
-  }, [])
 
   const guardarPedidoGeneral = () => {
     if (!clienteActivo.cliente_id) {
@@ -169,7 +169,7 @@ export const Pedidos = () => {
       <LayoutApp>
         {(clienteActivo.cliente_id) && (
           <>
-            <EstadisticasPedidos />
+            {/* <EstadisticasPedidos /> */}
           </>
         )}
         <div className="card">
@@ -179,7 +179,7 @@ export const Pedidos = () => {
               <div className="col-lg-9 text-align-middle">
                 <div>
                   <h6 className="fw-semibold text-primary">CREAR PEDIDO {selAnioPedido !== '2025' ? 'ANTIGUO' : ''} </h6>
-                  <div className="align-items-center">
+                  {/* <div className="align-items-center">
                     <div className="input-group form-select-sm">
                       <select
                         className="form-select form-select-sm fs-6 fw-bold text-danger border-danger"
@@ -201,7 +201,7 @@ export const Pedidos = () => {
                         <option value="2017">2017</option>
                       </select>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
               <div className="col-lg-3 text-end align-items-center">
@@ -414,6 +414,8 @@ export const Pedidos = () => {
                         <KitComungrande agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
 
                         <KitComuPeque agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
+
+                        <KitComunionECO agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
 
                         <KitBautizo agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} />
 

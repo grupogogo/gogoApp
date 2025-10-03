@@ -28,14 +28,14 @@ export const useForm = (initialForm = {}, formValidations = {}) => {
     const onInputChange = ({ target }) => {
         const { name, value } = target;
         // Validamos si el input pertenece a 'precioKits', 'precioCirios' o 'precioGuantes'
-        if (name === 'kcg' || name === 'kcp' || name === 'kb') {
+        if (name === 'kcg' || name === 'kcp' || name === 'kb' || name === 'kce') {
             setFormState((prev) => ({
                 ...prev,
                 precios: {
                     ...prev.precios,
                     precioKits: {
                         ...prev.precios.precioKits,  // Correctamente accedemos a 'precioKits'
-                        [name]: value        // Actualizamos el valor del campo en 'precioKits'
+                        [name]: parseInt(value) || 0        // Actualizamos el valor del campo en 'precioKits'
                     }
                 }
             }));
@@ -46,7 +46,7 @@ export const useForm = (initialForm = {}, formValidations = {}) => {
                     ...prev.precios,
                     precioCirios: {
                         ...prev.precios.precioCirios,  // Correctamente accedemos a 'precioCirios'
-                        [name]: value          // Actualizamos el valor del campo en 'precioCirios'
+                        [name]: parseInt(value) || 0          // Actualizamos el valor del campo en 'precioCirios'
                     }
                 }
             }));
@@ -57,7 +57,7 @@ export const useForm = (initialForm = {}, formValidations = {}) => {
                     ...prev.precios,
                     precioGuantes: {
                         ...prev.precios.precioGuantes,  // Correctamente accedemos a 'precioGuantes'
-                        [name]: value           // Actualizamos el valor del campo en 'precioGuantes'
+                        [name]: parseInt(value) || 0           // Actualizamos el valor del campo en 'precioGuantes'
                     }
                 }
             }));

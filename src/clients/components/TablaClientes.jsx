@@ -9,12 +9,13 @@ import { Table, Header, HeaderRow, Body, Row, HeaderCell, Cell } from "@table-li
 import { Button } from "react-bootstrap";
 import { useSort, HeaderCellSort } from "@table-library/react-table-library/sort";
 import Swal from "sweetalert2";
+import { useMemo } from "react";
 
 
 
 export const TablaClientes = ({ handleShow }) => {
     const [showModal, setShowModal] = useState(false);
-    const { limpiarClienteActivo, setClienteActivo, startSavingClient, startDeleteClient, startLoadingClientes, onSetDefaultActiveClient } = useClientesStore();
+    const { limpiarClienteActivo, setClienteActivo, startSavingClient, startDeleteClient, startLoadingClientes } = useClientesStore();
     const navegar = useNavigate();
     const { limpiarFecha, capitalize } = useFuntions();
     const { user } = useAuthStore()
@@ -26,31 +27,53 @@ export const TablaClientes = ({ handleShow }) => {
     const handleSearch = (event) => {
         setSearch(event.target.value);
     };
-    const data = {
-        nodes: [...clientes]
+
+    const data = useMemo(() => {
+        const filtered = [...clientes]
             .filter((item) =>
-                item.user?._id === user.uid && // Filtra por usuario autenticado
+                item.user?._id === user.uid &&
                 (item.nombre?.toLowerCase().includes(search.toLowerCase()) ||
                     item.ciudad?.toLowerCase().includes(search.toLowerCase()) ||
                     item.nitCC?.toLowerCase().includes(search.toLowerCase())
-                ) // Filtra por término de búsqueda
+                )
             )
             .sort((a, b) => {
-                // Función para extraer y convertir la fechaCreacion en "DD/MM/YYYY, hh:mm a. m./p. m."
                 const parseFecha = (fechaStr) => {
-                    if (!fechaStr) return new Date(0); // Usa fechaCreacion mínima si no existe
+                    if (!fechaStr) return new Date(0);
 
-                    const fechaSolo = fechaStr.split(",")[0]; // Extrae solo la parte "DD/MM/YYYY"
-                    const [dia, mes, anio] = fechaSolo.split("/");
+                    const clean = fechaStr.trim();
+                    const [fecha, horaCompleta] = clean.split(",");
 
-                    return new Date(`${anio}-${mes}-${dia}`); // Convierte a formato YYYY-MM-DD
+                    // 👉 Fecha: dd/mm/yyyy
+                    const [dia, mes, anio] = fecha.trim().split("/").map(Number);
+
+                    // 👉 Normalizar hora "04:32 p. m." a formato 24h
+                    let hora = horaCompleta.trim()
+                        .replace("a. m.", "AM")
+                        .replace("p. m.", "PM")
+                        .toUpperCase();
+
+                    let [time, meridian] = hora.split(" ");
+                    let [h, m] = time.split(":").map(Number);
+
+                    if (meridian === "PM" && h < 12) h += 12;
+                    if (meridian === "AM" && h === 12) h = 0;
+
+                    return new Date(anio, mes - 1, dia, h, m);
                 };
 
-                const fechaA = parseFecha(a.fechaCreacion);
-                const fechaB = parseFecha(b.fechaCreacion);
-                return fechaB - fechaA; // Ordena de más reciente a más antigua
+                return parseFecha(b.fechaCreacion) - parseFecha(a.fechaCreacion);
             })
-    };
+
+
+
+        // Filtros adicionales
+        let nodes = isHide ? filtered.filter((n) => n.distribuidor) : filtered;
+        nodes = isHideUnitarios ? nodes.filter((n) => n.distribuidor === false) : nodes;
+
+        return { nodes };
+    }, [clientes, user.uid, search, isHide, isHideUnitarios]);
+
     // Aplicar filtro adicional si isHide es verdadero
     data.nodes = isHide ? data.nodes.filter((node) => node.distribuidor) : data.nodes;
     data.nodes = isHideUnitarios ? data.nodes.filter((node) => node.distribuidor === false) : data.nodes;
@@ -58,16 +81,17 @@ export const TablaClientes = ({ handleShow }) => {
     const handleClose = () => {
         setShowModal(false);
         limpiarClienteActivo()
-        startLoadingClientes();
     }
     const editarCliente = (cliente) => {
-        startSavingClient(cliente);
+        startSavingClient(cliente).then(() => {
+            startLoadingClientes();
+        });
         setClienteActivo(cliente);
         setShowModal(true);
-    }
+    };
+
     const eliminarCliente = async (cliente) => {
         const respuesta = await startDeleteClient(cliente);
-        console.log(respuesta)
 
         if (respuesta.ok) {
             Swal.fire({
@@ -91,6 +115,7 @@ export const TablaClientes = ({ handleShow }) => {
         }
     }
     const direccionarPedido = (cliente) => {
+
         setClienteActivo(cliente);
         navegar('/pedidos')
     }
@@ -100,14 +125,31 @@ export const TablaClientes = ({ handleShow }) => {
             size: 20,
         },
     });
+    const marginTheme = {
+        BaseCell: `
+        margin: 0.5px;
+        padding: 0.5px;
+      `,
+    };
     const sizeColumnTheme = {
         Table: `
-                --data-table-library_grid-template-columns: 
-                    9% auto 10% auto 20% 7% 7% 7% !important;
-            `,
-    };
+        --data-table-library_grid-template-columns: 
+             max-content  
+             max-content 
+             1fr  
+             max-content
+             max-content
+             max-content
+             max-content
+             max-content
+             max-content
+
+            !important;
+    `,
+    }
+
     const theme = useTheme(
-        [sizeColumnTheme]
+        [marginTheme, sizeColumnTheme]
     );
     const sort = useSort(
         data,
@@ -130,8 +172,7 @@ export const TablaClientes = ({ handleShow }) => {
 
     useEffect(() => {
         startLoadingClientes();
-    }, [clientes])
-
+    }, [clientes.length])
 
     return (
         <div className="card shadow-none p-3 mb-5 rounded mt-1">
@@ -145,7 +186,7 @@ export const TablaClientes = ({ handleShow }) => {
                             <button
                                 onClick={() => {
                                     handleShow();
-                                    onSetDefaultActiveClient()
+                                    limpiarClienteActivo();
                                 }
                                 }
                                 className="btn btn-outline-primary"
@@ -219,6 +260,7 @@ export const TablaClientes = ({ handleShow }) => {
                             <Header>
                                 <HeaderRow className="table-light text-start fw-semibold">
                                     <HeaderCellSort sortKey={'INGRESO'} className='text-start fw-semibold'>Ingreso</HeaderCellSort>
+                                    <HeaderCellSort sortKey={'TIPO'} className='text-start fw-semibold'>Tipo</HeaderCellSort>
                                     <HeaderCellSort sortKey={'CLIENTE'} className='text-start fw-semibold'>Cliente</HeaderCellSort>
                                     <HeaderCellSort sortKey={'NIT'} className='text-start fw-semibold'>Nit/CC</HeaderCellSort>
                                     <HeaderCellSort sortKey={'CIUDAD'} className='text-start fw-semibold'>Ciudad</HeaderCellSort>
@@ -237,6 +279,7 @@ export const TablaClientes = ({ handleShow }) => {
                                         className={!item.distribuidor ? 'table-primary' : ''}
                                     >
                                         <Cell>{limpiarFecha(item.fechaCreacion)}</Cell>
+                                        <Cell className={'fw-semibold ' + (item.distribuidor ? 'text-success' : 'text-danger')} title={(item.distribuidor)}>{item.distribuidor ? 'Distribuidor' : 'Cliente final'}</Cell>
                                         <Cell>{item.nombre}</Cell>
                                         <Cell>{item.nitCC}</Cell>
                                         <Cell className="text-secondary">{capitalize(item.ciudad.toUpperCase())}</Cell>

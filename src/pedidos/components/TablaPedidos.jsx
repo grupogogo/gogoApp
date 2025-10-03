@@ -25,14 +25,7 @@ export const TablaPedidos = () => {
         //console.log(JSON.stringify(pedido));
     }
     const editarPedido = async (pedido, event) => {
-        /* if (event.target.value === 'pendiente' || event.target.value === 'preparado') {
-            Swal.fire({
-                icon: "error",
-                title: "Oops...",
-                text: "El pedido no se puede editar si ya ha sido despachado!",
-            });
-            return;
-        } */
+        console.log(pedido, event.target.value);
 
         onInputChange(event);
 
@@ -40,25 +33,59 @@ export const TablaPedidos = () => {
         const estado = event.target.value;
         const nuevoPedido = { ...pedido, estado, userEdit }
 
-        try {
-            const result = await Swal.fire({
-                title: `Está seguro de cambiar el estado a "${estado.charAt(0).toUpperCase() + estado.slice(1)}"`,
-                cancelButtonColor: "#3085d6",
-                confirmButtonColor: "red",
-                showCancelButton: true,
-                confirmButtonText: "Guardar",
-            });
+        console.log(pedido.user._id, user.uid, estado);
 
-            if (result.isConfirmed) {
-                await startEditarPedido(nuevoPedido);
-                Swal.fire("Guardado!", "", "success");
-            } else {
-                Swal.fire("Los cambios no han sido almacenados", "", "info");
+            if (pedido.user._id === user.uid && estado ===  'enviado') {
+                const { value: numeroGuia, isConfirmed } = await Swal.fire({
+                    title: `Está seguro de cambiar el estado a "${estado.charAt(0).toUpperCase() + estado.slice(1)}"?`,
+                    input: 'text',
+                    inputValue: '7001',
+                    inputLabel: 'Ingrese el número de guía',
+                    inputPlaceholder: 'Ej: 123456789',
+                    cancelButtonColor: "#3085d6",
+                    confirmButtonColor: "red",
+                    showCancelButton: true,
+                    confirmButtonText: "Guardar",
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return 'Solamente el usuario que creó el pedido puede asignar el número de guía';
+                        }
+                    }
+                });
+
+                if (isConfirmed) {
+                    // Clonamos el objeto y actualizamos numeroGuia
+                    const nuevoPedidoConGuia = {
+                        ...nuevoPedido,
+                        estado: "enviado",
+                        numeroGuia: numeroGuia
+                    };
+
+                    await startEditarPedido(nuevoPedidoConGuia);
+
+                    Swal.fire("Guardado!", `Número de guía: ${numeroGuia}`, "success");
+                } else {
+                    Swal.fire("Los cambios no han sido almacenados", "", "info");
+                }
             }
-        } catch (error) {
-            console.error("Error al editar el pedido:", error);
-            Swal.fire("Error", "No se pudo editar el pedido", "error");
-        }
+
+            else {
+
+                const result = await Swal.fire({
+                    title: `Está seguro de cambiar el estado a "${estado.charAt(0).toUpperCase() + estado.slice(1)}"`,
+                    cancelButtonColor: "#3085d6",
+                    confirmButtonColor: "red",
+                    showCancelButton: true,
+                    confirmButtonText: "Guardar",
+                });
+
+                if (result.isConfirmed) {
+                    await startEditarPedido(nuevoPedido);
+                    Swal.fire("Guardado!", "", "success");
+                } else {
+                    Swal.fire("Los cambios no han sido almacenados", "", "info");
+                }
+            }        
     };
 
     const eliminarPedido = (pedido) => {

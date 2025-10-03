@@ -11,9 +11,8 @@ export const ReusableModal = ({ show, handleClose }) => {
     const [cliente, setCliente] = useState({});
 
     const saveClient = async () => {
-
+        console.log(JSON.stringify(cliente))
         try {
-
             await startSavingClient(cliente);
             Swal.fire({
                 title: "Cliente almacenado correctamente!",
@@ -32,8 +31,39 @@ export const ReusableModal = ({ show, handleClose }) => {
         handleClose();
     }
     const editClient = () => {
-        startSavingClient(cliente);
-        handleClose();
+
+        if (cliente.nombre === '') {
+            Swal.fire({
+                icon: "error",
+                title: "El nombre es obligatorio",
+                text: "Completa los datos obligatorios!",
+            });
+            return;
+        }
+        if (cliente.ciudad === '') {
+            Swal.fire({
+                icon: "error",
+                title: "La ciudad es obligatoria",
+                text: "Completa los datos obligatorios!",
+            });
+            return;
+        }
+
+        try {
+            startSavingClient(cliente);
+            handleClose();
+            Swal.fire({
+                title: "Cliente almacenado correctamente!",
+                icon: "success",
+                draggable: true,
+            });
+        } catch (error) {
+            Swal.fire({
+                icon: "error",
+                title: error,
+                text: "Something went wrong!",
+            });
+        }
     }
 
     return (

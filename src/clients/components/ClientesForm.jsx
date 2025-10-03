@@ -18,7 +18,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
     detalle,
     distribuidor,
     precios: {
-      precioKits: { kcg = 0, kcp = 0, kb = 0 } = {},
+      precioKits: { kcg = 0, kcp = 0, kb = 0, kce = 0 } = {},
       precioCirios: { cc = 0, cb = 0 } = {},
       precioGuantes: { gb = 0, gn = 0, gm = 0 } = {}
     } = {},
@@ -44,17 +44,28 @@ export const ClientesForm = ({ setCliente, cliente }) => {
   return (
     <>
       <div className="container card">
-        <div className="row m-2">
-          <div className="col-md-12 text-right">
-            <div className="form-check form-switch">
-              <input className="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckClienteDistribuidor" name="distribuidor" value={!clienteTipo} onChange={selTipoCliente} checked={clienteTipo} />
-              <label className="form-check-label" htmlFor="flexSwitchCheckClienteDistribuidor">
-                <span>Cliente distribuidor</span>
-              </label>
-            </div>
+        <div className="row justify-content-center p-3">
+          <div className="form-check form-switch form-switch-lg d-flex justify-content-between">
+            <label
+              className="form-check-label fs-4"
+              htmlFor="flexSwitchCheckClienteDistribuidor"
+            >
+              Tipo de cliente: <span className="text-danger fw-bold"> {clienteTipo ? "Distribuidor" : "Unitario"} </span>
+            </label>
+            <input
+              className="form-check-input big-switch"
+              type="checkbox"
+              role="switch"
+              id="flexSwitchCheckClienteDistribuidor"
+              name="distribuidor"
+              value={!clienteTipo}
+              onChange={selTipoCliente}
+              checked={clienteTipo}
+            />
           </div>
         </div>
-        <div>
+        <hr />
+        <div className="container">
           <div className="row">
             <div className="col-md-8">
               <label htmlFor="iName" className="form-label">Razón social / Nombre</label>
@@ -144,22 +155,28 @@ export const ClientesForm = ({ setCliente, cliente }) => {
                   <div className="badge text-bg-primary text-wrap mb-3">
                     KITS
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-md-3">
                     <div className="input-group" title="Kit primera comunión grande">
                       <span className="input-group-text fw-semibold" id="inputGroup-sizing-default">KC-G: $</span>
                       <input type="text" className="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" name="kcg" value={kcg || 0} onChange={handleChange} />
                     </div>
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-md-3">
                     <div className="input-group" title="Kit primera comunión pequeño">
                       <span className="input-group-text fw-semibold" id="inputGroup-sizing-default">KC-P: $</span>
                       <input type="text" className="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" name="kcp" value={kcp || 0} onChange={handleChange} />
                     </div>
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-md-3">
                     <div className="input-group" title="Kit de bautizo">
                       <span className="input-group-text fw-semibold" id="inputGroup-sizing-default">KB: $</span>
                       <input type="text" className="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" name="kb" value={kb || 0} onChange={handleChange} />
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="input-group" title="Kit de comunión económico">
+                      <span className="input-group-text fw-semibold" id="inputGroup-sizing-default">KCE: $</span>
+                      <input type="text" className="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" name="kce" value={kce || 0} onChange={handleChange} />
                     </div>
                   </div>
                 </div>

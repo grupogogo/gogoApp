@@ -38,17 +38,34 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                 console.log("I was closed by the timer");
             }
         });
-        html2canvas(modalRef.current, { scale: 3 }).then(canvas => { // Aumenta la escala para más detalle
-            const imgData = canvas.toDataURL("image/jpeg", 1); // Cambia a JPEG con calidad 90%
-            const pdf = new jsPDF("p", "mm", "letter");
+        html2canvas(modalRef.current, { scale: 3 }).then(canvas => {
+            const imgData = canvas.toDataURL("image/jpeg", 1);
+            const pdf = new jsPDF("p", "mm", "letter"); // si usas carta completa
 
+            // 📏 Tamaño de página en mm
             const pageWidth = pdf.internal.pageSize.getWidth();
-            const imgWidth = pageWidth - 10; // Deja margen de 5mm en cada lado
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            // 👉 Márgenes personalizados
+            const marginLeft = 2;   // reduce margen izquierdo
+            const marginTop = 0;    // reduce margen superior
+            const marginRight = 2;  // reduce margen derecho
+            const marginBottom = 0; // reduce margen inferior
+
+            // ancho disponible restando márgenes
+            const imgWidth = pageWidth - marginLeft - marginRight;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-            pdf.addImage(imgData, "JPEG", 5, 5, imgWidth, imgHeight);
+            // si se pasa de alto, ajusta a la página
+            let finalHeight = imgHeight;
+            if (finalHeight > pageHeight - marginTop - marginBottom) {
+                finalHeight = pageHeight - marginTop - marginBottom;
+            }
+
+            pdf.addImage(imgData, "JPEG", marginLeft, marginTop, imgWidth, finalHeight);
             pdf.save(`GuiaDespacho_${pedido?.id}.pdf`);
         });
+
     };
 
     useEffect(() => {
@@ -73,14 +90,14 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                 <Modal.Body ref={modalRef} >
                     {/* Información del cliente y fecha */}
                     <>
-                        <Card.Body>
+                        <Card.Body className='font-normal' >
                             <Row>
                                 <Col>
-                                    <Row className='fs-4'>
+                                    <Row className='border fs-4'>
                                         <Col className='col-md-12'>
                                             <span className='fw-bold text-danger fs-1'>REMITENTE</span>
                                         </Col>
-                                        <hr className='col-md-10' />
+                                        <hr className='col-md-11 text-end  text-align-center' />
                                         <Col className='col-md-12'>
                                             <span className='fw-bold fs-2 text-info'>{pedido?.user?.name}</span>
                                         </Col>
@@ -88,7 +105,7 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                             <span className='fw-semibold'>CC: </span>{pedido?.user?.numIdentificacion}
                                         </Col>
                                         <Col className='col-md-12'>
-                                            <span className='fw-semibold'>DIRECCIÓN:&nbsp;</span> Carrera 8A # 76 sur - 23 
+                                            <span className='fw-semibold'>DIRECCIÓN:&nbsp;</span> Carrera 8A # 76 sur - 23
                                         </Col>
                                         <Col className='col-md-12'>
                                             <Row>
@@ -100,11 +117,11 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                     </Row>
                                 </Col>
                                 <Col>
-                                    <Row className='border-end fs-4'>
+                                    <Row className='border fs-4'>
                                         <Col className='col-md-12 text-danger'>
                                             <span className='fw-bold text-danger fs-1'>DESTINATARIO</span>
                                         </Col>
-                                        <hr className='col-md-10' />
+                                        <hr className='col-md-11' />
                                         <Col className='col-md-12'>
                                             <span className='fw-bold text-info fs-2'>{(pedido?.cliente?.nombre)}</span>
                                         </Col>
@@ -124,21 +141,23 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                         <Col>
                                             <span className='fw-semibold'>TELÉFONO:</span> {pedido?.cliente?.telefono}
                                         </Col>
-                                        {pedido?.formaPago === 'pCasa' || pedido?.formaPago === 'alCobro' && (
-                                            <Row className='text-center mr-2 card'>
-                                                <Col>
-                                                    {pedido?.formaPago === 'pCasa' && (
-                                                        <span className='text-danger fs-4 fw-bold'>PAGO EN CASA: {calculaTotalPedido(pedido)}</span>
-                                                    )}
-                                                    {pedido?.formaPago === 'alCobro' && (
-                                                        <span className='text-danger fs-4 fw-bold'>AL COBRO CON ENVÍO: {calculaTotalPedido(pedido, parseInt(pedido?.costoEnvio))}</span>
-                                                    )}
-                                                </Col>
-                                            </Row>
-                                        )}
                                     </Row>
                                 </Col>
-                            </Row>                     
+                            </Row>
+                            <Row className=''>
+                                {pedido?.formaPago === 'pCasa' || pedido?.formaPago === 'alCobro' && (
+                                    <Row >
+                                        <Col className='text-center card'>
+                                            {pedido?.formaPago === 'pCasa' && (
+                                                <span className='text-danger fs-4 fw-bold'>PAGO EN CASA: {calculaTotalPedido(pedido)}</span>
+                                            )}
+                                            {pedido?.formaPago === 'alCobro' && (
+                                                <span className='fw-bold fs-3 text-danger text-decoration-underline'>PEDIDO AL COBRO CON ENVÍO: {calculaTotalPedido(pedido, parseInt(pedido?.costoEnvio))}</span>
+                                            )}
+                                        </Col>
+                                    </Row>
+                                )}
+                            </Row>
                         </Card.Body>
                     </>
                 </Modal.Body>

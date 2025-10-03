@@ -554,53 +554,61 @@ export const ListOldOrders = () => {
 
     return (
         <LayoutApp>
-            <div className="container-fluid">
-                <div className='card p-3 mb-2'>
-                    <div className='row justify-content-between g-3'>
-                        <div className="col text-end">
-                            <div className="input-group form-select-sm d-flex align-items-center">
-                                <span className='me-2'>Columnas a mostrar</span>
-                                <select
-                                    className="form-select form-select-sm w-auto rounded"
-                                    value={showColumns}
-                                    style={{ maxWidth: 'fit-content' }}
-                                    onChange={e => {
-                                        const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
-                                        setShowColumns(value);
-                                    }}
-                                >
-                                    <option value={'12'}>1</option>
-                                    <option value={'6'}>2</option>
-                                    <option value={'6'}>3</option>
-                                    <option value={'3'}>4</option>
-                                </select>
-                            </div>
+            <div className='card p-3 mb-2 sticky-top bg-white z-3'
+                style={{
+                    position: 'sticky',
+                    top: 0,
+                    backgroundColor: 'white',
+                    zIndex: 1000,
+                    padding: '1rem',
+                    marginBottom: '1rem'
+                }} >
+                <div className='row justify-content-between g-3'>
+                    <div className="col text-end">
+                        <div className="input-group form-select-sm d-flex align-items-center">
+                            <span className='me-2'>Columnas a mostrar</span>
+                            <select
+                                className="form-select form-select-sm w-auto rounded"
+                                value={showColumns}
+                                style={{ maxWidth: 'fit-content' }}
+                                onChange={e => {
+                                    const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                                    setShowColumns(value);
+                                }}
+                            >
+                                <option value={'12'}>1</option>
+                                <option value={'6'}>2</option>
+                                <option value={'6'}>3</option>
+                                <option value={'3'}>4</option>
+                            </select>
                         </div>
+                    </div>
 
-                        <div className="col text-start">
-                            <div className="input-group form-select-sm d-flex align-items-center">
-                                <span className='me-2'>Año a filtrar</span>
-                                <select
-                                    className="form-select form-select-sm w-auto rounded"
-                                    value={fechaPedido}
-                                    style={{ maxWidth: 'fit-content' }}
-                                    onChange={e => {
-                                        const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
-                                        setFechaPedido(value);
-                                    }}
-                                >
-                                    <option value={'2024'}>2024</option>
-                                    <option value={'2023'}>2023</option>
-                                    <option value={'2022'}>2022</option>
-                                    <option value={'2021'}>2021</option>
-                                    <option value={'2020'}>2020</option>
-                                    <option value={'2019'}>2019</option>
-                                    <option value={'2025'}>2025</option>
-                                </select>
-                            </div>
+                    <div className="col text-start">
+                        <div className="input-group form-select-sm d-flex align-items-center">
+                            <span className='me-2'>Año a filtrar</span>
+                            <select
+                                className="form-select form-select-sm w-auto rounded"
+                                value={fechaPedido}
+                                style={{ maxWidth: 'fit-content' }}
+                                onChange={e => {
+                                    const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                                    setFechaPedido(value);
+                                }}
+                            >
+                                <option value={'2024'}>2024</option>
+                                <option value={'2023'}>2023</option>
+                                <option value={'2022'}>2022</option>
+                                <option value={'2021'}>2021</option>
+                                <option value={'2020'}>2020</option>
+                                <option value={'2019'}>2019</option>
+                                <option value={'2025'}>2025</option>
+                            </select>
                         </div>
                     </div>
                 </div>
+            </div>
+            <div className="container-fluid">
 
                 {/* DIV PARA LOS GRÁFICOS */}
                 <div className='row'>

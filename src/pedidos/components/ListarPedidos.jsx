@@ -14,7 +14,7 @@ import { useSelector } from 'react-redux';
 
 export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abrirModalImprimir, abrirModalGuia }) => {
   const [search, setSearch] = useState("");
-  const { capitalize, limpiarFecha, convertirFechaIngles } = useFuntions();
+  const { capitalize, limpiarFecha, fechaCorta, convertirFechaIngles } = useFuntions();
   const [filtroDistribuidor, setFiltroDistribuidor] = useState(null);
   const { user } = useAuthStore();
   const navegar = useNavigate();
@@ -53,7 +53,12 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
     nodes: data.nodes.filter((item) => {
       // Filtrar por rol "planta" y estado "pendiente"
       const matchesPlanta =
-        user.rol !== "planta" || item.estado === "pendiente" || item.estado === "preparado";
+        user.rol === "planta"
+          ? (item.estado === "pendiente" || item.estado === "preparado")
+          : user.rol === "vendedor"
+            ? item.user._id === user.uid
+            : true;
+
 
       // Condiciones del filtro existente
       const matchesSearch =
@@ -100,28 +105,32 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
   const sizeColumnTheme = user.rol !== "planta" ? {
     Table: `
         --data-table-library_grid-template-columns: 
-             7%  
-             8%  
-             28% 
-             16% 
-             7%
-             7%
-             7%
-             12%
-             5%
+             max-content  
+             max-content 
+             max-content  
+             1fr 
+             max-content
+             max-content
+             max-content
+             max-content
+             max-content
+             max-content
+             max-content
     `,
   }
     : {
       Table: `
         --data-table-library_grid-template-columns: 
-             8%  
-             10% 
-             auto 
-             7% 
-             7%             
-             7%
-             15%
-             8%             
+             max-content
+             max-content
+             max-content
+             1fr
+             max-content
+             max-content
+             max-content
+             max-content
+             max-content
+             max-content
     `,
     }
   const theme = useTheme(
@@ -144,6 +153,13 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
   const COLUMNS = (user.rol === "planta") ?
     [
       {
+        renderCell: (item) => (
+          <div className='border border-2 border-primary text-primary rounded text-center align-items-center d-flex justify-content-center' style={{ width: '30px', height: '30px', lineHeight: '30px' }}>
+            <span className='fw-bold' title={`Vendedor: ${(item.user.name)}`}>{item.user.name.slice(0, 1).toUpperCase()}</span>
+          </div>
+        ),
+      },
+      {
         label: 'ID',
         renderCell: (item) => (
           <span className='fw-semibold ' title={`ID del pedido: ${(item.pedido_id)}`}>{((item.pedido_id).slice(-6).toUpperCase())}</span>
@@ -152,7 +168,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
       {
         label: 'Fecha',
         renderCell: (item) => (
-          <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{capitalize(limpiarFecha(item.fechaCreacion))}</span>
+          <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{fechaCorta(limpiarFecha(item.fechaCreacion))}</span>
         ),
       },
       {
@@ -164,7 +180,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
       {
         label: <i className="fa fa-location-dot"></i>,
         renderCell: (item) => (
-          <div className="text-center"> <span title={`Ciudad: ${item.cliente.ciudad}`}>{item.cliente.ciudad}</span></div>
+          <div className="text-center"> <span title={`Ciudad: ${item.cliente.ciudad}`}>{(item.cliente.ciudad).toUpperCase()}</span></div>
         ),
       },
       {
@@ -223,7 +239,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
         ),
       },
       {
-        label: 'Cantidad',
+        label: 'Items',
         renderCell: (item) => {
           // Crear un mapa para agrupar las cantidades por categoría
           const categorias = {};
@@ -258,30 +274,102 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
               }
             }
           });
-          // Generar texto para el tooltip         
+
+          const tooltipText = Object.entries(categorias)
+            .map(([categoria, cantidad]) => `${categoria}: ${cantidad}`)
+            .join(", ");
+
           const renderTooltip = (props) => (
             <Tooltip id="button-tooltip" {...props}>
-              {Object.entries(categorias)
-                .map(([categoria, cantidad]) => `${categoria}: ${cantidad}`)
-                .join(', ')}
+              {tooltipText}
             </Tooltip>
           );
+
           return (
             <OverlayTrigger
               placement="left"
               delay={{ show: 250, hide: 400 }}
               overlay={renderTooltip}
             >
-              <span className=" text-dark" variant="secondary">
-                {
-                  <div className="text-center"> <span className='fw-bold fs-3 font-monospace'>{totalProductos}</span> </div>}
-              </span>
+              <div className="text-end" style={{ cursor: 'pointer' }} title={`Detalle de productos: ${tooltipText}`}>
+                <span className="fs-2 font-monospace text-dark">
+                  {totalProductos}|
+                </span>
+              </div>
             </OverlayTrigger>
           );
-
         },
-      }
+      },
+      {
+        label: 'Detalle',
+        renderCell: (item) => {
+          // Crear un mapa para agrupar las cantidades por categoría
+          const categorias = {};
+          let totalProductos = 0;
+
+          // Iterar sobre los pedidos en item.itemPedido
+          item.itemPedido.forEach((pedido) => {
+            for (const tipoProducto in pedido.itemPedido) {
+              const producto = pedido.itemPedido[tipoProducto];
+
+              // Verificar si la categoría es "OTR"
+              if (tipoProducto === "OTR" && producto.pedido) {
+                // Manejar la categoría "OTR"
+                producto.pedido.forEach((detalle) => {
+                  const cantidad = parseInt(detalle.cantidad, 10); // Convertir cantidad a número
+                  if (!categorias[tipoProducto]) {
+                    categorias[tipoProducto] = 0;
+                  }
+                  categorias[tipoProducto] += cantidad;
+                  totalProductos += cantidad;
+                });
+              } else if (producto.pedido) {
+                // Manejar las demás categorías
+                producto.pedido.forEach((detalle) => {
+                  const cantidad = parseInt(detalle.cantidad, 10); // Convertir cantidad a número
+                  if (!categorias[tipoProducto]) {
+                    categorias[tipoProducto] = 0;
+                  }
+                  categorias[tipoProducto] += cantidad;
+                  totalProductos += cantidad;
+                });
+              }
+            }
+          });
+
+          const tooltipText = Object.entries(categorias)
+            .map(([categoria, cantidad]) => `${categoria}: ${cantidad}`)
+            .join(", ");
+
+          const renderTooltip = (props) => (
+            <Tooltip id="button-tooltip" {...props}>
+              {tooltipText}
+            </Tooltip>
+          );
+
+          return (
+            <OverlayTrigger
+              placement="left"
+              delay={{ show: 250, hide: 400 }}
+              overlay={renderTooltip}
+            >
+              <div className="text-left fs-4 font-monospace text-dark" style={{ cursor: 'pointer' }} title={`Detalle de productos: ${tooltipText}`}>
+                <span>
+                  ({tooltipText})
+                </span>
+              </div>
+            </OverlayTrigger>
+          );
+        },
+      },
     ] : [
+      {
+        renderCell: (item) => (
+          <div className='border border-2 border-primary text-primary rounded text-center align-items-center d-flex justify-content-center' style={{ width: '30px', height: '30px', lineHeight: '30px' }}>
+            <span className='fw-bold' title={`Vendedor: ${(item.user.name)}`}>{item.user.name.slice(0, 1).toUpperCase()}</span>
+          </div>
+        ),
+      },
       {
         label: 'ID',
         renderCell: (item) => (
@@ -291,7 +379,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
       {
         label: 'Fecha',
         renderCell: (item) => (
-          <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{limpiarFecha(item.fechaCreacion)}</span>
+          <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{fechaCorta(limpiarFecha(item.fechaCreacion))}</span>
         ),
         sort: { sortKey: "FECHA" },
       },
@@ -311,7 +399,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
               onClick={() => abrirModalGuia(item)}
               title="Ver detalles del pedido"
             >
-              <span title={`Ciudad: ${item.cliente.ciudad}`}>{item.cliente.ciudad}</span>
+              <span className='fw-semibold' title={`Ciudad: ${item.cliente.ciudad}`}>{(item.cliente.ciudad).toUpperCase()}</span>
             </button>
           </div>
         ),
@@ -478,32 +566,93 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
             }
           });
 
-          // Generar texto para el tooltip         
+          const tooltipText = Object.entries(categorias)
+            .map(([categoria, cantidad]) => `${categoria}: ${cantidad}`)
+            .join(", ");
+
           const renderTooltip = (props) => (
             <Tooltip id="button-tooltip" {...props}>
-              {Object.entries(categorias)
-                .map(([categoria, cantidad]) => `${categoria}: ${cantidad}`)
-                .join(', ')}
+              {tooltipText}
             </Tooltip>
           );
+
           return (
-            <>
-              <OverlayTrigger
-                className='text-center'
-                placement="left"
-                delay={{ show: 250, hide: 400 }}
-                overlay={renderTooltip}
-              >
-                <span
-                  className='badge rounded-pill bg-secondary w-100 text-center align-items-center'
-                  variant="secondary"
-                  style={{ cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
-                >{totalProductos}</span>
-              </OverlayTrigger>
-            </>
+            <OverlayTrigger
+              placement="left"
+              delay={{ show: 250, hide: 400 }}
+              overlay={renderTooltip}
+            >
+              <div className="text-end" style={{ cursor: 'pointer' }} title={`Detalle de productos: ${tooltipText}`}>
+                <span className="fs-4 font-monospace text-dark">
+                  {totalProductos}|
+                </span>
+              </div>
+            </OverlayTrigger>
           );
         },
-      }
+      },
+      {
+        label: 'Detalle',
+        renderCell: (item) => {
+          // Crear un mapa para agrupar las cantidades por categoría
+          const categorias = {};
+          let totalProductos = 0;
+
+          // Iterar sobre los pedidos en item.itemPedido
+          item.itemPedido.forEach((pedido) => {
+            for (const tipoProducto in pedido.itemPedido) {
+              const producto = pedido.itemPedido[tipoProducto];
+
+              // Verificar si la categoría es "OTR"
+              if (tipoProducto === "OTR" && producto.pedido) {
+                // Manejar la categoría "OTR"
+                producto.pedido.forEach((detalle) => {
+                  const cantidad = parseInt(detalle.cantidad, 10); // Convertir cantidad a número
+                  if (!categorias[tipoProducto]) {
+                    categorias[tipoProducto] = 0;
+                  }
+                  categorias[tipoProducto] += cantidad;
+                  totalProductos += cantidad;
+                });
+              } else if (producto.pedido) {
+                // Manejar las demás categorías
+                producto.pedido.forEach((detalle) => {
+                  const cantidad = parseInt(detalle.cantidad, 10); // Convertir cantidad a número
+                  if (!categorias[tipoProducto]) {
+                    categorias[tipoProducto] = 0;
+                  }
+                  categorias[tipoProducto] += cantidad;
+                  totalProductos += cantidad;
+                });
+              }
+            }
+          });
+
+          const tooltipText = Object.entries(categorias)
+            .map(([categoria, cantidad]) => `${categoria}: ${cantidad}`)
+            .join(", ");
+
+          const renderTooltip = (props) => (
+            <Tooltip id="button-tooltip" {...props}>
+              {tooltipText}
+            </Tooltip>
+          );
+
+          return (
+            <OverlayTrigger
+              placement="left"
+              delay={{ show: 250, hide: 400 }}
+              overlay={renderTooltip}
+            >
+              <div className="text-left text-dark" style={{ cursor: 'pointer' }} title={`Detalle de productos: ${tooltipText}`}>
+                <span>
+                  ({tooltipText})
+                </span>
+              </div>
+            </OverlayTrigger>
+          );
+        },
+      },
     ];
 
   return (
@@ -544,7 +693,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
           </select>
         </div>
 
-        <div className="col-md-4 col-5">
+        <div className="col-md-6 col-6">
           <div className="input-group mt-2">
             <input
               type="text"
@@ -582,14 +731,6 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
               }}
             >
               <option value={'2025'}>2025</option>
-              <option value={'2024'}>2024</option>
-              <option value={'2023'}>2023</option>
-              <option value={'2022'}>2022</option>
-              <option value={'2021'}>2021</option>
-              <option value={'2020'}>2020</option>
-              <option value={'2019'}>2019</option>
-              <option value={'2018'}>2018</option>
-              <option value={'2017'}>2017</option>
             </select>
           </div>
         </div>
@@ -602,20 +743,25 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
             <select
               className="form-select form-select-sm w-auto"
               value={itemsMostrar}
-              title='Cantidad de items a mostrar'
+              title="Cantidad de items a mostrar"
               style={{ maxWidth: 'fit-content' }}
               onChange={e => {
-                const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                const value =
+                  e.target.value === "todos"
+                    ? filteredData.nodes.length
+                    : Number(e.target.value);
+
                 setItemsMostrar(value);
-                pagination.fns.onSetPage(0);
+                pagination.fns.onSetPage(0); // siempre regresar a la primera página
               }}
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
               <option value={50}>50</option>
               <option value={100}>100</option>
-              <option value={100000}>Todos</option>
+              <option value="todos">Todos</option>
             </select>
+
           </div>
         </div>
       </Row>
@@ -636,21 +782,65 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
         <span>Páginas: {pagination.state.getTotalPages(filteredData.nodes)}</span>
         <span>
           Página:{" "}
-          {pagination.state.getPages(filteredData.nodes).map((_, index) => (
-            <button
-              className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1 border'}
-              key={index}
-              type="button"
-              style={{
-                fontWeight: pagination.state.page === index ? "bold" : "normal",
-              }}
-              onClick={() => pagination.fns.onSetPage(index)}
-            >
-              {index + 1}
-            </button>
-          ))}
+          {(() => {
+            const totalPages = pagination.state.getTotalPages(filteredData.nodes);
+            const currentPage = pagination.state.page;
+            const maxVisible = 3; // Número de páginas visibles
+            const startPage = Math.max(0, currentPage - 1);
+            const endPage = Math.min(totalPages, startPage + maxVisible);
+
+            const pages = [];
+            // Botón para retroceder
+            if (startPage > 0) {
+              pages.push(
+                <button
+                  key="prev"
+                  className="btn btn-light btn-sm m-1 border"
+                  onClick={() => pagination.fns.onSetPage(currentPage - 1)}
+                >
+                  &laquo;
+                </button>
+              );
+            }
+
+            // Rango de páginas visibles
+            for (let i = startPage; i < endPage; i++) {
+              pages.push(
+                <button
+                  key={i}
+                  className={
+                    currentPage === i
+                      ? "btn btn-secondary btn-sm m-1 border"
+                      : "btn btn-light btn-sm m-1 border"
+                  }
+                  style={{
+                    fontWeight: currentPage === i ? "bold" : "normal",
+                  }}
+                  onClick={() => pagination.fns.onSetPage(i)}
+                >
+                  {i + 1}
+                </button>
+              );
+            }
+
+            // Botón para avanzar
+            if (endPage < totalPages) {
+              pages.push(
+                <button
+                  key="next"
+                  className="btn btn-light btn-sm m-1 border"
+                  onClick={() => pagination.fns.onSetPage(currentPage + 1)}
+                >
+                  &raquo;
+                </button>
+              );
+            }
+
+            return pages;
+          })()}
         </span>
       </div>
+
       <ModalImprimirPedido />
     </div>
   );

@@ -24,7 +24,7 @@ export const ListaPedidos = () => {
         <LayoutApp>
             {user.rol !== 'planta' && (
                 <div className="container-fluid">
-                    <Estadisticas totales={totales} tipo={2} />                    
+                    {/* <Estadisticas totales={totales} tipo={2} />                     */}
                     <div>
                         <div>
                             <TablaPedidos />

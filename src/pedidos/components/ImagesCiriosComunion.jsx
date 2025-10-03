@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CargaImagesTipo } from '../'
 import { useClientesStore, useFuntions } from "../../hooks";
 import Swal from "sweetalert2";
+import { max } from "date-fns";
 
 
 export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidadItems }) => {
@@ -16,10 +17,10 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
     return (event.target.value).replace(/^0+/, '');
   };
 
-  const seleccionaGenero = ({ target }) => {
-    setGenero(target.value);
+  const handleGenero = (value) => {
+    setGenero(value);
     setTalla('t0')
-  }
+  };
   const cargarTipoForm = ({ target }) => {
     setTipoPedido(target.value);
   }
@@ -28,33 +29,40 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
   }
 
   const verificarPrecio = () => {
+    console.log(categoria)
     switch (categoria) {
       case 'kcg':
-        if (clienteActivo.precios.precioKits.kcg !== null) {
+        if (clienteActivo.precios.precioKits.kcg !== null && clienteActivo.precios.precioKits.kcg !== 0) {
           return true
         } else {
           return false;
         }
       case 'kcp':
-        if (clienteActivo.precios.precioKits.kcp !== null) {
+        if (clienteActivo.precios.precioKits.kcp !== null && clienteActivo.precios.precioKits.kcp !== 0) {
+          return true
+        } else {
+          return false;
+        }
+      case 'kce':
+        if (clienteActivo.precios.precioKits.kce !== null && clienteActivo.precios.precioKits.kce !== 0) {
           return true
         } else {
           return false;
         }
       case 'kb':
-        if (clienteActivo.precios.precioKits.kb !== null) {
+        if (clienteActivo.precios.precioKits.kb !== null && clienteActivo.precios.precioKits.kb !== 0) {
           return true
         } else {
           return false;
         }
       case 'cc':
-        if (clienteActivo.precios.precioCirios.cc !== null) {
+        if (clienteActivo.precios.precioCirios.cc !== null && clienteActivo.precios.precioCirios.cc !== 0) {
           return true
         } else {
           return false;
         }
       case 'cb':
-        if (clienteActivo.precios.precioCirios.cb !== null) {
+        if (clienteActivo.precios.precioCirios.cb !== null && clienteActivo.precios.precioCirios.cb !== 0) {
           return true
         } else {
           return false;
@@ -72,6 +80,7 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
     if (value < 0) return;
 
     const ban = verificarPrecio()
+    console.log('ban', ban)
     if (!ban) {
       Swal.fire({
         icon: "error",
@@ -177,29 +186,39 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
         {tipoPedido === 'opDetallado' ? (
           <>
             {/* DETALLADO */}
-            <div className="col-md-6 card-body">
-              {/* GÉNERO */}
-              <div className="row">
-                <div className="col-md-6">
-                  <div className="form-check card">
-                    <input className="form-check form-check-inline" defaultChecked type="radio" name="inlineRadioOptions" id="inlineRadio1" value="0" onClick={seleccionaGenero} />
-                    <label className="form-check-label" htmlFor="inlineRadio1">
-                      <i className="fa-solid fa-child fa-2x mr-1"></i>
-                      Niño
-                    </label>
-                  </div>
-                </div>
-                <div className="col-md-6">
-                  <div className="form-check card">
-                    <input className="form-check form-check-inline" type="radio" name="inlineRadioOptions" id="inlineRadio2" value="1" onClick={seleccionaGenero} />
-                    <label className="form-check-label" htmlFor="inlineRadio2">
-                      <i className="fa-solid fa-child fa-2x mr-1"></i>
-                      Niña
-                    </label>
-                  </div>
+            <div className="col"></div>
+            {/* CONTENEDOR */}
+            {categoria !== 'kce' && (
+              <div className="col-md-3 m-2 border p-3 rounded shadow">
+                <div className="d-flex gap-2">
+                  {/* BOTÓN NIÑO */}
+                  <button
+                    type="button"
+                    className={`d-flex flex-column align-items-center justify-content-center ${genero === '0' ? 'btn btn-primary text-white' : 'btn btn-outline-primary'
+                      }`}
+                    style={{ flex: 1, minHeight: 84 }}
+                    onClick={() => handleGenero('0')}
+                    aria-pressed={genero === '0'}
+                  >
+                    <i className="fa-solid fa-child fa-2x mb-1"></i>
+                    <span className="fw-bold">Niño</span>
+                  </button>
+
+                  {/* BOTÓN NIÑA */}
+                  <button
+                    type="button"
+                    className={`d-flex flex-column align-items-center justify-content-center ${genero === '1' ? 'btn btn-danger text-white' : 'btn btn-outline-danger'
+                      }`}
+                    style={{ flex: 1, minHeight: 84 }}
+                    onClick={() => handleGenero('1')}
+                    aria-pressed={genero === '1'}
+                  >
+                    <i className="fa-solid fa-child-dress fa-2x mb-1"></i>
+                    <span className="fw-bold">Niña</span>
+                  </button>
                 </div>
               </div>
-            </div>
+            )}
           </>
         ) : (
           <>

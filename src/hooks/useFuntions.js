@@ -25,6 +25,7 @@ export const useFuntions = () => {
         precioKits: {
             kcg = 0,
             kcp = 0,
+            kce = 0,
             kb = 0,
         } = {},
         precioCirios: {
@@ -97,6 +98,26 @@ export const useFuntions = () => {
         return null;
     }
 
+    const fechaCorta = (fechaStr) => {
+        const meses = {
+            "Enero": "Ene",
+            "Febrero": "Feb",
+            "Marzo": "Mar",
+            "Abril": "Abr",
+            "Mayo": "May",
+            "Junio": "Jun",
+            "Julio": "Jul",
+            "Agosto": "Ago",
+            "Septiembre": "Sep",
+            "Octubre": "Oct",
+            "Noviembre": "Nov",
+            "Diciembre": "Dic"
+        };
+
+        const [mes, dia] = fechaStr.split(" ");
+        const fechaCorta = `${meses[mes]} ${dia}`;
+        return fechaCorta;
+    }
 
     const convertirFechaIngles = (fechaStr) => {
         const meses = {
@@ -202,6 +223,9 @@ export const useFuntions = () => {
         return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
     }
     function obtenerImagen(categoria, genero) {
+        if (categoria === 'kce' || categoria === 'KCE') {
+            return 'economico-unisex';
+        }
         if (categoria === 'kcg' || categoria === 'kcp' || categoria === 'cc' || categoria === 'KCG' || categoria === 'KCP' || categoria === 'CC') {
             return 'comunion-nin' + (genero === '0' ? 'o' : 'a')
         } else {
@@ -229,6 +253,8 @@ export const useFuntions = () => {
                 return kb;
             case 'kcp':
                 return kcp;
+            case 'kce':
+                return kce;
             case 'kcg':
                 return kcg;
             case 'BLANCOS':
@@ -279,15 +305,16 @@ export const useFuntions = () => {
     const buscarNombre = (categoria) => { //Busca el nombre de la categoria por la categoria que llegue
         const nombre = (categoria === 'KCG') ? 'KIT COMUNIÓN GRANDE' :
             (categoria === 'KCP') ? 'KIT COMUNIÓN PEQUEÑO' :
-                (categoria === 'KB') ? 'KIT DE BAUTIZO' :
-                    (categoria === 'CC') ? 'CIRIO DE COMUNIÓN' :
-                        (categoria === 'CB') ? 'CIRIO DE BAUTIZO' :
-                            (categoria === 'BLANCOS' || categoria === 'GUANTES-BLANCOS' || categoria === 'GB') ? 'GUANTES BLANCOS' :
-                                (categoria === 'NEGROS' || categoria === 'GN' || categoria === 'GUANTES-NEGROS') ? 'GUANTES NEGROS' :
-                                    (categoria === 'MITON' || categoria === 'GM' || categoria === 'GUANTES-MITON') ? 'GUANTES MITON' :
-                                        (categoria === 'GUANTES') ? 'GUANTES' :
-                                            (categoria === 'G') ? 'GENERAL' :
-                                                'OTROS PRODUCTOS';
+                (categoria === 'KCE') ? 'KIT COMUNIÓN ECONOMICO (Nuevo producto)' :
+                    (categoria === 'KB') ? 'KIT DE BAUTIZO' :
+                        (categoria === 'CC') ? 'CIRIO DE COMUNIÓN' :
+                            (categoria === 'CB') ? 'CIRIO DE BAUTIZO' :
+                                (categoria === 'BLANCOS' || categoria === 'GUANTES-BLANCOS' || categoria === 'GB') ? 'GUANTES BLANCOS' :
+                                    (categoria === 'NEGROS' || categoria === 'GN' || categoria === 'GUANTES-NEGROS') ? 'GUANTES NEGROS' :
+                                        (categoria === 'MITON' || categoria === 'GM' || categoria === 'GUANTES-MITON') ? 'GUANTES MITON' :
+                                            (categoria === 'GUANTES') ? 'GUANTES' :
+                                                (categoria === 'G') ? 'GENERAL' :
+                                                    'OTROS PRODUCTOS';
 
         return nombre;
     }
@@ -301,32 +328,51 @@ export const useFuntions = () => {
 
         return (numaletInstance(numero)).replace('MXN', 'PESOS');;
     };
-    const calcularTotalesPedidos = (cat, pedidos, setData, setLables, datosUsuario, anio) => {// label y datas
+    const calcularTotalesPedidos = (cat, pedidos, setData, setLables, datosUsuario, anio) => {
         // Objeto para almacenar las sumas por categoría
         const totalesPorCategoria = {};
         const labels = [];
         const data = [];
+        let totalUnitarios = 0;
 
-        pedidos.forEach((pedido) => {
-            const idUserPedido = pedido.user._id;
-            const fecha = convertirFecha(pedido.fechaCreacion);
+        pedidos.forEach((venta) => {
+            const idUserPedido = venta.user._id;
+            const fecha = convertirFecha(venta.fechaCreacion);
             const aniofiltro = parseInt(fecha.getFullYear());
-            if (aniofiltro !== anio) { return; }
+
+            if (aniofiltro !== anio) return;
+
+            // Caso: cuando datosUsuario es distinto de true
             if (datosUsuario !== true) {
-                if (pedido.user._id === user.uid) {
-                    const items = pedido?.itemPedido || [];
+                if (venta.user._id === user.uid) {
+                    const items = venta?.itemPedido || [];
+
                     items.forEach(({ itemPedido }) => {
                         Object.entries(itemPedido).forEach(([categoria, { pedido }]) => {
-                            if (categoria === 'GUANTES') {
-                                if (cat === 'guantes' || cat === 'todos') {
+
+                            if (categoria === "GUANTES") {
+                                if (cat === "guantes" || cat === "todos") {
                                     const subcategorias = {};
-                                    pedido.forEach(item => {
+
+                                    pedido.forEach((item) => {
                                         const subcategoria = item.categoria;
+                                        const cantidad = parseInt(item.cantidad || 0);
+
                                         if (!subcategorias[subcategoria]) {
-                                            subcategorias[subcategoria] = { cantidad: 0, totalPrecio: 0, precioUnitario: item.precioUnitario };
+                                            subcategorias[subcategoria] = {
+                                                cantidad: 0,
+                                                totalPrecio: 0,
+                                                precioUnitario: item.precioUnitario,
+                                            };
                                         }
-                                        subcategorias[subcategoria].cantidad += parseInt(item.cantidad || 0);
-                                        subcategorias[subcategoria].totalPrecio += item.precioUnitario * parseInt(item.cantidad || 0);
+
+                                        subcategorias[subcategoria].cantidad += cantidad;
+                                        subcategorias[subcategoria].totalPrecio += item.precioUnitario * cantidad;
+
+                                        // acumular unitarios si no es distribuidor
+                                        if (!venta.cliente.distribuidor) {
+                                            totalUnitarios += cantidad;
+                                        }
                                     });
 
                                     Object.entries(subcategorias).forEach(([subcategoria, datosSubcategoria]) => {
@@ -335,25 +381,40 @@ export const useFuntions = () => {
                                         }
 
                                         if (!totalesPorCategoria[categoria][subcategoria]) {
-                                            totalesPorCategoria[categoria][subcategoria] = { cantidad: 0, totalPrecio: 0 };
+                                            totalesPorCategoria[categoria][subcategoria] = {
+                                                cantidad: 0,
+                                                totalPrecio: 0,
+                                            };
                                         }
 
                                         totalesPorCategoria[categoria][subcategoria].cantidad += datosSubcategoria.cantidad;
                                         totalesPorCategoria[categoria][subcategoria].totalPrecio += datosSubcategoria.totalPrecio;
                                     });
                                 }
-                            } else if (categoria === 'OTR') {
-                                if (cat === 'otros' || cat === 'todos') {
+                            } else if (categoria === "OTR") {
+                                if (cat === "otros" || cat === "todos") {
                                     const productos = {};
 
-                                    pedido.forEach(item => {
+                                    pedido.forEach((item) => {
                                         const producto = item.producto;
+                                        const cantidad = parseInt(item.cantidad || 0);
+
                                         if (!productos[producto]) {
-                                            productos[producto] = { cantidad: 0, totalPrecio: 0, precioUnitario: item.precio };
+                                            productos[producto] = {
+                                                cantidad: 0,
+                                                totalPrecio: 0,
+                                                precioUnitario: item.precio,
+                                            };
                                         }
-                                        productos[producto].cantidad += parseInt(item.cantidad || 0);
-                                        productos[producto].totalPrecio += item.precio * parseInt(item.cantidad || 0);
+
+                                        productos[producto].cantidad += cantidad;
+                                        productos[producto].totalPrecio += item.precio * cantidad;
+
+                                        if (!venta.cliente.distribuidor) {
+                                            totalUnitarios += cantidad;
+                                        }
                                     });
+
                                     Object.entries(productos).forEach(([producto, datosProducto]) => {
                                         if (!totalesPorCategoria[categoria]) {
                                             totalesPorCategoria[categoria] = {};
@@ -362,96 +423,138 @@ export const useFuntions = () => {
                                         if (!totalesPorCategoria[categoria][producto]) {
                                             totalesPorCategoria[categoria][producto] = { cantidad: 0, totalPrecio: 0 };
                                         }
+
                                         totalesPorCategoria[categoria][producto].cantidad += datosProducto.cantidad;
                                         totalesPorCategoria[categoria][producto].totalPrecio += datosProducto.totalPrecio;
                                     });
                                 }
                             } else {
-                                if (cat === 'kits' || cat === 'todos') {
-
+                                if (cat === "kits" || cat === "todos") {
                                     if (!totalesPorCategoria[categoria]) {
-                                        totalesPorCategoria[categoria] = { cantidad: 0, totalPrecio: 0 };
+                                        totalesPorCategoria[categoria] = {
+                                            cantidad: 0,
+                                            totalPrecio: 0,
+                                            distribuidor: venta.user.distribuidor,
+                                        };
                                     }
-                                    pedido.forEach(item => {
-                                        totalesPorCategoria[categoria].cantidad += parseInt(item.cantidad || 0);
-                                        totalesPorCategoria[categoria].totalPrecio += (item.precioUnitario || item.precio) * parseInt(item.cantidad || 0);
-                                    });
 
+                                    pedido.forEach((item) => {
+                                        const cantidad = parseInt(item.cantidad || 0);
+                                        const precio = item.precioUnitario || item.precio;
+
+                                        totalesPorCategoria[categoria].cantidad += cantidad;
+                                        totalesPorCategoria[categoria].totalPrecio += precio * cantidad;
+
+                                        if (!venta.cliente.distribuidor) {
+                                            totalUnitarios += cantidad;
+                                        }
+                                    });
                                 }
                             }
                         });
                     });
                 }
-            } else {
-                const items = pedido?.itemPedido || [];
+            }
+            // Caso: cuando datosUsuario === true
+            else {
+                const items = venta?.itemPedido || [];
+
                 items.forEach(({ itemPedido }) => {
                     Object.entries(itemPedido).forEach(([categoria, { pedido }]) => {
+                        if (categoria === "GUANTES") {
+                            if (idUserPedido === user.uid && (cat === "guantes" || cat === "todos")) {
+                                const subcategorias = {};
 
-                        if (categoria === 'GUANTES') {
-                            if (idUserPedido === user.uid) {
-                                if (cat === 'guantes' || cat === 'todos') {
-                                    const subcategorias = {};
+                                pedido.forEach((item) => {
+                                    const subcategoria = item.categoria;
+                                    const cantidad = parseInt(item.cantidad || 0);
 
-                                    pedido.forEach(item => {
-                                        const subcategoria = item.categoria;
-                                        if (!subcategorias[subcategoria]) {
-                                            subcategorias[subcategoria] = { cantidad: 0, totalPrecio: 0, precioUnitario: item.precioUnitario };
-                                        }
-                                        subcategorias[subcategoria].cantidad += parseInt(item.cantidad || 0);
-                                        subcategorias[subcategoria].totalPrecio += item.precioUnitario * parseInt(item.cantidad || 0);
-                                    });
+                                    if (!subcategorias[subcategoria]) {
+                                        subcategorias[subcategoria] = {
+                                            cantidad: 0,
+                                            totalPrecio: 0,
+                                            precioUnitario: item.precioUnitario,
+                                        };
+                                    }
 
-                                    Object.entries(subcategorias).forEach(([subcategoria, datosSubcategoria]) => {
-                                        if (!totalesPorCategoria[categoria]) {
-                                            totalesPorCategoria[categoria] = {};
-                                        }
+                                    subcategorias[subcategoria].cantidad += cantidad;
+                                    subcategorias[subcategoria].totalPrecio += item.precioUnitario * cantidad;
 
-                                        if (!totalesPorCategoria[categoria][subcategoria]) {
-                                            totalesPorCategoria[categoria][subcategoria] = { cantidad: 0, totalPrecio: 0 };
-                                        }
+                                    if (!venta.cliente.distribuidor) {
+                                        totalUnitarios += cantidad;
+                                    }
+                                });
 
-                                        totalesPorCategoria[categoria][subcategoria].cantidad += datosSubcategoria.cantidad;
-                                        totalesPorCategoria[categoria][subcategoria].totalPrecio += datosSubcategoria.totalPrecio;
-                                    });
-                                }
+                                Object.entries(subcategorias).forEach(([subcategoria, datosSubcategoria]) => {
+                                    if (!totalesPorCategoria[categoria]) {
+                                        totalesPorCategoria[categoria] = {};
+                                    }
+
+                                    if (!totalesPorCategoria[categoria][subcategoria]) {
+                                        totalesPorCategoria[categoria][subcategoria] = {
+                                            cantidad: 0,
+                                            totalPrecio: 0,
+                                        };
+                                    }
+
+                                    totalesPorCategoria[categoria][subcategoria].cantidad += datosSubcategoria.cantidad;
+                                    totalesPorCategoria[categoria][subcategoria].totalPrecio += datosSubcategoria.totalPrecio;
+                                });
                             }
-                        } else if (categoria === 'OTR') {
-                            if (idUserPedido === user.uid) {
+                        } else if (categoria === "OTR") {
+                            if (idUserPedido === user.uid && (cat === "otros" || cat === "todos")) {
+                                const productos = {};
 
-                                if (cat === 'otros' || cat === 'todos') {
-                                    const productos = {};
+                                pedido.forEach((item) => {
+                                    const producto = item.producto;
+                                    const cantidad = parseInt(item.cantidad || 0);
 
-                                    pedido.forEach(item => {
-                                        const producto = item.producto;
-                                        if (!productos[producto]) {
-                                            productos[producto] = { cantidad: 0, totalPrecio: 0, precioUnitario: item.precio };
-                                        }
-                                        productos[producto].cantidad += parseInt(item.cantidad || 0);
-                                        productos[producto].totalPrecio += item.precio * parseInt(item.cantidad || 0);
-                                    });
-                                    Object.entries(productos).forEach(([producto, datosProducto]) => {
-                                        if (!totalesPorCategoria[categoria]) {
-                                            totalesPorCategoria[categoria] = {};
-                                        }
+                                    if (!productos[producto]) {
+                                        productos[producto] = {
+                                            cantidad: 0,
+                                            totalPrecio: 0,
+                                            precioUnitario: item.precio,
+                                        };
+                                    }
 
-                                        if (!totalesPorCategoria[categoria][producto]) {
-                                            totalesPorCategoria[categoria][producto] = { cantidad: 0, totalPrecio: 0 };
-                                        }
-                                        totalesPorCategoria[categoria][producto].cantidad += datosProducto.cantidad;
-                                        totalesPorCategoria[categoria][producto].totalPrecio += datosProducto.totalPrecio;
-                                    });
-                                }
+                                    productos[producto].cantidad += cantidad;
+                                    productos[producto].totalPrecio += item.precio * cantidad;
+
+                                    if (!venta.cliente.distribuidor) {
+                                        totalUnitarios += cantidad;
+                                    }
+                                });
+
+                                Object.entries(productos).forEach(([producto, datosProducto]) => {
+                                    if (!totalesPorCategoria[categoria]) {
+                                        totalesPorCategoria[categoria] = {};
+                                    }
+
+                                    if (!totalesPorCategoria[categoria][producto]) {
+                                        totalesPorCategoria[categoria][producto] = { cantidad: 0, totalPrecio: 0 };
+                                    }
+
+                                    totalesPorCategoria[categoria][producto].cantidad += datosProducto.cantidad;
+                                    totalesPorCategoria[categoria][producto].totalPrecio += datosProducto.totalPrecio;
+                                });
                             }
                         } else {
-                            if (cat === 'kits' || cat === 'todos') {
+                            if (cat === "kits" || cat === "todos") {
                                 if (!totalesPorCategoria[categoria]) {
                                     totalesPorCategoria[categoria] = { cantidad: 0, totalPrecio: 0 };
                                 }
-                                pedido.forEach(item => {
-                                    totalesPorCategoria[categoria].cantidad += parseInt(item.cantidad || 0);
-                                    totalesPorCategoria[categoria].totalPrecio += (item.precioUnitario || item.precio) * parseInt(item.cantidad || 0);
-                                });
 
+                                pedido.forEach((item) => {
+                                    const cantidad = parseInt(item.cantidad || 0);
+                                    const precio = item.precioUnitario || item.precio;
+
+                                    totalesPorCategoria[categoria].cantidad += cantidad;
+                                    totalesPorCategoria[categoria].totalPrecio += precio * cantidad;
+
+                                    if (!venta.cliente.distribuidor) {
+                                        totalUnitarios += cantidad;
+                                    }
+                                });
                             }
                         }
                     });
@@ -459,8 +562,15 @@ export const useFuntions = () => {
             }
         });
 
+        console.log("Totales por categoría:", totalesPorCategoria);
+        console.log("Total unitarios (no distribuidores):", totalUnitarios);
+
+
+
+        console.log(totalUnitarios)
         const resultadoTotales = [];
         Object.entries(totalesPorCategoria).forEach(([categoria, subcategorias]) => {
+            //console.log(subcategorias, categoria)
             if (categoria === 'GUANTES') {
                 if (cat === 'guantes' || cat === 'todos') {
                     Object.entries(subcategorias).forEach(([subcategoria, datosSubcategoria]) => {
@@ -487,11 +597,11 @@ export const useFuntions = () => {
                 }
             } else {
                 if (cat === 'kits' || cat === 'todos') {
-
                     resultadoTotales.push({
                         categoria,
                         cantidad: subcategorias.cantidad,
                         totalPrecio: subcategorias.totalPrecio,
+                        distribuidor: subcategorias.distribuidor || 'Sin definir'
                     });
                     labels.push(buscarNombre(categoria));
                     data.push(subcategorias.cantidad);
@@ -500,6 +610,11 @@ export const useFuntions = () => {
         });
         setLables(labels);
         setData(data);
+
+        if (cat === 'kits') {
+            console.log(resultadoTotales)
+        }
+        console.log(totalUnitarios)
         return resultadoTotales;
     };
     const totalesPedidos = (pedidos, datosUsuario, anioFiltro) => {// Esto es para las estadisticas mensuales
@@ -1156,6 +1271,7 @@ export const useFuntions = () => {
         formatearPrecio,
         handleBlur,
         limpiarFecha,
+        fechaCorta,
         number_format,
         obtenerImagen,
         totalesPedidos,

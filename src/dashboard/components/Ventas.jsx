@@ -3,6 +3,8 @@ import { useFuntions, usePedidosStore } from "../../hooks";
 import { AreaChart, BarChart, PieChart } from "../js";
 import { useSelector } from "react-redux";
 import { useGastosStore } from "../../hooks/useGastosStore";
+import { TablaClientes } from "../../clients/components/TablaClientes";
+import { TablaOtros } from "./tablaOtros";
 
 
 export const Ventas = ({ datosUsuario }) => {
@@ -16,6 +18,7 @@ export const Ventas = ({ datosUsuario }) => {
   const [anioFiltro, setAnioFiltro] = useState(2025);
   const oldOrders = useSelector(state => state.pedidos.oldOrders) || [];
   const { startLoadingOldOrders } = usePedidosStore();
+  const [ventasOtros, setVentasOtros] = useState([]);
 
   const [dashboardState, setDashboardState] = useState({
     lablesKits: [],
@@ -116,6 +119,9 @@ export const Ventas = ({ datosUsuario }) => {
         anioFiltro
       );
 
+      setVentasOtros(calcularTotalesPedidos('otros', pedidos, (data) => updateDashboardState({ dataTodos: data }),
+        (labels) => updateDashboardState({ lablesTodos: labels }), datosUsuario, anioFiltro));
+
       updateDashboardState({
         totalesPorCategoria: calcularTotalesPedidos('todos', pedidos,
           (data) => updateDashboardState({ dataTodos: data }),
@@ -146,6 +152,7 @@ export const Ventas = ({ datosUsuario }) => {
       });
     }
     //console.log(dashboardState.totalesPorCategoria);
+
   }, [datosUsuario, filtroCategoria, anioFiltro]);
 
   return (
@@ -176,7 +183,7 @@ export const Ventas = ({ datosUsuario }) => {
           </div>
         </div>
       </div>
-      {/* !PIECHARTS */}
+      {/* PIECHARTS */}
       <div className="row g-3 mb-4">
         {/* GENERAL */}
         <div className="col-xl-6 col-lg-6 col-md-12">
@@ -193,7 +200,7 @@ export const Ventas = ({ datosUsuario }) => {
             </div>
           </div>
         </div>
-
+        {/* KITS */}
         <div className="col-xl-6 col-lg-6 col-md-12">
           <div className="card card-hover border-0 shadow-lg">
             <div className="d-flex justify-content-between align-items-center">
@@ -239,20 +246,38 @@ export const Ventas = ({ datosUsuario }) => {
           </div>
         </div>
         {/* GASTOS KITS */}
-        <div className="col-xl-6 col-lg-4 col-md-12">
-          <div className="card card-hover border-0 shadow-lg">
-            <div className="d-flex justify-content-between align-items-center">
-              <h6 className="mb-0 text-gray m-3">{(user.user.uid === '679fce0ee8d1ed66d21d18c2' && !datosUsuario) ? 'Gastos Generales' : 'Gastos Kits'}</h6>
+        {(user.user.rol === 'admin' || user.user.rol === 'superAdmin') && (
+          <>
+            <div className="col-xl-6 col-lg-4 col-md-12">
+              <div className="card card-hover border-0 shadow-lg">
+                <div className="d-flex justify-content-between align-items-center">
+                  <h6 className="mb-0 text-gray m-3">{(user.user.uid === '679fce0ee8d1ed66d21d18c2' && !datosUsuario) ? 'Gastos Generales' : 'Gastos Kits'}</h6>
+                </div>
+                <div className="card-body p-1">
+                  <PieChart
+                    arrayLabels={(user.user.uid === '679fce0ee8d1ed66d21d18c2' && !datosUsuario) ? ['TOTAL GASTOS', 'KITS', 'GUANTES'] : ['TOTAL KITS', 'OG', 'LG']}
+                    arrayData={dashboardState.gastosTotalesKits}
+                    title={(user.user.uid === '679fce0ee8d1ed66d21d18c2' && !datosUsuario) ? `GASTOS GENERALES ${formatearPrecio(dashboardState.gastosTotalesKits[0])}` : `GASTOS KITS ${formatearPrecio(dashboardState.gastosTotalesKits[0])}`}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="card-body p-1">
-              <PieChart
-                arrayLabels={(user.user.uid === '679fce0ee8d1ed66d21d18c2' && !datosUsuario) ? ['TOTAL GASTOS', 'KITS', 'GUANTES'] : ['TOTAL KITS', 'OG', 'LG']}
-                arrayData={dashboardState.gastosTotalesKits}
-                title={(user.user.uid === '679fce0ee8d1ed66d21d18c2' && !datosUsuario) ? `GASTOS GENERALES ${formatearPrecio(dashboardState.gastosTotalesKits[0])}` : `GASTOS KITS ${formatearPrecio(dashboardState.gastosTotalesKits[0])}`}
-              />
+          </>
+
+        )}
+        {(user.user.rol === 'vendedor') && (
+          <>
+            <div className="col-xl-6 col-lg-4 col-md-12">
+              <div className="card card-hover border-0 shadow-lg">
+                <div className="card-body p-1">
+                  <TablaOtros ventasOtros={ventasOtros} />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+
+        )}
+
       </div>
       {/* AREA CHARTS */}
       <div className="row g-3 mb-4">
@@ -311,14 +336,30 @@ export const Ventas = ({ datosUsuario }) => {
       )}
 
       {/* Bar chart totales por categoría */}
-      <div className="row">
-        <div className="col-md-12 col-lg-12">
-          <div className="card card-hover shadow-sm">
-            <div className="card-body p-3">
-              <BarChart totales={dashboardState.totalesPorCategoria} />
+      <div className="row d-flex">
+        <div className="col-md-6 col-lg-6">
+          <div className="card card-hover border-0 shadow-lg">
+            <div className="card-body">
+              <div className="chartArea">
+                <BarChart totales={dashboardState.totalesPorCategoria} />
+              </div>
             </div>
           </div>
         </div>
+
+        {(user.user.rol === 'superAdmin' || user.user.rol === 'admin') && (
+          <>
+            <div className="col-md-6 col-lg-6">
+              <div className="card card-hover border-0 shadow-lg">
+                <div className="card-body">
+                  <div className="chartArea">
+                    <TablaOtros ventasOtros={ventasOtros} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </>
   );

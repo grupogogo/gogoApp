@@ -8,6 +8,7 @@ const Navbar = () => {
     const { user, startLogout } = useAuthStore();
     const [isOpen, setIsOpen] = useState(false);
 
+
     const toggleMobileMenu = () => {
         setIsOpen(!isOpen);
     };
@@ -36,17 +37,18 @@ const Navbar = () => {
                 </ul>
             </div>
             {user.rol === 'planta' && (
-                <div className="align-items-center">
+                <div className="align-items-center p-2">
                     {/* Logo */}
-                    <div className="text-center mb-4 bg-secondary border-2 rounded d-none d-md-block">
+                    <div className="text-center bg-secondary border-2 rounded d-none d-md-block">
                         <img
+
                             src="/images/logos/LOGO GOGO BLANCO.webp"
                             alt="Logo"
                             style={{
-                                width: "70px",
+                                width: "90px",
                                 height: "auto",
                                 transition: "width 2s ease",
-                                margin: "10px 0",
+                                padding: "5px"
                             }}
                         />
                     </div>
@@ -79,8 +81,8 @@ const Navbar = () => {
                         <span className="me-2 text-gray-600 small">{user.name}</span>
                         <img
                             className="img-profile rounded-circle"
-                            src="/images/avatar/undraw_profile.svg"
-                            style={{ width: "32px", height: "32px" }}
+                            src={(user.rol === 'superAdmin' || user.rol === 'admin') ? "/images/avatar/undraw_profile.svg" : "/images/avatar/undraw_profile_3.svg"}
+                            style={{ width: "42px", height: "42px" }}
                             alt="Avatar"
                         />
                     </a>

@@ -1,4 +1,4 @@
-const useImage = (category, imageName) => {    
+const useImage = (category, imageName) => {
     return `/images/${category}/${imageName}.webp`;
 };
 

@@ -469,6 +469,15 @@ export const CuentasXCobrar = () => {
                   <td style={{ borderBottom: '3px solid orange' }}>CB: {formatearPrecio(totalesAgrupados.kits[4])}</td>
                   <td style={{ borderBottom: '3px solid indigo' }}>OTROS: {formatearPrecio(totalesAgrupados.otros)}</td>
                 </tr>
+              </tbody>              
+            </table>
+            <br />
+            <table className='border  w-100 text-center rounded'>
+              <tbody>
+                <tr className='fw-semibold'>
+                  <td style={{ borderBottom: '3px solid #0d6efd' }}>TOTAL GUANTES: {formatearPrecio((totalesAgrupados.guantes[0]) + (totalesAgrupados.guantes[1]) + (totalesAgrupados.guantes[2]))}</td>                  
+                  <td style={{ borderBottom: '3px solid #dc3545' }}>TOTAL KITS: {formatearPrecio((totalesAgrupados.kits[0]) + (totalesAgrupados.kits[1]) + (totalesAgrupados.kits[2]) + (totalesAgrupados.kits[3]) + (totalesAgrupados.kits[4]))}</td>
+                </tr>
               </tbody>
             </table>
           </div>

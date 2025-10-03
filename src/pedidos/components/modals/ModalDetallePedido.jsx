@@ -103,8 +103,23 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                         {(pedido.costoEnvio !== '0') && (
                                             <Col><strong>Costo de Envío:</strong> {formatearPrecio(pedido?.costoEnvio) || ''}</Col>
                                         )}
-                                        {(pedido.numeroGuia) && (
-                                            <Col><strong>Número de Guía:</strong> {pedido?.numeroGuia || ''}</Col>
+                                        {pedido.numeroGuia && (
+                                            <Col>
+                                                <strong>Número de Guía:</strong>{" "}
+                                                <a
+                                                    href="https://interrapidisimo.com/sigue-tu-envio/"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        navigator.clipboard.writeText(pedido.numeroGuia);
+                                                        window.open("https://interrapidisimo.com/sigue-tu-envio/", "_blank");
+                                                    }}
+                                                    style={{ cursor: "pointer" }}
+                                                >
+                                                    {pedido.numeroGuia}
+                                                </a>
+                                            </Col>
                                         )}
                                     </Row>
                                     {(pedido?.detalleEstado) && (
@@ -200,7 +215,7 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                                 {categoria === 'OTR' && <th>Precio Unitario</th>}
                                                                 {user.rol !== "planta" && (
                                                                     <>
-                                                                        <th>SubTotal</th>
+                                                                        {categoria !== 'OTR' && <th>Precio</th>}
                                                                         <th>Total</th>
                                                                     </>
                                                                 )}
@@ -228,8 +243,9 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                                         {categoria === 'OTR' && (
                                                                             pedidoItem?.producto
                                                                         )}
-                                                                        {(categoria === 'KCG' || categoria === 'CC' || categoria === 'KCP') && (
+                                                                        {(categoria === 'KCG' || categoria === 'CC' || categoria === 'KCP' || categoria === 'KCE') && (
                                                                             pedidoItem?.nombreInput.includes('inputSurtidoNino')
+
                                                                                 ? (<span dangerouslySetInnerHTML={{
                                                                                     __html: 'Surtido <span class="badge text-bg-primary">Niño</span>'
                                                                                 }} />)
