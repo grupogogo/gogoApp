@@ -281,24 +281,23 @@ export const useFuntions = () => {
         }
         return totalFabrica;
     }
-    const buscarPrecioxCategoriaAnio = (categoria, anio) => { //Trae el precio de fabricacion segun el año y la categoria 
-
+    const buscarPrecioxCategoriaAnio = (categoria, anio = 2025) => { //Trae el precio de fabricacion segun el año y la categoria 
         // Buscar el precio según el año y la categoría
         const anioKey = `A${anio}`;
         const preciosAnio = precios[anioKey];
         let precioProducto = 0;
-
         if (!preciosAnio) return '';
         // Normalizar la categoría a minúsculas para coincidir con las claves
 
         precioProducto = (categoria === 'KIT COMUNIÓN GRANDE') ? preciosAnio.precioKits.kcg :
             (categoria === 'KIT COMUNIÓN PEQUEÑO') ? preciosAnio.precioKits.kcp :
                 (categoria === 'KIT DE BAUTIZO') ? preciosAnio.precioKits.kb :
-                    (categoria === 'CIRIO DE COMUNIÓN') ? preciosAnio.precioCirios.cc :
-                        (categoria === 'CIRIO DE BAUTIZO') ? preciosAnio.precioCirios.cb :
-                            (categoria === 'GUANTES BLANCOS') ? preciosAnio.precioGuantes.gb :
-                                (categoria === 'GUANTES NEGROS') ? preciosAnio.precioGuantes.gn :
-                                    (categoria === 'GUANTES MITON') ? preciosAnio.precioGuantes.gm : 0;
+                    (categoria === 'KIT COMUNIÓN ECONOMICO (Nuevo producto)') ? preciosAnio.precioKits.kce :
+                        (categoria === 'CIRIO DE COMUNIÓN') ? preciosAnio.precioCirios.cc :
+                            (categoria === 'CIRIO DE BAUTIZO') ? preciosAnio.precioCirios.cb :
+                                (categoria === 'GUANTES BLANCOS') ? preciosAnio.precioGuantes.gb :
+                                    (categoria === 'GUANTES NEGROS') ? preciosAnio.precioGuantes.gn :
+                                        (categoria === 'GUANTES MITON') ? preciosAnio.precioGuantes.gm : 0;
 
         return precioProducto;
     }
@@ -562,15 +561,11 @@ export const useFuntions = () => {
             }
         });
 
-        console.log("Totales por categoría:", totalesPorCategoria);
-        console.log("Total unitarios (no distribuidores):", totalUnitarios);
 
 
 
-        console.log(totalUnitarios)
         const resultadoTotales = [];
         Object.entries(totalesPorCategoria).forEach(([categoria, subcategorias]) => {
-            //console.log(subcategorias, categoria)
             if (categoria === 'GUANTES') {
                 if (cat === 'guantes' || cat === 'todos') {
                     Object.entries(subcategorias).forEach(([subcategoria, datosSubcategoria]) => {
@@ -610,11 +605,6 @@ export const useFuntions = () => {
         });
         setLables(labels);
         setData(data);
-
-        if (cat === 'kits') {
-            console.log(resultadoTotales)
-        }
-        console.log(totalUnitarios)
         return resultadoTotales;
     };
     const totalesPedidos = (pedidos, datosUsuario, anioFiltro) => {// Esto es para las estadisticas mensuales
@@ -694,7 +684,7 @@ export const useFuntions = () => {
 
             order.itemPedido.forEach(item => {
                 Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
-                    if (['KCG', 'KCP', 'KB', 'CC', 'CB'].includes(categoriaItem)) {
+                    if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'KCE'].includes(categoriaItem)) {
                         category.pedido.forEach(product => {
                             const price = Number(product.precioUnitario || product.precio || 0);
                             const quantity = parseInt(product.cantidad, 10) || 0;
@@ -718,7 +708,6 @@ export const useFuntions = () => {
     };
     const totalKitsXAnio2025 = (pedidos, selectFecha = 2025) => {
         if (pedidos.length === 0) return;
-
         const monthlySales = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
         const monthlySalesBrand = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
         const monthlySalesOscar = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
@@ -730,11 +719,11 @@ export const useFuntions = () => {
             }
             order.itemPedido.forEach(item => {
                 Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
-                    if (['KCG', 'KCP', 'KB', 'CC', 'CB'].includes(categoriaItem)) {
-                        category.pedido.forEach(product => {
-                            const price = Number(product.precioUnitario || product.precio || 0);
+                    if (['KCG', 'KCP', 'KB', 'CC', 'CB'/* , 'KCE' */].includes(categoriaItem)) {
+                        category.pedido.forEach(product => {                            
+                            const price2 = buscarPrecioxCategoriaAnio(buscarNombre(categoriaItem), selectFecha);
                             const quantity = parseInt(product.cantidad, 10) || 0;
-                            const sale = price * quantity;
+                            const sale = price2 * quantity;
 
                             const orderDate = convertirFecha(order.fechaCreacion);
                             const month = orderDate.getMonth();
@@ -1201,7 +1190,7 @@ export const useFuntions = () => {
         if (!pedido?.itemPedido) return;
 
         let totalItems = 0;
-        let totalKits = [0, 0, 0, 0, 0];
+        let totalKits = [0, 0, 0, 0, 0, 0];
         let totalGuantes = [0, 0, 0];
         let totalOtros = 0;
 
@@ -1232,6 +1221,8 @@ export const useFuntions = () => {
                         totalKits[3] += totalPorProducto;
                     } else if (categoriaKey === 'CB') {
                         totalKits[4] += totalPorProducto;
+                    } else if (categoriaKey === 'KCE') {
+                        totalKits[5] += totalPorProducto;
                     }
                     return prodAcc + totalPorProducto;
                 }, 0);
@@ -1239,7 +1230,6 @@ export const useFuntions = () => {
             }, 0);
             return acc + subTotal;
         }, 0);
-
         return {
             total,
             totalItems,

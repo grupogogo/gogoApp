@@ -34,7 +34,6 @@ export const FormGuantes = ({ categoria, tallaInicial, cantTallas, setPedidoGuan
     }
 
     const onInputChange = ({ target }, talla) => {
-        console.log(categoria)
 
         const { name, value } = target;
 

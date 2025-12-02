@@ -93,7 +93,7 @@ export const ReusableModal = ({ show, handleClose }) => {
                         )
                         : (
                             <Button variant="primary" onClick={editClient}>
-                                Guardar cliente
+                                Editar cliente
                             </Button>
                         )
                     }

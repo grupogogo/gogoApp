@@ -26,6 +26,7 @@ export const useClientesStore = () => {//* 3. Crear el hook que expone propiedad
     }
 
     const startSavingClient = async (cliente) => {
+        console.log(cliente)
         // TODO: Llegar al Backend        
         //*Si Todo bien          
         if (cliente.cliente_id) {
@@ -46,8 +47,6 @@ export const useClientesStore = () => {//* 3. Crear el hook que expone propiedad
             }
         }
     }
-
-
 
     const startDeleteClient = async (cliente) => {
         // TODO: Llegar al Backend        

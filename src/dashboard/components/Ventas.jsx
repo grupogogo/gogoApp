@@ -13,12 +13,21 @@ export const Ventas = ({ datosUsuario }) => {
   const user = useSelector(state => state.auth)
   const gastos = useSelector(state => state.gastos.gastos);
   const pedidos = useSelector(state => state.pedidos.pedidos);
+  const [pedidosUsuario, setPedidosUsuario] = useState([]);
+
+  useEffect(() => {
+    if (pedidos && user.user.uid) {
+      const filteredPedidos = pedidos.filter(pedido => pedido.user._id === user.user.uid);
+      setPedidosUsuario(filteredPedidos);
+    }
+  }, [pedidos, user.user.uid]);
   const [filtroCategoria, setFiltroCategoria] = useState('KCG');
   const { startLoadingGastos } = useGastosStore();
   const [anioFiltro, setAnioFiltro] = useState(2025);
   const oldOrders = useSelector(state => state.pedidos.oldOrders) || [];
   const { startLoadingOldOrders } = usePedidosStore();
   const [ventasOtros, setVentasOtros] = useState([]);
+  const { buscarPrecioxCategoriaAnio } = useFuntions();
 
   const [dashboardState, setDashboardState] = useState({
     lablesKits: [],
@@ -73,7 +82,6 @@ export const Ventas = ({ datosUsuario }) => {
     totalGastosUsuarios,
     totalizarPreciosFabrica
   } = useFuntions();
-
 
   // Procesar pedidos cuando llegan
   useEffect(() => {
@@ -270,12 +278,11 @@ export const Ventas = ({ datosUsuario }) => {
             <div className="col-xl-6 col-lg-4 col-md-12">
               <div className="card card-hover border-0 shadow-lg">
                 <div className="card-body p-1">
-                  <TablaOtros ventasOtros={ventasOtros} />
+                  <TablaOtros ventasOtros={ventasOtros} pedidosUsuario={pedidosUsuario} />
                 </div>
               </div>
             </div>
           </>
-
         )}
 
       </div>
@@ -314,7 +321,7 @@ export const Ventas = ({ datosUsuario }) => {
       {/* Area charts por categorías */}
       {pedidos && (
         <div className="row g-3 mb-4">
-          {['KCG', 'KCP', 'KB', 'CC', 'CB', 'GUANTES-BLANCOS', 'GUANTES-NEGROS', 'GUANTES-MITON', 'OTR'].map((categoria, index) => (
+          {['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'GUANTES-BLANCOS', 'GUANTES-NEGROS', 'GUANTES-MITON', 'OTR'].map((categoria, index) => (
             <div className="col-lg-4 col-md-6" key={index}>
               <div className="card card-hover border-0 shadow-lg">
                 <div className="card-body p-3">
@@ -326,7 +333,7 @@ export const Ventas = ({ datosUsuario }) => {
                   </div>
                   <hr className="my-3" />
                   <div className="d-flex justify-content-between align-items-center">
-                    <small className="text-center bg-primary text-white p-1 rounded w-100">Hasta {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} | <span className="fw-semibold"> {(buscarNombre(categoria)).toLocaleLowerCase()} </span> | Unidades:  <span className="fw-bold"> {totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria, oldOrders).monthlySales2025.reduce((a, b) => a + b, 0)} </span></small>
+                    <small className="text-center bg-primary text-white p-1 rounded w-100">Hasta {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} | <span className="fw-semibold"> {(buscarNombre(categoria)).toLocaleLowerCase()} </span> | Unidades:  <span className="fw-bold"> {totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria, oldOrders).monthlySales2025.reduce((a, b) => a + b, 0)} = {formatearPrecio((totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria, oldOrders).monthlySales2025.reduce((a, b) => a + b, 0)) * buscarPrecioxCategoriaAnio(buscarNombre(categoria)))} </span></small>
                   </div>
                 </div>
               </div>
@@ -353,7 +360,7 @@ export const Ventas = ({ datosUsuario }) => {
               <div className="card card-hover border-0 shadow-lg">
                 <div className="card-body">
                   <div className="chartArea">
-                    <TablaOtros ventasOtros={ventasOtros} />
+                    <TablaOtros ventasOtros={ventasOtros} pedidosUsuario={pedidosUsuario} />
                   </div>
                 </div>
               </div>

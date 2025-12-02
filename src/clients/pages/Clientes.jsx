@@ -15,12 +15,8 @@ export const Clientes = () => {
 
     return (
         <LayoutApp>
-            <div className="">
-                <div>
-                    <div className="col">                        
-                        <TablaClientes handleShow={handleShow} />
-                    </div>
-                </div>
+            <div className="container-fluid">
+                <TablaClientes handleShow={handleShow} />
             </div>
             <ReusableModal show={showModal} handleClose={handleClose} />
         </LayoutApp>

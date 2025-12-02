@@ -30,7 +30,7 @@ export const ListOldOrders = () => {
     const oldOrders = useSelector(state => state.pedidos.oldOrders) || [];
     const pedidos = useSelector(state => state.pedidos.pedidos);
     const gastos = useSelector(state => state.gastos.gastos);
-    const { formatearPrecio, convertirOldFecha, totalKitsXAnio2025, pastelColors, parsearFechaGasto, mensualGastosUsuarios } = useFuntions();
+    const { formatearPrecio, convertirOldFecha, totalKitsXAnio2025, pastelColors, parsearFechaGasto, mensualGastosUsuarios, buscarPrecioxCategoriaAnio } = useFuntions();
     const [fechaPedido, setFechaPedido] = useState('2024');
     const [showColumns, setShowColumns] = useState('12');
     const [excluirCliente, setExcluirCliente] = useState(false);
@@ -610,7 +610,7 @@ export const ListOldOrders = () => {
             </div>
             <div className="container-fluid">
 
-                {/* DIV PARA LOS GRÁFICOS */}
+                {/* DIV PARA LOS GRÁFICOS  VENTAS POR MESES DURANTE LOS ULTIMO AÑOS*/}
                 <div className='row'>
                     <div className={`col-${showColumns}`}>
                         <div className='card mb-4'>

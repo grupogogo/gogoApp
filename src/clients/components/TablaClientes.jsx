@@ -142,9 +142,16 @@ export const TablaClientes = ({ handleShow }) => {
              max-content
              max-content
              max-content
-             max-content
+             max-content !important;
 
-            !important;
+        @media (max-width: 992px) {
+            --data-table-library_grid-template-columns: 
+                1fr 
+                max-content 
+                max-content 
+                max-content 
+                max-content !important;
+        }
     `,
     }
 
@@ -252,69 +259,74 @@ export const TablaClientes = ({ handleShow }) => {
                     </div>
                 </div>
 
-                <Table
-                    className="table table-hover table table-hover text-start w-100 compact-table"
-                    data={data} theme={theme} pagination={pagination} sort={sort}>
-                    {(tableList) => (
-                        <>
-                            <Header>
-                                <HeaderRow className="table-light text-start fw-semibold">
-                                    <HeaderCellSort sortKey={'INGRESO'} className='text-start fw-semibold'>Ingreso</HeaderCellSort>
-                                    <HeaderCellSort sortKey={'TIPO'} className='text-start fw-semibold'>Tipo</HeaderCellSort>
-                                    <HeaderCellSort sortKey={'CLIENTE'} className='text-start fw-semibold'>Cliente</HeaderCellSort>
-                                    <HeaderCellSort sortKey={'NIT'} className='text-start fw-semibold'>Nit/CC</HeaderCellSort>
-                                    <HeaderCellSort sortKey={'CIUDAD'} className='text-start fw-semibold'>Ciudad</HeaderCellSort>
-                                    <HeaderCell className='text-start fw-semibold'>Dirección</HeaderCell>
-                                    <HeaderCell className='text-center fw-semibold'>Pedido</HeaderCell>
-                                    <HeaderCell className='text-center fw-semibold'>Editar</HeaderCell>
-                                    <HeaderCell className='text-center fw-semibold'>Eliminar</HeaderCell>
-                                </HeaderRow>
-                            </Header>
+                <div className="table-responsive">
+                    <Table
+                        className="table table-hover table table-hover text-start w-100 compact-table"
+                        data={data} theme={theme} pagination={pagination} sort={sort}>
+                        {(tableList) => (
+                            <>
+                                <Header>
+                                    <HeaderRow className="table-light text-start fw-semibold">
+                                        <HeaderCellSort sortKey={'INGRESO'} className='text-start fw-semibold d-none d-lg-flex'>Ingreso</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'TIPO'} className='text-start fw-semibold d-none d-lg-flex'>Tipo</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'CLIENTE'} className='text-start fw-semibold'>Cliente</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'NIT'} className='text-start fw-semibold d-none d-lg-flex'>Nit/CC</HeaderCellSort>
+                                        <HeaderCellSort sortKey={'CIUDAD'} className='text-start fw-semibold'>Ciudad</HeaderCellSort>
+                                        <HeaderCell className='text-start fw-semibold d-none d-lg-flex'>Dirección</HeaderCell>
+                                        <HeaderCell className='text-center fw-semibold'>Pedido</HeaderCell>
+                                        <HeaderCell className='text-center fw-semibold'>Editar</HeaderCell>
+                                        <HeaderCell className='text-center fw-semibold'>Eliminar</HeaderCell>
+                                    </HeaderRow>
+                                </Header>
 
-                            <Body>
-                                {tableList.map((item, index) => (
-                                    <Row
-                                        key={index}
-                                        item={item}
-                                        className={!item.distribuidor ? 'table-primary' : ''}
-                                    >
-                                        <Cell>{limpiarFecha(item.fechaCreacion)}</Cell>
-                                        <Cell className={'fw-semibold ' + (item.distribuidor ? 'text-success' : 'text-danger')} title={(item.distribuidor)}>{item.distribuidor ? 'Distribuidor' : 'Cliente final'}</Cell>
-                                        <Cell>{item.nombre}</Cell>
-                                        <Cell>{item.nitCC}</Cell>
-                                        <Cell className="text-secondary">{capitalize(item.ciudad.toUpperCase())}</Cell>
-                                        <Cell>{(item.direccion)}</Cell>
-                                        <Cell className="text-center"><div className="dropdown">
-                                            <button
-                                                className="btn btn-outline-success btn-sm py-1"
-                                                type="button"
-                                                id="dropdownMenuButton1"
-                                                data-toggle="dropdown"
-                                                aria-haspopup="true"
-                                                aria-expanded="false"
-                                                onClick={() => direccionarPedido(item)}
-                                            >
-                                                <i className="fa fa-clipboard-list"></i>
-                                            </button>
-                                        </div></Cell>
-                                        <Cell className="text-center"><button
-                                            className="btn btn-outline-primary py-1"
-                                            onClick={() => editarCliente(item)}
+                                <Body>
+                                    {tableList.map((item, index) => (
+                                        <Row
+                                            key={index}
+                                            item={item}
+                                            className={!item.distribuidor ? 'table-primary' : ''}
                                         >
-                                            <i className="fa fa-edit"></i>
-                                        </button></Cell>
-                                        <Cell className="text-center"><button
-                                            className="btn btn-outline-danger py-1"
-                                            onClick={() => eliminarCliente(item)}
-                                        >
-                                            <i className="fa fa-trash"></i>
-                                        </button></Cell>
-                                    </Row>
-                                ))}
-                            </Body>
-                        </>
-                    )}
-                </Table>
+                                            <Cell className="d-none d-lg-flex">{limpiarFecha(item.fechaCreacion)}</Cell>
+                                            <Cell className={'fw-semibold d-none d-lg-flex ' + (item.distribuidor ? 'text-success' : 'text-danger')} title={(item.distribuidor)}>{item.distribuidor ? 'Distribuidor' : 'Cliente final'}</Cell>
+                                            <Cell>{item.nombre}</Cell>
+                                            <Cell className="d-none d-lg-flex">{item.nitCC}</Cell>
+                                            <Cell className="text-secondary">{capitalize(item.ciudad.toUpperCase())}</Cell>
+                                            <Cell className="d-none d-lg-flex">{(item.direccion)}</Cell>
+                                            <Cell className="text-center"><div className="dropdown">
+                                                <button
+                                                    className="btn btn-outline-success btn-sm py-1"
+                                                    type="button"
+                                                    id="dropdownMenuButton1"
+                                                    data-toggle="dropdown"
+                                                    aria-haspopup="true"
+                                                    aria-expanded="false"
+                                                    onClick={() => direccionarPedido(item)}
+                                                >
+                                                    <i className="fa fa-clipboard-list"></i>
+                                                </button>
+                                            </div>
+                                            </Cell>
+                                            <Cell className="text-center">
+                                                <button
+                                                    className="btn btn-outline-primary py-1"
+                                                    onClick={() => editarCliente(item)}>
+                                                    <i className="fa fa-edit"></i>
+                                                </button>
+                                            </Cell>
+                                            <Cell className="text-center">
+                                                <button
+                                                    className="btn btn-outline-danger py-1"
+                                                    onClick={() => eliminarCliente(item)}>
+                                                    <i className="fa fa-trash"></i>
+                                                </button>
+                                            </Cell>
+                                        </Row>
+                                    ))}
+                                </Body>
+                            </>
+                        )}
+                    </Table>
+                </div>
                 <div style={{ display: "flex", justifyContent: "space-between", width: "99%" }}>
                     <span className="fw-semibold">Total registros: {data.nodes.length}</span>
                     <span className="fw-semibold">Páginas: {pagination.state.getTotalPages(data.nodes)}</span>

@@ -3,17 +3,70 @@ import { useAuthStore, useClientesStore, useFuntions } from "../../hooks";
 import { useTheme } from "@table-library/react-table-library/theme";
 import { usePagination } from "@table-library/react-table-library/pagination";
 import { Table, Header, HeaderRow, Body, Row, HeaderCell, Cell } from "@table-library/react-table-library/table";
-import { Button } from "react-bootstrap";
 import { useSort, HeaderCellSort } from "@table-library/react-table-library/sort";
 
 
 
-export const TablaOtros = ({ ventasOtros }) => {
-
+export const TablaOtros = ({ ventasOtros, pedidosUsuario }) => {
     const { formatearPrecio, capitalizarPrimeraLetra } = useFuntions();
     if (!ventasOtros && (ventasOtros = [])) return;
     const { user } = useAuthStore();
     const [search, setSearch] = useState("");
+    const [categoriaTotales, setCategoriaTotales] = useState({});
+
+    useEffect(() => {
+        if (!pedidosUsuario) return;
+
+        const totales = {};
+
+        const countQuantities = (node) => {
+            let total = 0;
+            if (!node || typeof node !== 'object') return 0;
+
+            if (node.pedido && Array.isArray(node.pedido)) {
+                node.pedido.forEach(prod => {
+                    total += parseInt(prod.cantidad) || 0;
+                });
+            }
+
+            Object.keys(node).forEach(key => {
+                if (key !== 'pedido' && typeof node[key] === 'object') {
+                    total += countQuantities(node[key]);
+                }
+            });
+
+            return total;
+        };
+
+        pedidosUsuario.forEach(pedido => {
+            if (pedido.itemPedido && Array.isArray(pedido.itemPedido)) {
+                pedido.itemPedido.forEach(item => {
+                    if (item.itemPedido) {
+                        Object.keys(item.itemPedido).forEach(categoria => {
+                            const categoriaData = item.itemPedido[categoria];
+                            console.log(categoriaData)
+                            if (!totales[categoria]) {
+                                totales[categoria] = 0;
+                            }
+                            totales[categoria] += countQuantities(categoriaData);
+
+                            // Logic for subcategories (specifically for GUANTES or similar structures)
+                            Object.keys(categoriaData).forEach(subKey => {
+                                if (subKey !== 'pedido' && subKey !== 'detalleGeneral' && typeof categoriaData[subKey] === 'object') {
+                                    const subCategoriaName = `${categoria} - ${subKey}`;
+                                    if (!totales[subCategoriaName]) {
+                                        totales[subCategoriaName] = 0;
+                                    }
+                                    totales[subCategoriaName] += countQuantities(categoriaData[subKey]);
+                                }
+                            });
+                        });
+                    }
+                });
+            }
+        });
+        setCategoriaTotales(totales);
+    }, [pedidosUsuario]);
 
     const handleSearch = (event) => {
         setSearch(event.target.value);
@@ -79,16 +132,15 @@ export const TablaOtros = ({ ventasOtros }) => {
 
 
     useEffect(() => {
-    }, [ventasOtros])
+
+
+    }, [ventasOtros, pedidosUsuario])
 
     return (
         <div className="card p-3 mb-1 rounded">
             <div>
                 <div className="row mb-1 text-end justify-content-end align-items-center">
                     {/* Columna para el input */}
-                    <div className="col-md-6 card-header bg-light">
-                        <h6 className="text-start fw-semibold">Listado de Ventas otros</h6>
-                    </div>
                     <div className="col-md-6">
                         <div className="input-group">
                             <input
@@ -116,7 +168,7 @@ export const TablaOtros = ({ ventasOtros }) => {
                                 <HeaderRow className="table-light text-center fw-semibold">
                                     <HeaderCellSort sortKey={"PRODUCTO"} className='fw-semibold'>Producto</HeaderCellSort>
                                     <HeaderCellSort sortKey={"CANTIDAD"} className='fw-semibold'>Cantidad</HeaderCellSort>
-                                    <HeaderCell  className='fw-semibold'>Precio</HeaderCell>
+                                    <HeaderCell className='fw-semibold'>Precio</HeaderCell>
                                     <HeaderCellSort sortKey={"TOTAL"} className='fw-semibold'>Total</HeaderCellSort>
                                 </HeaderRow>
                             </Header>
@@ -136,6 +188,16 @@ export const TablaOtros = ({ ventasOtros }) => {
                         </>
                     )}
                 </Table>
+                <div className="col-md-6 card-header bg-light">
+                    <h6 className="text-start fw-semibold">Listado de Ventas otros</h6>
+                    <div className="d-flex gap-3 mt-2">
+                        {Object.entries(categoriaTotales).map(([categoria, total]) => (
+                            <span key={categoria} className="badge bg-primary">
+                                {categoria}: {total}
+                            </span>
+                        ))}
+                    </div>
+                </div>
                 <div style={{ display: "flex", justifyContent: "space-between", width: "99%" }}>
                     <span className="fw-semibold">Total registros: {filteredData.nodes.length}</span>
                     <span className="fw-semibold">Páginas: {pagination.state.getTotalPages(filteredData.nodes)}</span>

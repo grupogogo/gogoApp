@@ -6,7 +6,7 @@ import { useClientesStore } from "../../hooks";
 export const ClientesForm = ({ setCliente, cliente }) => {
   const { clienteActivo } = useClientesStore();
   const [checkPrecios, setCheckPrecios] = useState(false);
-  const [clienteTipo, setClienteTipo] = useState(true);
+  const [clienteTipo, setClienteTipo] = useState(clienteActivo ? clienteActivo.distribuidor : true);
 
   const {
     nombre,

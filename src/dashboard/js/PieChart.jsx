@@ -10,6 +10,7 @@ Chart.register(Colors);
 
 
 export const PieChart = ({ arrayData, arrayLabels, title, anio = 2025 }) => {  
+
   const { buscarPrecioxCategoriaAnio } = useFuntions()
 
   if (!arrayData) { return }

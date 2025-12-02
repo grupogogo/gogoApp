@@ -18,7 +18,7 @@ export const HeadersPedidos = ({ codigo, titulo, cantidadItems, collapsed, vTota
     } = clienteActivo?.precios || {};
 
     const formatPrice = (cantidad, categoria) => {
-        if (cantidad === 0 || codigo === 'OTR' || codigo === 'GUANTES') return;
+        if (cantidad === 0 || codigo === 'GUANTES') return;
         let valorMultiplicado = null;
         switch (categoria) {
             case 'KCG':
@@ -40,13 +40,16 @@ export const HeadersPedidos = ({ codigo, titulo, cantidadItems, collapsed, vTota
                 valorMultiplicado = cantidad * cb;
                 break;
             case 'GUA':
-                valorMultiplicado = totalGuantes;
-
+                valorMultiplicado = 0;
+                break;
+            case 'OTR':
+                valorMultiplicado = 0;
                 break;
             default:
+                valorMultiplicado = 0;
                 break;
         }
-        return formatearPrecio(valorMultiplicado);
+        return (valorMultiplicado);
     }
 
     return (
@@ -62,7 +65,7 @@ export const HeadersPedidos = ({ codigo, titulo, cantidadItems, collapsed, vTota
                 >
                     <div className="d-flex align-items-center">
                         <div className="font-weight-bold me-2">{codigo} |</div>
-                        <div>{titulo} {codigo === 'KCE' ? <span className='text-danger fw-semibold'>(New product)</span> : ''}</div>
+                        <div>{titulo}  {((formatPrice(1, codigo)) !== 0) ? '|' + formatearPrecio(formatPrice(1, codigo)) : ''} {codigo === 'KCE' ? <span className='text-danger fw-semibold'>(New product)</span> : ''}</div>
                     </div>
 
                     {cantidadItems !== 0 && (

@@ -113,6 +113,20 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                                     <span className='fw-semibold'>TELEFONO: </span>&nbsp; {pedido?.user?.telefono}
                                                 </Col>
                                             </Row>
+                                            <Row className='w-100 align-items-center justify-content-center'>
+                                                {pedido?.formaPago === 'pCasa' || pedido?.formaPago === 'alCobro' && (
+                                                    <Row className=''>
+                                                        <Col className='text-center card bg-danger text-white decoration-underline'>
+                                                            {pedido?.formaPago === 'pCasa' && (
+                                                                <span className='text-danger fs-4 fw-bold'>PAGO EN CASA: {calculaTotalPedido(pedido)}</span>
+                                                            )}
+                                                            {pedido?.formaPago === 'alCobro' && (
+                                                                <span className='fw-bold fs-4'>PEDIDO AL COBRO CON ENVÍO: {calculaTotalPedido(pedido, parseInt(pedido?.costoEnvio))}</span>
+                                                            )}
+                                                        </Col>
+                                                    </Row>
+                                                )}
+                                            </Row>
                                         </Col>
                                     </Row>
                                 </Col>
@@ -144,20 +158,7 @@ export const ModalGuia = ({ setShow, show, pedido }) => {
                                     </Row>
                                 </Col>
                             </Row>
-                            <Row className=''>
-                                {pedido?.formaPago === 'pCasa' || pedido?.formaPago === 'alCobro' && (
-                                    <Row >
-                                        <Col className='text-center card'>
-                                            {pedido?.formaPago === 'pCasa' && (
-                                                <span className='text-danger fs-4 fw-bold'>PAGO EN CASA: {calculaTotalPedido(pedido)}</span>
-                                            )}
-                                            {pedido?.formaPago === 'alCobro' && (
-                                                <span className='fw-bold fs-3 text-danger text-decoration-underline'>PEDIDO AL COBRO CON ENVÍO: {calculaTotalPedido(pedido, parseInt(pedido?.costoEnvio))}</span>
-                                            )}
-                                        </Col>
-                                    </Row>
-                                )}
-                            </Row>
+
                         </Card.Body>
                     </>
                 </Modal.Body>

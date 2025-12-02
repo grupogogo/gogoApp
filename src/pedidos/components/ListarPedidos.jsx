@@ -366,7 +366,8 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
       {
         renderCell: (item) => (
           <div className='border border-2 border-primary text-primary rounded text-center align-items-center d-flex justify-content-center' style={{ width: '30px', height: '30px', lineHeight: '30px' }}>
-            <span className='fw-bold' title={`Vendedor: ${(item.user.name)}`}>{item.user.name.slice(0, 1).toUpperCase()}</span>
+            <span className='fw-bold' title={`Vendedor: ${(item.user.name)}`}>
+              {item.user.name.slice(0, 1).toUpperCase()}</span>
           </div>
         ),
       },
@@ -386,7 +387,11 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
       {
         label: 'Cliente',
         renderCell: (item) => (
-          <span className="text-start" title={`Cliente: ${item.cliente.nombre}`}>{item.cliente.nombre}</span>
+          <div className='d-flex align-items-center justify-content-center gap-1 justify-content-between'>
+            <span className="text-start" title={`Cliente: ${item.cliente.nombre}`}>{item.cliente.nombre}</span>
+            {(item.cliente.distribuidor) && (<span className="fw-bold text-primary  rounded" title="Cliente distribuidor">| D</span>)}
+            {!(item.cliente.distribuidor) && (<span className="fw-bold text-secondary rounded" title="Cliente no distribuidor">| U</span>)}
+          </div>
         ),
         sort: { sortKey: "CLIENTE" },
       },
@@ -519,6 +524,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
             )}
             {(item.estado === 'enviado') && (
               <>
+                <option value="pendiente">Pendiente</option>
                 <option value="enviado">Enviado</option>
                 <option value="entregado">Entregado</option>
                 <option value="devuelto">Devuelto</option>
@@ -582,10 +588,10 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
               delay={{ show: 250, hide: 400 }}
               overlay={renderTooltip}
             >
-              <div className="text-end" style={{ cursor: 'pointer' }} title={`Detalle de productos: ${tooltipText}`}>
-                <span className="fs-4 font-monospace text-dark">
-                  {totalProductos}|
-                </span>
+              <div className="text-end " style={{ cursor: 'pointer' }} title={`Detalle de productos: ${tooltipText}`}>
+                <div className="fs-4 font-monospace text-dark d-flex justify-content-between align-items-center">
+                  {<span> {totalProductos} </span>}
+                </div>
               </div>
             </OverlayTrigger>
           );
