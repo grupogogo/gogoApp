@@ -221,6 +221,7 @@ export const CuentasXCobrar = () => {
   };
   const handleViewDetail = (userId) => {
     const userOrders = pedidos.filter(p => p.user._id === userId);
+    const quantities = {};
     const totals = {};
     let grandTotal = 0;
     const allItems = [];
@@ -231,12 +232,18 @@ export const CuentasXCobrar = () => {
         if (!item.itemPedido) return;
         Object.entries(item.itemPedido).forEach(([catKey, catData]) => {
           if (!totals[catKey]) totals[catKey] = 0;
+          if (!quantities[catKey]) quantities[catKey] = 0;
 
           const catTotal = (catData.pedido || []).reduce((acc, prod) => {
             return acc + ((prod.cantidad || 0) * (prod.precio || prod.precioUnitario || 0));
           }, 0);
 
+          const catQuantity = (catData.pedido || []).reduce((acc, prod) => {
+            return acc + (prod.cantidad || 0);
+          }, 0);
+
           totals[catKey] += catTotal;
+          quantities[catKey] += catQuantity;
           grandTotal += catTotal;
 
           if (catData.pedido) {
@@ -247,7 +254,7 @@ export const CuentasXCobrar = () => {
     });
 
     const user = userOrders[0]?.user || {};
-    setSelectedUserDetail({ user, totals, grandTotal, allItems });
+    setSelectedUserDetail({ user, totals, quantities, grandTotal, allItems });
     setShowDetailModal(true);
   };
 
@@ -375,7 +382,7 @@ export const CuentasXCobrar = () => {
               ref={modalRef}
               className="table-responsive"
             >
-              <div className='text-center fs-4'>
+              <div className='text-center'>
                 <div className="alert alert-primary" role="alert">
                   <span className='fw-semibold'></span>
                   <span className='fw-semibold'>Listado de cuentas por cobrar</span>
@@ -416,7 +423,7 @@ export const CuentasXCobrar = () => {
               {/* Desktop Table View */}
               <div className="d-none d-md-block">
                 <Table
-                  className="table table-hover text-start w-100 compact-table"
+                  className="table table-hover text-start w-100 compact-table table-sm"
                   style={{ maxWidth: "100%" }}
                   data={filteredData}
                   theme={theme}
@@ -467,24 +474,68 @@ export const CuentasXCobrar = () => {
                   )}
                 </Table>
               </div>
-              <div className="d-flex flex-column flex-md-row justify-content-between width-99">
-                <span className="fw-semibold mb-2 mb-md-0">Total registros: {filteredData.nodes.length}</span>
-                <span className="fw-semibold mb-2 mb-md-0">Páginas: {pagination.state.getTotalPages(filteredData.nodes)}</span>
-                <span className="d-flex flex-wrap align-items-center">
+              {/* PAGINACION */}
+              <div style={{ display: "flex", justifyContent: "space-between", width: "99%" }}>
+                <span>Total registros: {filteredData.nodes.length}</span>
+                <span>Páginas: {pagination.state.getTotalPages(filteredData.nodes)}</span>
+                <span>
                   Página:{" "}
-                  {pagination.state.getPages(filteredData.nodes).map((_, index) => (
-                    <button
-                      className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1 border'}
-                      key={index}
-                      type="button"
-                      style={{
-                        fontWeight: pagination.state.page === index ? "bold" : "normal",
-                      }}
-                      onClick={() => pagination.fns.onSetPage(index)}
-                    >
-                      {index + 1}
-                    </button>
-                  ))}
+                  {(() => {
+                    const totalPages = pagination.state.getTotalPages(filteredData.nodes);
+                    const currentPage = pagination.state.page;
+                    const maxVisible = 3; // Número de páginas visibles
+                    const startPage = Math.max(0, currentPage - 1);
+                    const endPage = Math.min(totalPages, startPage + maxVisible);
+
+                    const pages = [];
+                    // Botón para retroceder
+                    if (startPage > 0) {
+                      pages.push(
+                        <button
+                          key="prev"
+                          className="btn btn-light btn-sm m-1 border"
+                          onClick={() => pagination.fns.onSetPage(currentPage - 1)}
+                        >
+                          &laquo;
+                        </button>
+                      );
+                    }
+
+                    // Rango de páginas visibles
+                    for (let i = startPage; i < endPage; i++) {
+                      pages.push(
+                        <button
+                          key={i}
+                          className={
+                            currentPage === i
+                              ? "btn btn-secondary btn-sm m-1 border"
+                              : "btn btn-light btn-sm m-1 border"
+                          }
+                          style={{
+                            fontWeight: currentPage === i ? "bold" : "normal",
+                          }}
+                          onClick={() => pagination.fns.onSetPage(i)}
+                        >
+                          {i + 1}
+                        </button>
+                      );
+                    }
+
+                    // Botón para avanzar
+                    if (endPage < totalPages) {
+                      pages.push(
+                        <button
+                          key="next"
+                          className="btn btn-light btn-sm m-1 border"
+                          onClick={() => pagination.fns.onSetPage(currentPage + 1)}
+                        >
+                          &raquo;
+                        </button>
+                      );
+                    }
+
+                    return pages;
+                  })()}
                 </span>
               </div>
             </div>
@@ -564,7 +615,7 @@ export const CuentasXCobrar = () => {
 
       <div className='container mt-4 text-center'>
         <div className="card shadow border-1">
-          <table class="table table-sm table-hover border" style={{ fontSize: '12px' }}>
+          <table className="table table-sm table-hover border" style={{ fontSize: '12px' }}>
             <thead>
               <tr>
                 <th colSpan="5">Resumen general ventas {new Date().getFullYear()}</th>
@@ -577,7 +628,7 @@ export const CuentasXCobrar = () => {
                 <th className="text-end">Total ($)</th>
               </tr>
             </thead>
-            <tbody class="table-group-divider">
+            <tbody className="table-group-divider">
               {['entregado', 'pendiente', 'pagado', 'enviado', 'preparado', 'devuelto', 'anulado'].map((estadoIteracion) => {
                 const pedidosUsuario = pedidos.filter(p => p.user._id === user.uid && p.estado === estadoIteracion);
                 const totalesUsuario = calcularTotalesAgrupados(pedidosUsuario);

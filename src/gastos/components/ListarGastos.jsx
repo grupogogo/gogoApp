@@ -19,7 +19,7 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
     const [isHideUser, setHideUser] = useState(false);
     const { setGastoActivo, startDeleteGasto, startLoadingGastos } = useGastosStore();
     const { user } = useAuthStore();
-    const [fechaGasto, setFechaGasto] = useState('2025');
+    const [fechaGasto, setFechaGasto] = useState(new Date().getFullYear());
     const [itemsMostrar, setItemsMostrar] = useState(20);
 
 
@@ -252,6 +252,7 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
                                         pagination.fns.onSetPage(0);
                                     }}
                                 >
+                                    <option value="2026">2026</option>
                                     <option value="2025">2025</option>
                                     <option value="2024">2024</option>
                                     <option value="2023">2023</option>
@@ -369,24 +370,68 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
                         </Alert>
                     </div>
 
+                    {/* PAGINACION */}
                     <div style={{ display: "flex", justifyContent: "space-between", width: "99%" }}>
-                        <span className="fw-semibold">Total registros: {data.nodes.length}</span>
-                        <span className="fw-semibold">Páginas: {pagination.state.getTotalPages(data.nodes)}</span>
+                        <span>Total registros: {data.nodes.length}</span>
+                        <span>Páginas: {pagination.state.getTotalPages(data.nodes)}</span>
                         <span>
                             Página:{" "}
-                            {pagination.state.getPages(data.nodes).map((_, index) => (
-                                <button
-                                    className={(pagination.state.page === index) ? 'btn btn-secondary btn-sm m-1 border' : 'btn btn-light btn-sm m-1 border'}
-                                    key={index}
-                                    type="button"
-                                    style={{
-                                        fontWeight: pagination.state.page === index ? "bold" : "normal",
-                                    }}
-                                    onClick={() => pagination.fns.onSetPage(index)}
-                                >
-                                    {index + 1}
-                                </button>
-                            ))}
+                            {(() => {
+                                const totalPages = pagination.state.getTotalPages(data.nodes);
+                                const currentPage = pagination.state.page;
+                                const maxVisible = 3; // Número de páginas visibles
+                                const startPage = Math.max(0, currentPage - 1);
+                                const endPage = Math.min(totalPages, startPage + maxVisible);
+
+                                const pages = [];
+                                // Botón para retroceder
+                                if (startPage > 0) {
+                                    pages.push(
+                                        <button
+                                            key="prev"
+                                            className="btn btn-light btn-sm m-1 border"
+                                            onClick={() => pagination.fns.onSetPage(currentPage - 1)}
+                                        >
+                                            &laquo;
+                                        </button>
+                                    );
+                                }
+
+                                // Rango de páginas visibles
+                                for (let i = startPage; i < endPage; i++) {
+                                    pages.push(
+                                        <button
+                                            key={i}
+                                            className={
+                                                currentPage === i
+                                                    ? "btn btn-secondary btn-sm m-1 border"
+                                                    : "btn btn-light btn-sm m-1 border"
+                                            }
+                                            style={{
+                                                fontWeight: currentPage === i ? "bold" : "normal",
+                                            }}
+                                            onClick={() => pagination.fns.onSetPage(i)}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    );
+                                }
+
+                                // Botón para avanzar
+                                if (endPage < totalPages) {
+                                    pages.push(
+                                        <button
+                                            key="next"
+                                            className="btn btn-light btn-sm m-1 border"
+                                            onClick={() => pagination.fns.onSetPage(currentPage + 1)}
+                                        >
+                                            &raquo;
+                                        </button>
+                                    );
+                                }
+
+                                return pages;
+                            })()}
                         </span>
                     </div>
                 </div>

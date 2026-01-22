@@ -24,7 +24,7 @@ export const Pedidos = () => {
   const [total, setTotal] = useState(0);
   const [detallesPorCategoria, setDetallesPorCategoria] = useState([]);
   const { formatearPrecio } = useFuntions();
-  const [selAnioPedido, setSelFechaPedido] = useState('2025');
+  const [selAnioPedido, setSelFechaPedido] = useState(new Date().getFullYear());
   const [resetearPedido, setResetearPedido] = useState(0); //Uso para resetear todas lac categorias del pedido general
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export const Pedidos = () => {
     // Asumiendo que tienes acceso a la fecha actual desde otro estado
     const fecha = new Date(); // fechaActual contiene día y mes correctos
 
-    const nuevaFecha = (selAnioPedido === '2025')
+    const nuevaFecha = (selAnioPedido === new Date().getFullYear())
       ? new Date(nuevoAnio, fecha.getMonth(), fecha.getDate(), fecha.getHours(), fecha.getMinutes(), fecha.getSeconds())
       : new Date(nuevoAnio, fecha.getMonth(), fecha.getDate(), 0, 0, 0);
 
@@ -117,7 +117,7 @@ export const Pedidos = () => {
       setPedidoGeneral([]);
       setDetallesPorCategoria([]);
       setTimeout(() => {
-        if (selAnioPedido === '2025') {
+        if (selAnioPedido === new Date().getFullYear()) {
           navegar('/listaPedidos')
           setClienteActivo([]);
         } else {
@@ -179,29 +179,6 @@ export const Pedidos = () => {
               <div className="col-lg-9 text-align-middle">
                 <div>
                   <h6 className="fw-semibold text-primary">CREAR PEDIDO {selAnioPedido !== '2025' ? 'ANTIGUO' : ''} </h6>
-                  {/* <div className="align-items-center">
-                    <div className="input-group form-select-sm">
-                      <select
-                        className="form-select form-select-sm fs-6 fw-bold text-danger border-danger"
-                        title="Filtro por año"
-                        style={{ maxWidth: 'fit-content' }}
-                        value={selAnioPedido} // solo el año
-                        onChange={e => {
-                          setSelFechaPedido(e.target.value); // actualiza el año como string                                       
-                        }}
-                      >
-                        <option value="2025">2025</option>
-                        <option value="2024">2024</option>
-                        <option value="2023">2023</option>
-                        <option value="2022">2022</option>
-                        <option value="2021">2021</option>
-                        <option value="2020">2020</option>
-                        <option value="2019">2019</option>
-                        <option value="2018">2018</option>
-                        <option value="2017">2017</option>
-                      </select>
-                    </div>
-                  </div> */}
                 </div>
               </div>
               <div className="col-lg-3 text-end align-items-center">
@@ -216,13 +193,13 @@ export const Pedidos = () => {
             <hr />
             <div className="card p-3 shadow">
               <Row>
-                <Col md={6} className="mt-2">
+                <Col xs={12} md={6} className="mt-2">
                   <Row className="mb-3">
-                    <Col md={8}>
+                    <Col xs={12} md={8}>
                       {/* informacion del pedido */}
                       <span className="fw-medium fs-4 text-secondary">Información del pedido</span>
                     </Col>
-                    <Col md={4} className="text-end">
+                    <Col xs={12} md={4} className="text-end">
                       {/* DataPciker */}
                       <DatePicker
                         className="form-control text-center"
@@ -234,7 +211,7 @@ export const Pedidos = () => {
                     </Col>
                   </Row>
                   <Row>
-                    <Col md={4}>
+                    <Col xs={12} md={6} lg={4} className="mb-2">
                       {/* Tipo de Despacho */}
                       <div className="form-group">
                         <label htmlFor="inputDespacho" className="mb-2">Tipo de despacho</label>
@@ -257,7 +234,7 @@ export const Pedidos = () => {
                         </div>
                       </div>
                     </Col>
-                    <Col md={4}>
+                    <Col xs={12} md={6} lg={4} className="mb-2">
                       {/* Forma de Pago */}
 
                       <div className="form-group">
@@ -281,7 +258,7 @@ export const Pedidos = () => {
                         </div>
                       </div>
                     </Col>
-                    <Col md={4}>
+                    <Col xs={12} md={6} lg={4} className="mb-2">
                       {(formaPago === "alCobro") && (
                         <div className="form-group">
                           <label className="form-label" htmlFor="inputCostoEnvio">Costo del despacho</label>

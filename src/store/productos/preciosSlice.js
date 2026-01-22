@@ -81,7 +81,7 @@ export const preciosSlice = createSlice({
             precioGuantes: {
                 gb: 23000,
                 gn: 24000,
-                gm: 36000,
+                gm: 33000,
             },
         },
     },

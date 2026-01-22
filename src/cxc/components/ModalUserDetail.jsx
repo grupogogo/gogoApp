@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ModalOtrosDetail } from './ModalOtrosDetail';
 
 export const ModalUserDetail = ({ show, handleClose, data, formatearPrecio, buscarNombre }) => {
-    const { user, totals, grandTotal, allItems } = data || {};
+    const { user, totals, quantities, grandTotal, allItems } = data || {};
     const [showOtrosModal, setShowOtrosModal] = useState(false);
 
     return (
@@ -23,6 +23,7 @@ export const ModalUserDetail = ({ show, handleClose, data, formatearPrecio, busc
                                 <thead className="bg-light">
                                     <tr>
                                         <th>Categoría</th>
+                                        <th className="text-center">Cantidad</th>
                                         <th className="text-end">Total</th>
                                     </tr>
                                 </thead>
@@ -32,6 +33,7 @@ export const ModalUserDetail = ({ show, handleClose, data, formatearPrecio, busc
                                             <td>
                                                 {buscarNombre(key)} <small className='text-muted'>({key})</small>
                                             </td>
+                                            <td className="text-center">{quantities[key]}</td>
                                             <td className="text-end fw-semibold">{formatearPrecio(value)}</td>
                                         </tr>
                                     ))}

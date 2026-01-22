@@ -667,9 +667,9 @@ export const useFuntions = () => {
             enviado
         };
     }
-    const totalKitsXAnio = (pedidos, datosUsuario, anioFiltro = 2025) => {
+    const totalKitsXAnio = (pedidos, datosUsuario, anioFiltro = 2026) => {
         let totalSales = 0;
-        const monthlySales = [...Array(11).fill(0)]; // Inicializa directamente con 12 meses
+        const monthlySales = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
 
         pedidos.forEach(order => {
             const orderDate = convertirFecha(order.fechaCreacion);
@@ -694,19 +694,18 @@ export const useFuntions = () => {
 
                             const orderDate = convertirFecha(order.fechaCreacion);
                             const month = orderDate.getMonth();
-                            monthlySales[month + 1] += sale;
+                            monthlySales[month] += sale;
                         });
                     }
                 });
             });
         });
-        //console.log(monthlySales)
         return {
             monthlySales,
             totalSales
         };
     };
-    const totalKitsXAnio2025 = (pedidos, selectFecha = 2025) => {
+    const totalKitsXAnio2025 = (pedidos, selectFecha = 2026) => {
         if (pedidos.length === 0) return;
         const monthlySales = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
         const monthlySalesBrand = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
@@ -720,7 +719,7 @@ export const useFuntions = () => {
             order.itemPedido.forEach(item => {
                 Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
                     if (['KCG', 'KCP', 'KB', 'CC', 'CB'/* , 'KCE' */].includes(categoriaItem)) {
-                        category.pedido.forEach(product => {                            
+                        category.pedido.forEach(product => {
                             const price2 = buscarPrecioxCategoriaAnio(buscarNombre(categoriaItem), selectFecha);
                             const quantity = parseInt(product.cantidad, 10) || 0;
                             const sale = price2 * quantity;
@@ -750,16 +749,17 @@ export const useFuntions = () => {
         };
 
     };
-    const totalGuantesXAnio = (pedidos, datosUsuario, anioFiltro) => {
+    const totalGuantesXAnio = (pedidos, datosUsuario, anioFiltro = 2026) => {
         let totalSales = 0;
-        const monthlySales = [...Array(11).fill(0)]; // 12 meses, índice 0 = enero
+        const monthlySales = [...Array(12).fill(0)]; // 12 meses, índice 0 = enero
 
         pedidos.forEach(order => {
             const orderDate = convertirFecha(order.fechaCreacion);
             if (orderDate.getFullYear() !== anioFiltro) {
                 return; // Si el año de la orden no coincide con el año filtrado, salta a la siguiente orden
             }
-            if (order.user._id !== user.uid) return;
+            if (order.user.rol === 'admin')
+                if (order.user._id !== user.uid) return;
 
             order.itemPedido.forEach(item => {
                 Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
@@ -770,13 +770,15 @@ export const useFuntions = () => {
                             const sale = price * quantity;
                             totalSales += sale;
                             const month = orderDate.getMonth();
-                            monthlySales[month + 1] += sale;
+                            monthlySales[month] += sale;
 
                         });
                     }
                 });
             });
         });
+        console.log(monthlySales)
+        console.log(totalSales)
         return {
             monthlySales,
             totalSales
@@ -818,14 +820,9 @@ export const useFuntions = () => {
             totalSales
         };
     };
-    const totalesPedidosAnuales = (pedidos, datosUsuario) => { //Para calculos por años
+    const totalesPedidosAnuales = (pedidos, datosUsuario, anioFiltro) => { //Para calculos por años
         let totalSales = 0;
-
-        const monthlySales2021 = [0, ...Array(13).fill(0)];
-        const monthlySales2022 = [0, ...Array(13).fill(0)];
-        const monthlySales2023 = [0, ...Array(13).fill(0)];
-        const monthlySales2024 = [0, ...Array(13).fill(0)];
-        const monthlySales2025 = [0, ...Array(13).fill(0)];
+        const monthlySales = [0, ...Array(12).fill(0)];
         const currentYear = new Date().getFullYear();
 
 
@@ -841,23 +838,7 @@ export const useFuntions = () => {
                                 totalSales += sale;
                                 const orderDate = convertirFecha(order.fechaCreacion);
                                 if (orderDate.getFullYear() === currentYear) {
-                                    monthlySales2025[orderDate.getMonth() + 1] += sale; //guarda 2025
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 1) {
-                                    monthlySales2024[orderDate.getMonth() + 1] += sale; //guarda 2024
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 2) {
-                                    monthlySales2023[orderDate.getMonth() + 1] += sale; //guarda 2023
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 3) {
-                                    monthlySales2022[orderDate.getMonth() + 1] += sale; //guarda 2022
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 4) {
-                                    monthlySales2021[orderDate.getMonth() + 1] += sale; //guarda 2021
+                                    monthlySales[orderDate.getMonth()] += sale; //guarda 2025
                                     return;
                                 }
                             });
@@ -873,24 +854,8 @@ export const useFuntions = () => {
                             const sale = price * quantity;
                             totalSales += sale;
                             const orderDate = convertirFecha(order.fechaCreacion);
-                            if (orderDate.getFullYear() === currentYear) {
-                                monthlySales2025[orderDate.getMonth() + 1] += sale; //guarda 2025
-                                return;
-                            }
-                            if (orderDate.getFullYear() === currentYear - 1) {
-                                monthlySales2024[orderDate.getMonth() + 1] += sale; //guarda 2024
-                                return;
-                            }
-                            if (orderDate.getFullYear() === currentYear - 2) {
-                                monthlySales2023[orderDate.getMonth() + 1] += sale; //guarda 2023
-                                return;
-                            }
-                            if (orderDate.getFullYear() === currentYear - 3) {
-                                monthlySales2022[orderDate.getMonth() + 1] += sale; //guarda 2022
-                                return;
-                            }
-                            if (orderDate.getFullYear() === currentYear - 4) {
-                                monthlySales2021[orderDate.getMonth() + 1] += sale; //guarda 2021
+                            if (orderDate.getFullYear() === anioFiltro) {
+                                monthlySales[orderDate.getMonth()] += sale; //guarda
                                 return;
                             }
                         });
@@ -898,177 +863,86 @@ export const useFuntions = () => {
                 });
             }
         });
+        console.log(monthlySales)
         return {
-            monthlySales2025,
-            monthlySales2024,
-            monthlySales2023,
-            monthlySales2022,
-            monthlySales2021,
+            monthlySales
         };
     }
-    const totalesPedidosAnualesPorCategoria = (pedidos, datosUsuario, categoria, oldOrders) => { //Para calculos por años
-        if (!pedidos || pedidos === null) return null;
+    const totalesPedidosAnualesPorCategoria = (
+        pedidos,
+        datosUsuario,
+        categoria,
+        oldOrders,
+        anioFiltro
+    ) => {
+        if (!Array.isArray(pedidos)) return null;
+
         let totalSales = 0;
-        const monthlySales2019 = [0, ...Array(11).fill(0)];
-        const monthlySales2020 = [0, ...Array(11).fill(0)];
-        const monthlySales2021 = [0, ...Array(11).fill(0)];
-        const monthlySales2022 = [0, ...Array(11).fill(0)];
-        const monthlySales2023 = [0, ...Array(11).fill(0)];
-        const monthlySales2024 = [0, ...Array(11).fill(0)];
-        const monthlySales2025 = [0, ...Array(11).fill(0)];
-        const currentYear = new Date().getFullYear();
+        const monthlySales = Array(12).fill(0);
+        const currentYear = anioFiltro;
         let cont = 0;
 
         pedidos.forEach(order => {
-            if (datosUsuario !== true) {
-                if (order.user._id === user.uid) {
-                    order.itemPedido.forEach(item => {
-                        Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
-                            if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'OTR'].includes(categoriaItem)) {
-                                if (categoriaItem !== categoria) return;
-                                category.pedido.forEach(product => {
-                                    const price = parseInt(product.precioUnitario) || parseInt(product.precio);
-                                    const quantity = parseInt(product.cantidad, 10);
-                                    const sale = price * quantity;
-                                    totalSales += sale;
+            if (!order?.fechaCreacion) return;
 
-                                    const orderDate = convertirFecha(order.fechaCreacion);
+            const orderDate = convertirFecha(order.fechaCreacion);
+            if (orderDate.getFullYear() !== currentYear) return;
 
-                                    const year = orderDate.getFullYear();
-                                    const month = orderDate.getMonth() + 1;
+            if (!datosUsuario && order.user?._id !== user.uid) return;
 
-                                    if (year === currentYear) {
-                                        monthlySales2025[month] += quantity;
-                                    } else if (year === currentYear - 1) {
-                                        monthlySales2024[month] += quantity;
-                                    } else if (year === currentYear - 2) {
-                                        monthlySales2023[month] += quantity;
-                                    } else if (year === currentYear - 3) {
-                                        monthlySales2022[month] += quantity;
-                                    } else if (year === currentYear - 4) {
-                                        monthlySales2021[month] += quantity;
-                                    }
+            order.itemPedido?.forEach(item => {
+                Object.entries(item.itemPedido || {}).forEach(([categoriaItem, category]) => {
+                    if (!Array.isArray(category?.pedido)) return;
 
-                                    cont++;
-                                });
-                            } else {
-                                category.pedido.forEach(product => {
-                                    if (product.categoria !== categoria.split('-')[1]) {
-                                        return
-                                    }
-                                    const price = product.precioUnitario || product.precio;
-                                    const quantity = parseInt(product.cantidad, 10);
-                                    const sale = price * quantity;
-                                    totalSales += sale;
-                                    const orderDate = convertirFecha(order.fechaCreacion);
+                    // ===== CATEGORÍAS PRINCIPALES =====
+                    if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'OTR', 'KCE'].includes(categoriaItem)) {
+                        if (categoriaItem !== categoria) return;
 
+                        category.pedido.forEach(product => {
+                            const price =
+                                parseInt(product.precioUnitario) ||
+                                parseInt(product.precio) ||
+                                0;
 
-                                    if (orderDate.getFullYear() === currentYear) {
-                                        monthlySales2025[orderDate.getMonth() + 1] += quantity; //guarda 2025
-                                        return;
-                                    }
-                                    if (orderDate.getFullYear() === currentYear - 1) {
-                                        monthlySales2024[orderDate.getMonth() + 1] += quantity; //guarda 2024
-                                        return;
-                                    }
-                                    if (orderDate.getFullYear() === currentYear - 2) {
-                                        monthlySales2023[orderDate.getMonth() + 1] += quantity; //guarda 2023
-                                        return;
-                                    }
-                                    if (orderDate.getFullYear() === currentYear - 3) {
-                                        monthlySales2022[orderDate.getMonth() + 1] += quantity; //guarda 2022
-                                        return;
-                                    }
-                                    if (orderDate.getFullYear() === currentYear - 4) {
-                                        monthlySales2021[orderDate.getMonth() + 1] += quantity; //guarda 2021
-                                        return;
-                                    }
-                                });
-                            }
+                            const quantity = parseInt(product.cantidad, 10) || 0;
+
+                            totalSales += price * quantity;
+                            monthlySales[orderDate.getMonth()] += quantity;
+                            cont++;
                         });
 
+                        return; // ← CORTE CLAVE (evita duplicación)
+                    }
+
+                    // ===== SUBCATEGORÍAS =====
+                    const subCategoria = categoria.split('-')[1];
+                    if (!subCategoria) return;
+
+                    category.pedido.forEach(product => {
+                        if (product.categoria !== subCategoria) return;
+
+                        const price =
+                            parseInt(product.precioUnitario) ||
+                            parseInt(product.precio) ||
+                            0;
+
+                        const quantity = parseInt(product.cantidad, 10) || 0;
+
+                        totalSales += price * quantity;
+                        monthlySales[orderDate.getMonth()] += quantity;
+                        cont++;
                     });
-                }
-            } else {
-                order.itemPedido.forEach(item => {
-                    Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
-                        if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'OTR'].includes(categoriaItem)) {
-                            if (categoriaItem !== categoria) return;
-                            category.pedido.forEach(product => {
-                                const price = parseInt(product.precioUnitario) || parseInt(product.precio);
-                                const quantity = parseInt(product.cantidad, 10);
-                                const sale = price * quantity;
-                                totalSales += sale;
-
-                                const orderDate = convertirFecha(order.fechaCreacion);
-
-                                const year = orderDate.getFullYear();
-                                const month = orderDate.getMonth() + 1;
-
-                                if (year === currentYear) {
-                                    monthlySales2025[month] += quantity;
-                                } else if (year === currentYear - 1) {
-                                    monthlySales2024[month] += quantity;
-                                } else if (year === currentYear - 2) {
-                                    monthlySales2023[month] += quantity;
-                                } else if (year === currentYear - 3) {
-                                    monthlySales2022[month] += quantity;
-                                } else if (year === currentYear - 4) {
-                                    monthlySales2021[month] += quantity;
-                                } else if (year === currentYear - 5) {
-                                    monthlySales2020[month] += quantity;
-                                } else if (year === currentYear - 6) {
-                                    monthlySales2019[month] += quantity;
-                                }
-                                cont++;
-                            });
-                        } else {
-                            category.pedido.forEach(product => {
-                                if (product.categoria !== categoria.split('-')[1]) {
-                                    return
-                                }
-                                const price = product.precioUnitario || product.precio;
-                                const quantity = parseInt(product.cantidad, 10);
-                                const sale = price * quantity;
-                                totalSales += sale;
-                                const orderDate = convertirFecha(order.fechaCreacion);
-
-
-                                if (orderDate.getFullYear() === currentYear) {
-                                    monthlySales2025[orderDate.getMonth() + 1] += quantity; //guarda 2025
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 1) {
-                                    monthlySales2024[orderDate.getMonth() + 1] += quantity; //guarda 2024
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 2) {
-                                    monthlySales2023[orderDate.getMonth() + 1] += quantity; //guarda 2023
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 3) {
-                                    monthlySales2022[orderDate.getMonth() + 1] += quantity; //guarda 2022
-                                    return;
-                                }
-                                if (orderDate.getFullYear() === currentYear - 4) {
-                                    monthlySales2021[orderDate.getMonth() + 1] += quantity; //guarda 2021
-                                    return;
-                                }
-                            });
-                        }
-                    });
-
                 });
-            }
+            });
         });
+
         return {
-            monthlySales2025,
-            monthlySales2024,
-            monthlySales2023,
-            monthlySales2022,
-            monthlySales2021,
+            monthlySales,
+            totalSales,
+            cont
         };
-    }
+    };
+
     const calculaTotalPedido = (pedido, costoEnvio = 0) => {
         if (pedido?.itemPedido) {
             // Calcular el total general

@@ -23,7 +23,7 @@ export const Ventas = ({ datosUsuario }) => {
   }, [pedidos, user.user.uid]);
   const [filtroCategoria, setFiltroCategoria] = useState('KCG');
   const { startLoadingGastos } = useGastosStore();
-  const [anioFiltro, setAnioFiltro] = useState(2025);
+  const [anioFiltro, setAnioFiltro] = useState(new Date().getFullYear());
   const oldOrders = useSelector(state => state.pedidos.oldOrders) || [];
   const { startLoadingOldOrders } = usePedidosStore();
   const [ventasOtros, setVentasOtros] = useState([]);
@@ -91,7 +91,7 @@ export const Ventas = ({ datosUsuario }) => {
       const { monthlySales: monthlyOtros, totalSales: totalSalesOtros } = totalOtrosXAnio(pedidos, datosUsuario, anioFiltro);
       updateDashboardState({
         totales: totalesPedidos(pedidos, datosUsuario, anioFiltro), // Datos de usuario estado que controla si mostrar todo o solo el usuario logueado - totales de estadisticas
-        totalxAnio: totalesPedidosAnuales(pedidos, datosUsuario),
+        totalxAnio: totalesPedidosAnuales(pedidos, datosUsuario, anioFiltro),
         monthlySales,
         totalSalesKits: totalSales, // Nueva variable para almacenar totalSales
         monthlyGuantes,
@@ -150,6 +150,8 @@ export const Ventas = ({ datosUsuario }) => {
 
     }
 
+    console.log(dashboardState.monthlyGuantes)
+
   }, [pedidos, datosUsuario, gastos, anioFiltro]);
 
   // Cambio de categoría
@@ -178,6 +180,7 @@ export const Ventas = ({ datosUsuario }) => {
                 setAnioFiltro(parseInt(e.target.value)); // actualiza el año como string                                                     
               }}
             >
+              <option value="2026">2026</option>
               <option value="2025">2025</option>
               <option value="2024">2024</option>
               <option value="2023">2023</option>
@@ -293,7 +296,8 @@ export const Ventas = ({ datosUsuario }) => {
           <div className="card card-hover border-0 shadow-lg">
             <div className="card-body p-3">
               <div className="chartArea">
-                <AreaChart totales={dashboardState.totalxAnio} />
+                <AreaChart totales={dashboardState.totalxAnio} anioFiltro={anioFiltro} tipo={0}
+                />
               </div>
               <hr className="my-3" />
               <div className="d-flex justify-content-between align-items-center">
@@ -307,11 +311,25 @@ export const Ventas = ({ datosUsuario }) => {
           <div className="card card-hover border-0 shadow-lg">
             <div className="card-body p-3">
               <div className="chartArea">
-                <AreaChart totales={dashboardState} />
+                <AreaChart totales={dashboardState} anioFiltro={anioFiltro} tipo={0} />
               </div>
               <hr className="my-3" />
               <div className="d-flex justify-content-between align-items-center">
                 <small className="text-center bg-primary text-white p-1 rounded w-100">KITS: $ <span className="fw-bold">{formatearPrecio(dashboardState.totalSalesKits)}</span></small>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Guantes */}
+        <div className="col-md-6">
+          <div className="card card-hover border-0 shadow-lg">
+            <div className="card-body p-3">
+              <div className="chartArea">
+                <AreaChart totales={dashboardState.monthlyGuantes} anioFiltro={anioFiltro} tipo={3} />
+              </div>
+              <hr className="my-3" />
+              <div className="d-flex justify-content-between align-items-center">
+                <small className="text-center bg-primary text-white p-1 rounded w-100">GUANTES: $ <span className="fw-bold">{formatearPrecio(dashboardState.totalSalesGuantes)}</span></small>
               </div>
             </div>
           </div>
@@ -321,30 +339,83 @@ export const Ventas = ({ datosUsuario }) => {
       {/* Area charts por categorías */}
       {pedidos && (
         <div className="row g-3 mb-4">
-          {['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'GUANTES-BLANCOS', 'GUANTES-NEGROS', 'GUANTES-MITON', 'OTR'].map((categoria, index) => (
-            <div className="col-lg-4 col-md-6" key={index}>
-              <div className="card card-hover border-0 shadow-lg">
-                <div className="card-body p-3">
-                  <div className="chartArea">
-                    <AreaChart
-                      totales={totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria, oldOrders)}
-                      porValor={true}
-                    />
-                  </div>
-                  <hr className="my-3" />
-                  <div className="d-flex justify-content-between align-items-center">
-                    <small className="text-center bg-primary text-white p-1 rounded w-100">Hasta {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} | <span className="fw-semibold"> {(buscarNombre(categoria)).toLocaleLowerCase()} </span> | Unidades:  <span className="fw-bold"> {totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria, oldOrders).monthlySales2025.reduce((a, b) => a + b, 0)} = {formatearPrecio((totalesPedidosAnualesPorCategoria(pedidos, datosUsuario, categoria, oldOrders).monthlySales2025.reduce((a, b) => a + b, 0)) * buscarPrecioxCategoriaAnio(buscarNombre(categoria)))} </span></small>
+          {[
+            'KCG',
+            'KCP',
+            'KCE',
+            'KB',
+            'CC',
+            'CB',
+            'GUANTES-BLANCOS',
+            'GUANTES-NEGROS',
+            'GUANTES-MITON',
+            'OTR'
+          ].map((categoria, index) => {
+
+            const totales = totalesPedidosAnualesPorCategoria(
+              pedidos,
+              datosUsuario,
+              categoria,
+              oldOrders,
+              anioFiltro
+            );
+
+            const totalUnidades = totales?.monthlySales?.reduce((a, b) => a + b, 0) || 0;
+            const totalValor = totalUnidades * buscarPrecioxCategoriaAnio(buscarNombre(categoria));
+
+            return (
+              <div className="col-lg-4 col-md-6" key={index}>
+                <div className="card card-hover border-0 shadow-lg">
+                  <div className="card-body p-3">
+
+                    <div className="chartArea">
+                      <AreaChart
+                        totales={totales}
+                        porValor={true}
+                        anioFiltro={anioFiltro}
+                        tipo={0}
+                      />
+                    </div>
+
+                    <hr className="my-3" />
+
+                    <div className="d-flex justify-content-between align-items-center">
+                      <small className="text-center bg-primary text-white p-1 rounded w-100">
+                        Hasta {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} |{' '}
+                        <span className="fw-semibold">
+                          {buscarNombre(categoria).toLowerCase()}
+                        </span>{' '}
+                        | Unidades:{' '}
+                        <span className="fw-bold">
+                          {totalUnidades} = {formatearPrecio(totalValor)}
+                        </span>
+                      </small>
+                    </div>
+
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
+
       {/* Bar chart totales por categoría */}
-      <div className="row d-flex">
-        <div className="col-md-6 col-lg-6">
+      <div className="row g-3">
+        {(user.user.rol === 'superAdmin' || user.user.rol === 'admin') && (
+          <>
+            <div className="col-md-12">
+              <div className="chartArea" style={{ height: 'auto', overflow: 'visible' }}>
+                <TablaOtros ventasOtros={ventasOtros} pedidosUsuario={pedidos} anioFiltro={anioFiltro} />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+      {/* Bar chart totales por categoría */}
+      <div className="row d-flex g-3">
+        <div className="col-md-6 col-lg-12">
           <div className="card card-hover border-0 shadow-lg">
             <div className="card-body">
               <div className="chartArea">
@@ -353,20 +424,6 @@ export const Ventas = ({ datosUsuario }) => {
             </div>
           </div>
         </div>
-
-        {(user.user.rol === 'superAdmin' || user.user.rol === 'admin') && (
-          <>
-            <div className="col-md-6 col-lg-6">
-              <div className="card card-hover border-0 shadow-lg">
-                <div className="card-body">
-                  <div className="chartArea">
-                    <TablaOtros ventasOtros={ventasOtros} pedidosUsuario={pedidosUsuario} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
       </div>
     </>
   );

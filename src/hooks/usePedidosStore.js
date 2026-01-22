@@ -28,7 +28,7 @@ export const usePedidosStore = () => {
     const startLoadingOldOrders = async () => {
         try {
             const { data } = await gogoApi.get('/pedidos/oldOrders');
-            dispatch(onLoadOldOrders(data)); 
+            dispatch(onLoadOldOrders(data));
         } catch (error) {
             console.log(error);
         }
@@ -66,6 +66,22 @@ export const usePedidosStore = () => {
         dispatch(setTotalGuantes(total));
     }
 
+    const startUpdatePedidoItems = async (pedido_id, items) => {
+        try {
+            const { data } = await gogoApi.put(`/pedidos/items/${pedido_id}`, { items });
+            if (data.ok) {
+                // Recargar pedidos para reflejar cambios
+                startLoadingPedidos();
+                return { ok: true, msg: data.msg };
+            } else {
+                return { ok: false, msg: data.msg };
+            }
+        } catch (error) {
+            console.log(error);
+            return { ok: false, msg: 'Error al actualizar items' };
+        }
+    }
+
     return {
         //*Propiedades
         pedidosActivo,
@@ -79,7 +95,8 @@ export const usePedidosStore = () => {
         startDeletePedido,
         getPedidosCliente,
         startSetGuantes,
-        startLoadingOldOrders
+        startLoadingOldOrders,
+        startUpdatePedidoItems
     }
 
 }

@@ -29,7 +29,6 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
   }
 
   const verificarPrecio = () => {
-    console.log(categoria)
     switch (categoria) {
       case 'kcg':
         if (clienteActivo.precios.precioKits.kcg !== null && clienteActivo.precios.precioKits.kcg !== 0) {
