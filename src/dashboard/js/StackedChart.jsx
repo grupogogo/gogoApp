@@ -11,6 +11,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { useFuntions } from '../../hooks';
+import { useTheme } from '../../context/ThemeContext';
 
 Chart.register(
     BarController,
@@ -30,7 +31,7 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, formato 
     const chartRef = useRef(null);
     const { formatearPrecio, number_format } = useFuntions();
 
-   
+
 
     const normalizeDatasetsTo100 = (datasets) => {
         if (!datasets || datasets.length === 0) return [];
@@ -58,6 +59,10 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, formato 
 
     const processedDatasets = formato ? datasets : normalizeDatasetsTo100(datasets);
 
+
+    const { theme } = useTheme(); // Hook para el tema
+    const isDark = theme === 'dark';
+    const textColor = isDark ? '#e0e0e0' : '#666';
 
     useEffect(() => {
         if (!chartRef.current || !datasets || !labels) return;
@@ -104,10 +109,14 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, formato 
                     title: {
                         display: true,
                         text: title,
+                        color: textColor,
                     },
                     tooltip: {
                         mode: 'index',
                         intersect: false,
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        backgroundColor: isDark ? 'rgba(50, 50, 50, 0.9)' : 'rgba(0, 0, 0, 0.8)',
                         callbacks: {
                             label: (context) => {
                                 const original = context.dataset.originalData?.[context.dataIndex];
@@ -117,7 +126,10 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, formato 
                         }
                     },
                     legend: {
-                        position: 'top'
+                        position: 'top',
+                        labels: {
+                            color: textColor
+                        }
                     }
                 },
                 scales: {
@@ -128,6 +140,7 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, formato 
                         ticks: {
                             maxRotation: 0,
                             autoSkip: false,
+                            color: textColor
                         },
                         grid: {
                             display: false,
@@ -142,6 +155,9 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, formato 
                         },
                         border: {
                             display: false
+                        },
+                        ticks: {
+                            color: textColor
                         }
                     }
                 }
@@ -153,7 +169,7 @@ export const StackedChart = ({ labels, datasets, title, stacked = true, formato 
         return () => {
             myChart.destroy();
         };
-    }, [datasets]);
+    }, [datasets, theme]);
 
     return (
         <div className="border rounded shadow-sm p-2" style={{ height: '820px', width: '100%' }}>

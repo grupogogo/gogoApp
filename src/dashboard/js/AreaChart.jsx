@@ -3,14 +3,13 @@ import Chart from 'chart.js/auto';
 import { useFuntions } from '../../hooks';
 
 export const AreaChart = ({ totales = [], porValor, anioFiltro, tipo = 0 }) => {
-
   const { number_format } = useFuntions();
 
   const canvasRef = useRef(null);
   const chartInstanceRef = useRef(null);
 
   const monthlySales2025 =
-    tipo === 3 ? totales :
+    tipo === 3 || tipo === 5 ? totales :
       Array.isArray(totales?.monthlySales2025)
         ? totales.monthlySales2025
         : Array.isArray(totales?.monthlySales)

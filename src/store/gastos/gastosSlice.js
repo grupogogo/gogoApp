@@ -13,9 +13,8 @@ export const gastosSlice = createSlice({
             state.gastos = payload;
         },
         onSetGastoActivo: (state, { payload }) => {
-            console.log(payload)
             state.gastoActivo = { ...payload };
-        },       
+        },
         onSetDefaultActiveGasto: (state) => {
             state.gastoActivo = null;
         },

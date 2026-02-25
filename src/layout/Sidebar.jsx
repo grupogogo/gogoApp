@@ -13,7 +13,7 @@ const Sidebar = () => {
         <>
             {(user.rol !== "planta") && (
                 <div
-                    className="text-white d-flex flex-column p-2 position-fixed h-100 d-none d-md-block"
+                    className="text-white d-flex flex-column p-2 position-fixed h-100 d-none d-md-block sidebar"
 
                     style={{
                         width: isHovered ? '250px' : '80px',

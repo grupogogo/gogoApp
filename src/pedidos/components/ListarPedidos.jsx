@@ -76,7 +76,12 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
         item.cliente.ciudad.toLowerCase().includes(search.toLowerCase()) ||
         item.estado.toLowerCase().includes(search.toLowerCase()) ||
         item.pedido_id.toLowerCase().includes(search.toLowerCase()) ||
-        item.user.name.toLowerCase().includes(search.toLowerCase());
+        item.user.name.toLowerCase().includes(search.toLowerCase()) ||
+        item.itemPedido.some(p =>
+          p.itemPedido && Object.keys(p.itemPedido).some(key =>
+            key.toLowerCase().includes(search.toLowerCase())
+          )
+        );
 
       const matchesDistribuidor =
         filtroDistribuidor === null ||
@@ -180,6 +185,19 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
             categorias[tipoProducto] += cantidad;
             totalProductos += cantidad;
           });
+        } else if (tipoProducto === "GUANTES" && producto.pedido) {
+          // Manejar la categoría "GUANTES" por subcategorías
+          producto.pedido.forEach((detalle) => {
+            const cantidad = parseInt(detalle.cantidad, 10);
+            const subCategoria = detalle.categoria; // Ej: BLANCOS, NEGROS
+            const nombreCategoria = `G${subCategoria.charAt(0)}`;
+
+            if (!categorias[nombreCategoria]) {
+              categorias[nombreCategoria] = 0;
+            }
+            categorias[nombreCategoria] += cantidad;
+            totalProductos += cantidad;
+          });
         } else if (producto.pedido) {
           // Manejar las demás categorías
           producto.pedido.forEach((detalle) => {
@@ -249,8 +267,8 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
             <input
               type="text"
               className="form-control"
-              placeholder="Filtro (ID, Estado, Cliente, Ciudad o fecha)"
-              aria-label="Filtro (ID, Estado, Cliente, Ciudad o fecha)"
+              placeholder="Filtro (ID, Estado, Codigo del producto, Cliente, Ciudad o fecha)"
+              aria-label="Filtro (ID, Estado, Codigo del producto, Cliente, Ciudad o fecha)"
               aria-describedby="basic-addon2"
               id="search"
               value={search}
@@ -452,7 +470,15 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                               delay={{ show: 250, hide: 400 }}
                               overlay={renderTooltip}
                             >
-                              <div className="text-left fs-4 font-monospace text-dark" style={{ cursor: 'pointer' }} title={`Detalle de productos: ${tooltipText}`}>
+                              <div className="text-left fs-4 font-monospace text-dark" style={{
+                                cursor: 'pointer',
+                                maxWidth: '350px',
+                                whiteSpace: 'normal',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }} title={`Detalle de productos: ${tooltipText}`}>
                                 <span>
                                   ({tooltipText})
                                 </span>
@@ -595,9 +621,9 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                               delay={{ show: 250, hide: 400 }}
                               overlay={renderTooltip}
                             >
-                              <div className="text-end " style={{ cursor: 'pointer' }} title={`Detalle de productos: ${tooltipText}`}>
-                                <div className="fs-4 font-monospace text-dark d-flex justify-content-between align-items-center">
-                                  {<span> {totalProductos} </span>}
+                              <div className="text-end" style={{ cursor: 'pointer' }} title={`Detalle de productos: ${tooltipText}`}>
+                                <div className="fs-4 font-monospace text-dark justify-content-between align-items-end text-right">
+                                  {<span className="text-end"> {totalProductos} </span>}
                                 </div>
                               </div>
                             </OverlayTrigger>
@@ -608,7 +634,15 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                               delay={{ show: 250, hide: 400 }}
                               overlay={renderTooltip}
                             >
-                              <div className="text-left text-dark" style={{ cursor: 'pointer' }} title={`Detalle de productos: ${tooltipText}`}>
+                              <div className="text-left text-dark" style={{
+                                cursor: 'pointer',
+                                maxWidth: '350px',
+                                whiteSpace: 'normal',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }} title={`Detalle de productos: ${tooltipText}`}>
                                 <span>
                                   ({tooltipText})
                                 </span>

@@ -122,66 +122,9 @@ export const Gastos = () => {
         cargarGastos();
     }, []); // 🔹 Se ejecuta solo una vez al montar el componente
 
-    useEffect(() => {
-        if (gastos.length === 0) return; // Si no hay datos, no hacer cálculos
-
-        const now = new Date();
-        const mesActual = now.getMonth(); // Mes actual (0 = enero, 11 = diciembre)
-        const añoActual = now.getFullYear(); // Año actual
-
-        // Función para convertir "marzo 30, 2025 21:12" a un objeto Date
-        const convertirFecha = (fechaStr) => {
-            const meses = {
-                enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
-                julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
-            };
-
-            const regex = /(\w+) (\d+), (\d+) (\d+):(\d+)/; // Expresión para extraer datos
-            const match = fechaStr.match(regex);
-
-            if (!match) return null; // Si el formato no es válido, retorna null
-
-            const [, mesTexto, dia, año, horas, minutos] = match;
-            const mes = meses[mesTexto.toLowerCase()]; // Convertir el mes a número
-
-            return new Date(año, mes, dia, horas, minutos);
-        };
-
-        // Filtrar solo los gastos del mes en curso
-        const gastosDelMes = gastos.filter(gasto => {
-            const fecha = convertirFecha(gasto.fecha);
-            return fecha && fecha.getMonth() === mesActual && fecha.getFullYear() === añoActual;
-        });
-        const gastosDelMesUsuario = gastos.filter(gasto => {
-            const fecha = convertirFecha(gasto.fecha);
-            return gasto.user === user.uid && fecha && fecha.getMonth() === mesActual && fecha.getFullYear() === añoActual;
-        });
-
-        // Calcular los gastos del usuario
-        const gastoUsuario1 = gastos
-            .filter(gasto => gasto.user === user.uid)
-            .reduce((sum, gasto) => sum + (gasto.cantidad * gasto.precio), 0) || 0;
-
-        const gastoUsuario2 = gastos
-            .filter(gasto => gasto.user !== user.uid)
-            .reduce((sum, gasto) => sum + (gasto.cantidad * gasto.precio), 0) || 0;
-
-        // Calcular el total de gastos del mes
-        const totalGastosMes = gastosDelMes.reduce((sum, gasto) => sum + (gasto.cantidad * gasto.precio), 0) || 0;
-        const totalGastosMesUsuario = gastosDelMesUsuario.reduce((sum, gasto) => sum + (gasto.cantidad * gasto.precio), 0) || 0;
-
-        setGastoUsuarios({
-            user1: gastoUsuario1,
-            user2: gastoUsuario2,
-            gastosMes: totalGastosMes, // Nueva constante con los gastos del mes actual
-            gastosMesUsuario: totalGastosMesUsuario
-        });
-    }, [gastos]);
-
 
     useEffect(() => {
         if (gastoActivo) {
-            console.log(gastoActivo)
             setFormState({
                 proveedor: gastoActivo.proveedor || '',
                 codigo: gastoActivo.codigo || '',
@@ -201,97 +144,7 @@ export const Gastos = () => {
     return (
         <LayoutApp>
             <div className='m-3'>
-                <Row>{/* Estadisticas de gastos */}
-                    {/* gastos del año usuario logueado */}
-                    <div className="col-xl-3 col-md-6 mb-4 col-6">
-                        <div className="card shadow-sm border-start-custom border-primary" style={{ fontSize: "0.5rem" }}>
-                            <div className="card-body">
-                                <div className="d-flex align-items-center justify-content-between">
-                                    <div className="col">
-                                        <div className="text-xs fw-bold text-black text-uppercase mb-1">
-                                            Gastos del año {user.name.split('|')[0]}
-                                        </div>
-                                        <div className="h5 mb-0 fw-bold text-center">
-                                            <span className="badge text-bg-primary text-light">
-                                                {formatearPrecio(gastoUsuarios.user1) || 0}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="col-auto">
-                                        <i className="fas fa-dollar-sign fa-2x text-primary" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Gstos del mes usuario */}
-                    <div className="col-xl-3 col-md-6 mb-4 col-6">
-                        <div className="card shadow-sm border-start-custom border-warning" style={{ fontSize: "0.6rem" }}>
-                            <div className="card-body">
-                                <div className="d-flex align-items-center justify-content-between">
-                                    <div className="col">
-                                        <div className="text-xs fw-bold text-black text-uppercase mb-1">
-                                            Gastos del mes de {user.name.split('|')[0]}
-                                        </div>
-                                        <div className="h5 mb-0 fw-bold text-center">
-                                            <span className="badge text-bg-warning text-light">
-                                                {formatearPrecio(gastoUsuarios.gastosMesUsuario) || 0}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="col-auto">
-                                        <i className="fas fa-dollar-sign fa-2x text-warning" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Gastos del mes generales */}
-                    <div className="col-xl-3 col-md-6 mb-4 col-6">
-                        <div className="card shadow-sm border-start-custom border-danger" style={{ fontSize: "0.6rem" }}>
-                            <div className="card-body">
-                                <div className="d-flex align-items-center justify-content-between">
-                                    <div className="col">
-                                        <div className="text-xs fw-bold text-black text-uppercase mb-1">
-                                            Gastos del mes
-                                        </div>
-                                        <div className="h5 mb-0 fw-bold text-center">
-                                            <span className="badge text-bg-danger text-light">
-                                                {formatearPrecio(gastoUsuarios.gastosMes) || 0}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="col-auto">
-                                        <i className="fas fa-dollar-sign fa-2x text-danger" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Gastos del año totales */}
-                    <div className="col-xl-3 col-md-6 mb-4 col-6">
-                        <div className="card shadow-sm border-start-custom border-success" style={{ fontSize: "0.6rem" }}>
-                            <div className="card-body">
-                                <div className="d-flex align-items-center justify-content-between">
-                                    <div className="col">
-                                        <div className="text-xs fw-bold text-black text-uppercase mb-1">
-                                            Gastos totales
-                                        </div>
-                                        <div className="h5 mb-0 fw-bold text-center">
-                                            <span className="badge text-bg-success text-light">
-                                                {formatearPrecio(gastoUsuarios.user1 + gastoUsuarios.user2) || 0}
 
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="col-auto">
-                                        <i className="fas fa-dollar-sign fa-2x text-success" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </Row>
                 <Row>
                     <Modal
                         size="lg"

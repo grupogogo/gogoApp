@@ -272,7 +272,7 @@ export const useFuntions = () => {
         if (!word) return '';
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     };
-    const totalizarPreciosFabrica = (categorias, cantidad, anio = 2025) => {
+    const totalizarPreciosFabrica = (categorias, cantidad, anio = new Date().getFullYear()) => {
         let totalFabrica = 0;
         if (categorias) {
             categorias.forEach((categoria, index) => {
@@ -281,7 +281,7 @@ export const useFuntions = () => {
         }
         return totalFabrica;
     }
-    const buscarPrecioxCategoriaAnio = (categoria, anio = 2025) => { //Trae el precio de fabricacion segun el año y la categoria 
+    const buscarPrecioxCategoriaAnio = (categoria, anio = new Date().getFullYear()) => { //Trae el precio de fabricacion segun el año y la categoria 
         // Buscar el precio según el año y la categoría
         const anioKey = `A${anio}`;
         const preciosAnio = precios[anioKey];
@@ -705,33 +705,44 @@ export const useFuntions = () => {
             totalSales
         };
     };
-    const totalKitsXAnio2025 = (pedidos, selectFecha = 2026) => {
-        if (pedidos.length === 0) return;
-        const monthlySales = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
-        const monthlySalesBrand = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
-        const monthlySalesOscar = [...Array(12).fill(0)]; // Inicializa directamente con 12 meses
+    const totalKitsXAnioResults = (pedidos, selectFechas = [new Date().getFullYear()]) => {
+        if (pedidos.length === 0) return {};
+
+        // Inicializar estructura para cada año solicitado
+        const results = {};
+        selectFechas.forEach(year => {
+            results[year] = {
+                monthlySales: Array(12).fill(0),
+                monthlySalesBrand: Array(12).fill(0),
+                monthlySalesOscar: Array(12).fill(0),
+                totalSales: 0
+            };
+        });
 
         pedidos.forEach(order => {
             const orderDate = convertirFecha(order.fechaCreacion);
-            if (orderDate.getFullYear() !== selectFecha) {
-                return; // Si el año de la orden no coincide con el año filtrado, salta a la siguiente orden
-            }
+            const year = orderDate.getFullYear();
+
+            // Si el año de la orden no está en los solicitados, saltar
+            if (!results[year]) return;
+
             order.itemPedido.forEach(item => {
                 Object.entries(item.itemPedido).forEach(([categoriaItem, category]) => {
                     if (['KCG', 'KCP', 'KB', 'CC', 'CB'/* , 'KCE' */].includes(categoriaItem)) {
                         category.pedido.forEach(product => {
-                            const price2 = buscarPrecioxCategoriaAnio(buscarNombre(categoriaItem), selectFecha);
+                            const price2 = buscarPrecioxCategoriaAnio(buscarNombre(categoriaItem), year);
                             const quantity = parseInt(product.cantidad, 10) || 0;
                             const sale = price2 * quantity;
 
-                            const orderDate = convertirFecha(order.fechaCreacion);
                             const month = orderDate.getMonth();
-                            monthlySales[month] += sale;
+                            results[year].monthlySales[month] += sale;
+                            results[year].totalSales += sale;
+
                             if (order.user._id === '679fce0ee8d1ed66d21d18c2') {
-                                monthlySalesOscar[month] += sale;
+                                results[year].monthlySalesOscar[month] += sale;
                             }
                             if (order.user._id === '6789ce1b48932f890985d1f7') {
-                                monthlySalesBrand[month] += sale;
+                                results[year].monthlySalesBrand[month] += sale;
                             }
                         });
                     }
@@ -739,15 +750,7 @@ export const useFuntions = () => {
             });
         });
 
-        //console.log('Brand ', monthlySalesBrand, 'oscar', monthlySalesOscar);
-
-        return {
-            monthlySales,
-            monthlySalesBrand,
-            monthlySalesOscar,
-            totalSales2025: monthlySales.reduce((a, b) => a + b, 0)
-        };
-
+        return results;
     };
     const totalGuantesXAnio = (pedidos, datosUsuario, anioFiltro = 2026) => {
         let totalSales = 0;
@@ -777,8 +780,6 @@ export const useFuntions = () => {
                 });
             });
         });
-        console.log(monthlySales)
-        console.log(totalSales)
         return {
             monthlySales,
             totalSales
@@ -863,7 +864,6 @@ export const useFuntions = () => {
                 });
             }
         });
-        console.log(monthlySales)
         return {
             monthlySales
         };
@@ -881,6 +881,8 @@ export const useFuntions = () => {
         const monthlySales = Array(12).fill(0);
         const currentYear = anioFiltro;
         let cont = 0;
+        let totalNino = 0;
+        let totalNina = 0;
 
         pedidos.forEach(order => {
             if (!order?.fechaCreacion) return;
@@ -909,6 +911,9 @@ export const useFuntions = () => {
                             totalSales += price * quantity;
                             monthlySales[orderDate.getMonth()] += quantity;
                             cont++;
+
+                            if (String(product.genero) === '0') totalNino += quantity;
+                            if (String(product.genero) === '1') totalNina += quantity;
                         });
 
                         return; // ← CORTE CLAVE (evita duplicación)
@@ -931,6 +936,9 @@ export const useFuntions = () => {
                         totalSales += price * quantity;
                         monthlySales[orderDate.getMonth()] += quantity;
                         cont++;
+
+                        if (String(product.genero) === '0') totalNino += quantity;
+                        if (String(product.genero) === '1') totalNina += quantity;
                     });
                 });
             });
@@ -939,7 +947,9 @@ export const useFuntions = () => {
         return {
             monthlySales,
             totalSales,
-            cont
+            cont,
+            totalNino,
+            totalNina
         };
     };
 
@@ -1024,7 +1034,6 @@ export const useFuntions = () => {
                     );
                 }
             }
-            //console.log(gastosLG, gastosOG, totalGastos);
             gastosPorAnio.push(gastosOG, gastosLG, totalGastos);
             return [
                 totalGastos,
@@ -1059,6 +1068,26 @@ export const useFuntions = () => {
             }
         });
         return { gastosMensualesO, gastosMensualesL };
+    };
+    const mensualGastos = (gastos, anioComparar, categoria) => {
+        if (!gastos) return;
+
+        // Inicializa 12 meses en 0
+        const gastosMensuales = new Array(12).fill(0);
+
+        gastos.forEach(gasto => {
+            const fechaGasto = convertirFecha(gasto.fecha);
+            const anio = fechaGasto.getFullYear();
+            const mes = fechaGasto.getMonth(); // 0 = Enero, 11 = Diciembre
+
+            if (anio !== anioComparar) return;
+            if (gasto.categoria !== categoria) return;
+
+            const subtotal = gasto.precio * gasto.cantidad;
+            gastosMensuales[mes] += subtotal;
+            return;
+        });
+        return gastosMensuales;
     };
     const calcularTotalesPedidoCxC = (pedido) => { /* retorna el total de cantidades y de venta por pedido */
         if (!pedido?.itemPedido) return;
@@ -1142,10 +1171,11 @@ export const useFuntions = () => {
         totalesPedidosAnuales,
         totalesPedidosAnualesPorCategoria,
         totalGastosUsuarios,
+        mensualGastos,
         totalGuantesXAnio,
         totalizarPreciosFabrica,
+        totalKitsXAnioResults,
         totalKitsXAnio,
-        totalKitsXAnio2025,
         totalOtrosXAnio,
         formatearFechaConNombreMes,
         convertirOldFecha,

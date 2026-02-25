@@ -46,6 +46,8 @@ export const Ventas = ({ datosUsuario }) => {
     totalSalesKits: 0,
     gastosTotalesKits: [],
     gastosTotalesGuantes: [],
+    gastosMensuales: [],
+    totalGastosAnual: 0,
   });
 
   const busquedaPorCategoria = (e) => {
@@ -79,8 +81,9 @@ export const Ventas = ({ datosUsuario }) => {
     formatearPrecio,
     totalOtrosXAnio,
     totalGuantesXAnio,
-    totalGastosUsuarios,
-    totalizarPreciosFabrica
+    mensualGastos,
+    totalizarPreciosFabrica,
+    convertirFecha
   } = useFuntions();
 
   // Procesar pedidos cuando llegan
@@ -139,18 +142,38 @@ export const Ventas = ({ datosUsuario }) => {
         )
       });
 
+
     }
     if (gastos.length > 0) {
       const categoriaKits = 'K'; // Cambiar a 'guantes' o 'otros' según sea necesario
       const categoriaGuantes = 'G'; // Cambiar a 'guantes' o 'otros' según sea necesario
-      const gastosTotalesKits = totalGastosUsuarios(gastos, anioFiltro, datosUsuario, categoriaKits);
-      const gastosTotalesGuantes = totalGastosUsuarios(gastos, anioFiltro, datosUsuario, categoriaGuantes);
+      const gastosTotalesKits = mensualGastos(gastos, anioFiltro, categoriaKits);
+      const gastosTotalesGuantes = mensualGastos(gastos, anioFiltro, categoriaGuantes);
       updateDashboardState({ gastosTotalesKits });
       updateDashboardState({ gastosTotalesGuantes });
 
+      // CÁLCULO DE GASTOS MENSUALES
+      const gastosMensuales = Array(12).fill(0);
+      let totalGastosAnual = 0;
+
+      gastos.forEach(gasto => {
+        const fechaGasto = convertirFecha(gasto.fecha);
+        const anio = fechaGasto.getFullYear();
+
+        if (anio === anioFiltro) {
+          const mes = fechaGasto.getMonth();
+          const total = gasto.precio * gasto.cantidad;
+          gastosMensuales[mes] += total;
+          totalGastosAnual += total;
+        }
+      });
+
+      updateDashboardState({
+        gastosMensuales,
+        totalGastosAnual
+      });
     }
 
-    console.log(dashboardState.monthlyGuantes)
 
   }, [pedidos, datosUsuario, gastos, anioFiltro]);
 
@@ -222,6 +245,7 @@ export const Ventas = ({ datosUsuario }) => {
                 arrayLabels={dashboardState.lablesKits}
                 arrayData={dashboardState.dataKits}
                 title={`${formatearPrecio(dashboardState.totalSalesKits)} | fabrica: ${formatearPrecio(totalizarPreciosFabrica(dashboardState.lablesKits, dashboardState.dataKits))}`}
+                anio={anioFiltro}
               />
             </div>
           </div>
@@ -291,6 +315,20 @@ export const Ventas = ({ datosUsuario }) => {
       </div>
       {/* AREA CHARTS */}
       <div className="row g-3 mb-4">
+        {/* EXPENSES AREA CHART */}
+        <div className="col-md-12">
+          <div className="card card-hover border-0 shadow-lg">
+            <div className="card-body p-3">
+              <div className="chartArea">
+                <AreaChart totales={dashboardState.gastosTotalesKits} anioFiltro={anioFiltro} tipo={5} />
+              </div>
+              <hr className="my-3" />
+              <div className="d-flex justify-content-between align-items-center">
+                <small className="text-center bg-danger text-white p-1 rounded w-100">GASTOS GENERALES: $ <span className="fw-bold">{formatearPrecio(dashboardState.totalGastosAnual)}</span></small>
+              </div>
+            </div>
+          </div>
+        </div>
         {/* GENERAL */}
         <div className="col-md-6">
           <div className="card card-hover border-0 shadow-lg">
@@ -381,7 +419,7 @@ export const Ventas = ({ datosUsuario }) => {
 
                     <div className="d-flex justify-content-between align-items-center">
                       <small className="text-center bg-primary text-white p-1 rounded w-100">
-                        Hasta {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} |{' '}
+                        Con precios de fabrica hasta {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} |{' '}
                         <span className="fw-semibold">
                           {buscarNombre(categoria).toLowerCase()}
                         </span>{' '}
@@ -389,6 +427,12 @@ export const Ventas = ({ datosUsuario }) => {
                         <span className="fw-bold">
                           {totalUnidades} = {formatearPrecio(totalValor)}
                         </span>
+                        <br />
+                        {categoria === 'KCG' || categoria === 'KCP' || categoria === 'KCE' || categoria === 'KB' || categoria === 'CC' || categoria === 'CB' ? (
+                          <span className="fw-bold" style={{ fontSize: '0.85em' }}>
+                            Niño: {totales?.totalNino || 0} | Niña: {totales?.totalNina || 0}
+                          </span>
+                        ) : null}
                       </small>
                     </div>
 

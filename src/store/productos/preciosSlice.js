@@ -84,9 +84,26 @@ export const preciosSlice = createSlice({
                 gm: 33000,
             },
         },
+        A2026: {
+            precioKits: {
+                kcg: 21450,
+                kcp: 15950,
+                kb: 15950,
+                kce: 8400
+            },
+            precioCirios: {
+                cc: 8580,
+                cb: 8580
+            },
+            precioGuantes: {
+                gb: 23000,
+                gn: 24000,
+                gm: 33000,
+            },
+        },
     },
     reducers: {
-        onLoadPrecios: (state, /* action */ ) => {
+        onLoadPrecios: (state, /* action */) => {
         },
     }
 });

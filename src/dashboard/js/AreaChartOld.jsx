@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
 import { useFuntions } from '../../hooks';
+import { useTheme } from '../../context/ThemeContext';
 
 export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, ventasOtros }) => {
 
@@ -30,6 +31,12 @@ export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, vent
 
 
   const { number_format, formatearPrecio } = useFuntions();
+  const { theme } = useTheme(); // Hook para el tema
+  const isDark = theme === 'dark';
+  const textColor = isDark ? '#e0e0e0' : '#858796';
+  const gridColor = isDark ? '#444' : '#e3e6f0';
+  const tooltipBg = isDark ? 'rgba(50, 50, 50, 0.9)' : 'rgb(255,255,255)';
+  const tooltipText = isDark ? '#fff' : '#6e707e';
 
   const chartRef = useRef(null);
   useEffect(() => {
@@ -181,7 +188,7 @@ export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, vent
               align: 'end',
               anchor: 'end',
               formatter: (value) => number_format(value),
-              color: 'black',
+              color: isDark ? '#FFD700' : 'black',
               font: {
                 size: 10,
                 weight: 'semibold',
@@ -210,7 +217,7 @@ export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, vent
               align: 'end',
               anchor: 'end',
               formatter: (value) => number_format(value),
-              color: 'black',
+              color: isDark ? '#FFD700' : 'black',
               font: {
                 size: 10,
                 weight: 'semibold',
@@ -377,10 +384,13 @@ export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, vent
           x: {
             grid: {
               display: true,
-              drawBorder: true
+              drawBorder: true,
+              color: gridColor,
+              borderColor: gridColor
             },
             ticks: {
-              maxTicksLimit: 13
+              maxTicksLimit: 13,
+              color: textColor
             }
           },
           y: {
@@ -402,7 +412,7 @@ export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, vent
             title: {
               display: true,
               text: porValor ? 'Gastos gastos' : 'Gastos en $',
-              color: '#858796',
+              color: textColor,
               font: {
                 size: 14,
                 weight: 'bold'
@@ -441,14 +451,14 @@ export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, vent
                 weight: 'bold',
                 family: 'Arial'
               },
-              color: '#858796'
+              color: textColor
             }
           },
           tooltip: {
-            backgroundColor: "rgb(255,255,255)",
-            bodyColor: "#858796",
+            backgroundColor: tooltipBg,
+            bodyColor: tooltipText,
             titleMarginBottom: 10,
-            titleColor: '#6e707e',
+            titleColor: tooltipText,
             titleFont: {
               size: 20
             },
@@ -474,7 +484,7 @@ export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, vent
     return () => {
       myLineChart.destroy();
     };
-  }, [gastos]);
+  }, [gastos, theme]);
 
   return (
     <>

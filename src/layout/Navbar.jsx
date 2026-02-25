@@ -1,12 +1,30 @@
 import { NavLink } from "react-router-dom";
 import { useAuthStore } from "../hooks/useAuthStore";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 
+
+import { useTheme } from "../context/ThemeContext";
 
 const Navbar = () => {
     const { user, startLogout } = useAuthStore();
+    const { theme, toggleTheme } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsProfileOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
 
     const toggleMobileMenu = () => {
@@ -67,16 +85,24 @@ const Navbar = () => {
             </div>
 
             {/* Usuario a la derecha */}
-            <ul className="navbar-nav ms-auto">
-                <li className="nav-item dropdown">
+            <ul className="navbar-nav ms-auto align-items-center">
+                <li className="nav-item mx-2">
+                    <button onClick={toggleTheme} className="btn btn-link text-secondary" style={{ textDecoration: 'none' }}>
+                        {theme === 'light' ? <i className="fas fa-moon"></i> : <i className="fas fa-sun"></i>}
+                    </button>
+                </li>
+                <li className="nav-item dropdown" ref={dropdownRef}>
                     <a
                         className="nav-link dropdown-toggle d-flex align-items-center"
                         href="#"
                         id="userDropdown"
                         role="button"
-                        data-bs-toggle="dropdown"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setIsProfileOpen(!isProfileOpen);
+                        }}
                         aria-haspopup="true"
-                        aria-expanded="false"
+                        aria-expanded={isProfileOpen}
                     >
                         <span className="me-2 text-gray-600 small">{user.name}</span>
                         <img
@@ -87,10 +113,13 @@ const Navbar = () => {
                         />
                     </a>
                     <div
-                        className="dropdown-menu dropdown-menu-end shadow animated--grow-in"
+                        className={`dropdown-menu dropdown-menu-end shadow animated--grow-in ${isProfileOpen ? 'show' : ''}`}
                         aria-labelledby="userDropdown"
                     >
-                        <button className="dropdown-item" onClick={startLogout}>
+                        <button className="dropdown-item" onClick={() => {
+                            setIsProfileOpen(false);
+                            startLogout();
+                        }}>
                             <i className="fa fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400" />
                             Salir
                         </button>

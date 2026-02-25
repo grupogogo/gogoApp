@@ -9,7 +9,7 @@ Chart.register(PieController, ArcElement, Tooltip, Legend, ChartDataLabels);
 Chart.register(Colors);
 
 
-export const PieChart = ({ arrayData, arrayLabels, title, anio = 2025 }) => {  
+export const PieChart = ({ arrayData, arrayLabels, title, anio = new Date().getFullYear() }) => {
 
   const { buscarPrecioxCategoriaAnio } = useFuntions()
 

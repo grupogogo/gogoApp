@@ -14,11 +14,11 @@ export const ListarGastos = ({ handleShow, setFechaActual, fechaActual }) => {
     const gastos = useSelector(state => state.gastos.gastos);
     const { formatearPrecio, buscarNombre, convertirFechaIngles, limpiarFecha, number_format, capitalize, convertirFecha } = useFuntions();
     const [search, setSearch] = useState("");
-    const [isHideKits, setHideKits] = useState(false);
     const [isHideGuantes, setHideGuantes] = useState(false);
     const [isHideUser, setHideUser] = useState(false);
     const { setGastoActivo, startDeleteGasto, startLoadingGastos } = useGastosStore();
     const { user } = useAuthStore();
+    const [isHideKits, setHideKits] = useState(user.rol === 'superadmin' ? true : false);
     const [fechaGasto, setFechaGasto] = useState(new Date().getFullYear());
     const [itemsMostrar, setItemsMostrar] = useState(20);
 

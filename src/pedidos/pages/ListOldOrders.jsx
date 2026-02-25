@@ -30,7 +30,7 @@ export const ListOldOrders = () => {
     const oldOrders = useSelector(state => state.pedidos.oldOrders) || [];
     const pedidos = useSelector(state => state.pedidos.pedidos);
     const gastos = useSelector(state => state.gastos.gastos);
-    const { formatearPrecio, convertirOldFecha, totalKitsXAnio2025, pastelColors, parsearFechaGasto, mensualGastosUsuarios, buscarPrecioxCategoriaAnio } = useFuntions();
+    const { formatearPrecio, convertirOldFecha, totalKitsXAnioResults, pastelColors, parsearFechaGasto, mensualGastosUsuarios, buscarPrecioxCategoriaAnio } = useFuntions();
     const [fechaPedido, setFechaPedido] = useState('2024');
     const [showColumns, setShowColumns] = useState('12');
     const [excluirCliente, setExcluirCliente] = useState(false);
@@ -157,18 +157,26 @@ export const ListOldOrders = () => {
         if (!ventas2025 || !stackedChartData) return;
 
         const newDatasets = [...stackedChartData.datasets];
-        const existing2025Index = newDatasets.findIndex(dataset => dataset.label === '2025');
+        const currentYear = new Date().getFullYear();
 
-        if (existing2025Index !== -1) {
-            // Update existing 2025 data
-            newDatasets[existing2025Index].data = ventas2025.monthlySales;
-        } else {
-            // Add 2025 data as a new dataset
-            newDatasets.push({
-                label: '2025',
-                data: ventas2025.monthlySales,
-                backgroundColor: 'rgba(99, 255, 203, 1)', // You can choose a different color
-            });
+        // Iterar desde 2025 hasta el año actual
+        for (let year = 2025; year <= currentYear; year++) {
+            const dataYear = ventas2025[year];
+            if (!dataYear) continue;
+
+            const existingIndex = newDatasets.findIndex(dataset => dataset.label === String(year));
+
+            if (existingIndex !== -1) {
+                // Update existing data
+                newDatasets[existingIndex].data = dataYear.monthlySales;
+            } else {
+                // Add new dataset
+                newDatasets.push({
+                    label: String(year),
+                    data: dataYear.monthlySales,
+                    backgroundColor: 'rgba(99, 255, 203, 1)', // You can choose a different color or dynamic color
+                });
+            }
         }
 
         setStackedChartData({
@@ -427,9 +435,15 @@ export const ListOldOrders = () => {
 
         const NIT_BRAND_DESIGN = '900879470';
 
-        const ventas2025Local = totalKitsXAnio2025(pedidos);
-        const totalSales2025 = ventas2025Local.monthlySales.reduce((a, b) => a + b, 0);
-        setVentas2025(ventas2025Local);
+        // Generar rango de años desde 2025 hasta el año actual
+        const currentYear = new Date().getFullYear();
+        const yearsRange = [];
+        for (let y = 2025; y <= currentYear; y++) {
+            yearsRange.push(y);
+        }
+
+        const ventasPorAnios = totalKitsXAnioResults(pedidos, yearsRange);
+        setVentas2025(ventasPorAnios); // Guardamos el objeto completo { 2025: {...}, 2026: {...} }
 
         const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -451,7 +465,6 @@ export const ListOldOrders = () => {
 
             const target = fechaPedido !== '2025' ? (nit === NIT_BRAND_DESIGN ? salesBD : salesOtros) : salesTotal;
 
-
             if (!target[year]) target[year] = Array(12).fill(0);
             if (!salesTotal[year]) salesTotal[year] = 0;
 
@@ -459,16 +472,23 @@ export const ListOldOrders = () => {
             salesTotal[year] += total;
         });
 
-        // Agregar 2025 manualmente
-        salesOtros['2025'] = ventas2025Local.monthlySales; // Suponiendo que no es Brand Design
-        salesTotal['2025'] = (salesTotal['2025'] || 0) + totalSales2025;
+        // Agregar datos calculados de años recientes (2025+) a las estructuras
+        yearsRange.forEach(year => {
+            const dataYear = ventasPorAnios[year];
+            if (dataYear) {
+                // Asumiendo que estos datos van a Otros (según lógica original) o según corresponda
+                // En el original: salesOtros['2025'] = ventas2025Local.monthlySales;
+                salesOtros[year] = dataYear.monthlySales;
+                salesTotal[year] = (salesTotal[year] || 0) + dataYear.totalSales;
+            }
+        });
 
-        const years = Object.keys(salesTotal).sort();
+        const sortedYears = Object.keys(salesTotal).sort();
 
         const pastel = (i) => pastelColors[i % pastelColors.length];
 
         // 🔵 Dataset general (todos juntos)
-        const datasetsByMonth = years.map((year, i) => ({
+        const datasetsByMonth = sortedYears.map((year, i) => ({
             label: year,
             data: (salesBD[year] || Array(12).fill(0)).map((v, idx) =>
                 v + ((salesOtros[year] && salesOtros[year][idx]) || 0)
@@ -492,23 +512,30 @@ export const ListOldOrders = () => {
         // ⬇️ Guardar todo por separado
         setStackedChartData({ labels: monthLabels, datasets: datasetsByMonth });
 
-        if (fechaPedido === 2025) {
-            setStackedChartDataBrand({
-                labels: monthLabels,
-                datasets: {
-                    label: '2025',
-                    data: ventas2025Local.monthlySalesBrand
-                }
-            });
+        // Lógica para mostrar detalle según el año seleccionado en el filtro
+        const selectedYearInt = parseInt(fechaPedido);
+        if (yearsRange.includes(selectedYearInt)) {
+            // Si es uno de los años nuevos (2025 en adelante)
+            const dataYear = ventasPorAnios[selectedYearInt];
+            if (dataYear) {
+                setStackedChartDataBrand({
+                    labels: monthLabels,
+                    datasets: {
+                        label: String(selectedYearInt),
+                        data: dataYear.monthlySalesBrand
+                    }
+                });
 
-            setStackedChartDataOtros({
-                labels: monthLabels,
-                datasets: {
-                    label: '2025',
-                    data: ventas2025Local.monthlySalesOscar
-                }
-            });
+                setStackedChartDataOtros({
+                    labels: monthLabels,
+                    datasets: {
+                        label: String(selectedYearInt),
+                        data: dataYear.monthlySalesOscar
+                    }
+                });
+            }
         } else {
+            // Años anteriores (ListOldOrders puro)
             setStackedChartDataBrand({
                 labels: monthLabels,
                 datasets: datasetsBrandDesign
@@ -520,13 +547,11 @@ export const ListOldOrders = () => {
             });
         }
 
-
         // Anual general
-        const totalYears = Object.keys(salesTotal).sort();
-        const totalData = totalYears.map(year => salesTotal[year]);
+        const totalData = sortedYears.map(year => salesTotal[year]);
 
         setYearlySalesChartData({
-            labels: totalYears,
+            labels: sortedYears,
             datasets: [{
                 label: 'Ventas Anuales',
                 data: totalData,
@@ -652,18 +677,18 @@ export const ListOldOrders = () => {
                                 <AreaChartOld
                                     gastos={mensualGastosUsuarios(gastos, parseInt(fechaPedido), 'K')}
                                     ventas={
-                                        fechaPedido === 2025
-                                            ? { data: ventas2025.monthlySales }
+                                        ventas2025?.[fechaPedido]
+                                            ? { data: ventas2025[fechaPedido].monthlySales }
                                             : getDatasetByYear(stackedChartData.datasets, fechaPedido)
                                     }
                                     ventasBrandDesign={
-                                        fechaPedido === 2025
+                                        ventas2025?.[fechaPedido]
                                             ? stackedChartDataBrand.datasets
                                             : getDatasetByYear(stackedChartDataBrand.datasets, fechaPedido)
                                     }
 
                                     ventasOtros={
-                                        fechaPedido === 2025
+                                        ventas2025?.[fechaPedido]
                                             ? stackedChartDataOtros.datasets
                                             : getDatasetByYear(stackedChartDataOtros.datasets, fechaPedido)
                                     }

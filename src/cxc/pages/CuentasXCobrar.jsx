@@ -22,7 +22,7 @@ export const CuentasXCobrar = () => {
   const modalRef = useRef();
   const [pedido, setPedido] = useState({});
   const [showModal, setShowModal] = useState(false)
-  const [fechaPedido, setFechaPedido] = useState('2025');
+  const [fechaPedido, setFechaPedido] = useState(new Date().getFullYear());
   const [itemsMostrar, setItemsMostrar] = useState(20);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
@@ -339,15 +339,8 @@ export const CuentasXCobrar = () => {
                       pagination.fns.onSetPage(0);
                     }}
                   >
+                    <option value={'2026'}>2026</option>
                     <option value={'2025'}>2025</option>
-                    <option value={'2024'}>2024</option>
-                    <option value={'2023'}>2023</option>
-                    <option value={'2022'}>2022</option>
-                    <option value={'2021'}>2021</option>
-                    <option value={'2020'}>2020</option>
-                    <option value={'2019'}>2019</option>
-                    <option value={'2018'}>2018</option>
-                    <option value={'2017'}>2017</option>
                   </select>
                 </div>
               </div>
@@ -546,35 +539,45 @@ export const CuentasXCobrar = () => {
             <div className="card-header text-center fw-semibold text-gray-800">Total cuentas por cobrar: {formatearPrecio(filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0))}</div>
             <div className="card-body">
               <div className="progress-stacked ">
-                <div className="progress" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-primary" title={`${buscarNombre('GB')}: (${formatearPrecio(totalesAgrupados.guantes[0])}) ${`${parseInt((totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>GB {`${parseInt((totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
+                <div className="progress" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
+                  <div className="progress-bar fw-bold bg-primary" title={`${buscarNombre('GB')}: (${formatearPrecio(totalesAgrupados.guantes[0])}) ${`${parseInt((totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
+                    GB {`${(parseInt((totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}
+                  </div>
                 </div>
-                <div className="progress" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-success" title={`${buscarNombre('GN')}: (${formatearPrecio(totalesAgrupados.guantes[1])}) ${`${parseInt((totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>GN {`${parseInt((totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
+                <div className="progress" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
+                  <div className="progress-bar fw-bold bg-success" title={`${buscarNombre('GN')}: (${formatearPrecio(totalesAgrupados.guantes[1])}) ${`${parseInt((totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
+                    GN {`${(parseInt((totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}</div>
                 </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-info" title={`${buscarNombre('GM')}: (${formatearPrecio(totalesAgrupados.guantes[2])}) ${`${parseInt((totalesAgrupados.guantes[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>GM {`${parseInt((totalesAgrupados.guantes[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
+                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
+                  <div className="progress-bar fw-bold bg-info" title={`${buscarNombre('GM')}: (${formatearPrecio(totalesAgrupados.guantes[2])}) ${`${parseInt((totalesAgrupados.guantes[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
+                    GM {`${(parseInt((totalesAgrupados.guantes[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}</div>
                 </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-danger" title={`${buscarNombre('KCG')}: ${`${parseInt((totalesAgrupados.kits[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>KCG {`${parseInt((totalesAgrupados.kits[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
+                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
+                  <div className="progress-bar fw-bold bg-danger" title={`${buscarNombre('KCG')}: ${`${parseInt((totalesAgrupados.kits[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
+                    KCG {`${(parseInt((totalesAgrupados.kits[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}</div>
                 </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-warning" title={`${buscarNombre('KCP')}: ${`${parseInt((totalesAgrupados.kits[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>KCP {`${parseInt((totalesAgrupados.kits[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
+                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
+                  <div className="progress-bar fw-bold bg-warning" title={`${buscarNombre('KCP')}: ${`${parseInt((totalesAgrupados.kits[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
+                    KCP {`${(parseInt((totalesAgrupados.kits[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}</div>
+                </div>
+                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
+                  <div className="progress-bar fw-bold bg-light text-black" title={`${buscarNombre('KCE')}: ${`${parseInt((totalesAgrupados.kits[5] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
+                    KCE {`${(parseInt((totalesAgrupados.kits[5] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}</div>
+                </div>
+                <div className="progress" role="secondary" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
+                  <div className="progress-bar fw-bold bg-secondary" title={`${buscarNombre('KB')}: ${`${parseInt((totalesAgrupados.kits[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
+                    KB {`${parseInt((totalesAgrupados.kits[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10) || 0}%`}</div>
+                </div>
+                <div className="progress" role="black" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[3] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
+                  <div className="progress-bar fw-bold bg-black" title={`${buscarNombre('CC')}: ${`${parseInt((totalesAgrupados.kits[3] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
+                    CC {`${parseInt((totalesAgrupados.kits[3] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10) || 0}%`}</div>
                 </div>
                 <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-light text-black" title={`${buscarNombre('KCE')}: ${`${parseInt((totalesAgrupados.kits[5] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>KCE {`${parseInt((totalesAgrupados.kits[5] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
+                  <div className="progress-bar fw-bold bg-orange" title={`${buscarNombre('CB')}: ${`${parseInt((totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
+                    CB {`${parseInt((totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10) || 0}%`}</div>
                 </div>
-                <div className="progress" role="secondary" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-secondary" title={`${buscarNombre('KB')}: ${`${parseInt((totalesAgrupados.kits[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>KB {`${parseInt((totalesAgrupados.kits[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
-                </div>
-                <div className="progress" role="black" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[3] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-black" title={`${buscarNombre('CC')}: ${`${parseInt((totalesAgrupados.kits[3] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>CC {`${parseInt((totalesAgrupados.kits[3] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
-                </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-orange" title={`${buscarNombre('CB')}: ${`${parseInt((totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>CB {`${parseInt((totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
-                </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.otros * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-indigo" title={`${buscarNombre('OTROS')}: ${`${parseInt((totalesAgrupados.otros * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>OTROS {`${parseInt((totalesAgrupados.otros * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}</div>
+                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.otros * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
+                  <div className="progress-bar fw-bold bg-indigo" title={`${buscarNombre('OTROS')}: ${`${parseInt((totalesAgrupados.otros * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>OTROS {`${parseInt((totalesAgrupados.otros * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10) || 0}%`}</div>
                 </div>
               </div>
             </div>
