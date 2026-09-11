@@ -6,10 +6,26 @@ import { useForm } from "../../hooks";
 import { Collapse } from 'bootstrap';
 
 
-export const KitComunionECO = ({ agregarPedidoGeneral, resetearPedido }) => {
-    const [cantidadItems, setCantidadItems] = useState(0)
-    const [pedidoKCP, setPedidoKCP] = useState([]);
-    const { detalle = '', onInputChange } = useForm();
+export const KitComunionECO = ({ agregarPedidoGeneral, resetearPedido, initialItems }) => {
+    const [cantidadItems, setCantidadItems] = useState(() => {
+        return (initialItems?.pedido || []).reduce((acc, item) => acc + (parseInt(item.cantidad, 10) || 0), 0);
+    });
+    const [pedidoKCP, setPedidoKCP] = useState(() => initialItems?.pedido || []);
+    const { detalle = '', onInputChange, setFormState } = useForm({
+        detalle: initialItems?.detalleGeneral || ''
+    });
+
+    useEffect(() => {
+        if (initialItems) {
+            const items = initialItems.pedido || [];
+            setPedidoKCP(items);
+            const qty = items.reduce((acc, item) => acc + (parseInt(item.cantidad, 10) || 0), 0);
+            setCantidadItems(qty);
+            if (initialItems.detalleGeneral !== undefined) {
+                setFormState(prev => ({ ...prev, detalle: initialItems.detalleGeneral || '' }));
+            }
+        }
+    }, [initialItems]);
 
     useEffect(() => {
         if (resetearPedido) {
@@ -40,14 +56,19 @@ export const KitComunionECO = ({ agregarPedidoGeneral, resetearPedido }) => {
                         <div className="col-lg-7">
                             {/* Segunda fila */}
                             <ImagesCiriosComunion className="border" pedido={pedidoKCP} setPedido={setPedidoKCP} categoria='kce' setCantidadItems={setCantidadItems} />
-                            <hr />
-                            <div className="row">
-                                <div className="col-md">
-                                    <div className="form-group card-body">
-                                        <label htmlFor="detalle-KCE">Detalle general de la categoría KC-E</label>
-                                        <textarea className="form-control" name='detalle' value={detalle} onChange={onInputChange}></textarea>
-                                    </div>
-                                </div>
+                            <div className="card border border-light-subtle shadow-xs rounded-4 p-3 bg-white mb-3">
+                                <label className="form-label small fw-semibold text-muted mb-1" htmlFor="detalle-KCE">
+                                    <i className="fa-regular fa-comment-dots me-1 text-primary"></i> Observaciones de Kit Comunión Económico (opcional)
+                                </label>
+                                <textarea
+                                    className="form-control shadow-none border-light-subtle"
+                                    id="detalle-KCE"
+                                    name="detalle"
+                                    value={detalle}
+                                    onChange={onInputChange}
+                                    rows={2}
+                                    placeholder="Nombres, detalles especiales o empaque..."
+                                ></textarea>
                             </div>
                         </div>
                         {/* COLUMNA DERECHA TABLA */}

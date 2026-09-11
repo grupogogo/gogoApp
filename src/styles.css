@@ -466,8 +466,23 @@ html {
 }
 
 [data-theme="dark"] .sidebar {
-    background-color: #1e1e1e !important;
-    border-right-color: #333 !important;
+    background: linear-gradient(180deg, #090e17 0%, #0d1524 50%, #0a0f1d 100%) !important;
+    border-right-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Sidebar custom scrollbar */
+.sidebar nav::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+.sidebar nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
 }
 
 [data-theme="dark"] hr {
@@ -508,4 +523,20 @@ html {
 
 [data-theme="dark"] .text-muted {
     color: #adb5bd !important;
+}
+
+/* Image zoom cards in detailed view */
+.image-zoom-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.image-zoom-card:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
+    border-color: #3b82f6 !important;
+}
+.image-zoom-container .image-zoom-banner {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.image-zoom-container:hover .image-zoom-banner {
+    opacity: 1;
 }

@@ -9,24 +9,21 @@ Chart.register(PieController, ArcElement, Tooltip, Legend, ChartDataLabels);
 Chart.register(Colors);
 
 
-export const PieChart = ({ arrayData, arrayLabels, title, anio = new Date().getFullYear() }) => {
+export const PieChart = ({ arrayData = [], arrayLabels = [], title = '', anio = new Date().getFullYear() }) => {
 
-  const { buscarPrecioxCategoriaAnio } = useFuntions()
-
-  if (!arrayData) { return }
-  // Asegúrate de que arrayData y arrayLabels sean arrays y tengan la misma longitud
-  const { formatearPrecio, number_format } = useFuntions()
+  const { buscarPrecioxCategoriaAnio, formatearPrecio, number_format } = useFuntions();
   const chartRef = useRef(null);
   const [ready, setReady] = useState(false);
 
   // Verificar si los datos están listos para el gráfico
   useEffect(() => {
     if (
-      (arrayLabels && arrayLabels.length > 0) &&
-      (arrayData && arrayData.length > 0)
+      arrayLabels && arrayLabels.length > 0 &&
+      arrayData && arrayData.length > 0
     ) {
       setReady(true);
     } else {
+      setReady(false);
     }
   }, [arrayLabels, arrayData]);
 
@@ -40,7 +37,6 @@ export const PieChart = ({ arrayData, arrayLabels, title, anio = new Date().getF
     if (chartRef.current.chartInstance) {
       chartRef.current.chartInstance.destroy();
     }
-
 
     const myPieChart = new Chart(ctx, {
       type: 'pie',
@@ -58,13 +54,11 @@ export const PieChart = ({ arrayData, arrayLabels, title, anio = new Date().getF
         plugins: {
           title: {
             display: true,
-            text: title
-            , color: 'gray',
+            color: 'gray',
             font: {
               size: 16,
-              weight: ''
             },
-            text: title.charAt(0).toUpperCase() + title.slice(1).toLowerCase()
+            text: title ? (title.charAt(0).toUpperCase() + title.slice(1).toLowerCase()) : '',
           },
           colors: {
             forceOverride: true
@@ -77,19 +71,13 @@ export const PieChart = ({ arrayData, arrayLabels, title, anio = new Date().getF
                 const label = arrayLabels[index];
                 let price = 0;
                 let total = 0;
-                if (
-                  label === 'TOTAL KITS' ||
-                  label === 'LG' ||
-                  label === 'OG' ||
-                  label.includes('OTR')
-                ) {
-                  price = 1;
-                  total = value * price;
-                  //console.log(`Label: ${label}, Valor: ${value}, Precio: ${price}, Total: ${total}`);
-                  return `Total: ${number_format(total)}`;
+                if (label && (label.includes('OTR') || label.includes('OTROS'))) {
+                  return `Unidades: ${number_format(value)}`;
+                } else if (label === 'TOTAL KITS' || label === 'LG' || label === 'OG') {
+                  return `Total: $ ${number_format(value)}`;
                 } else {
-                  price = buscarPrecioxCategoriaAnio(label, anio)
-                  total = value * price;
+                  const price = buscarPrecioxCategoriaAnio(label, anio);
+                  const total = value * price;
                   return `Precio unitario: (${formatearPrecio(price)}) | Total: ${formatearPrecio(total)}`;
                 }
               }
@@ -112,13 +100,23 @@ export const PieChart = ({ arrayData, arrayLabels, title, anio = new Date().getF
             },
           },
           datalabels: {
-            display: true,
+            display: (context) => {
+              const dataset = context.dataset;
+              const total = dataset.data.reduce((acc, val) => acc + (Number(val) || 0), 0);
+              const value = Number(dataset.data[context.dataIndex] || 0);
+              if (value <= 0) return false;
+              if (dataset.data.length > 4 && (value / (total || 1)) < 0.08) return false;
+              return true;
+            },
             color: 'white',
+            backgroundColor: 'rgba(40, 40, 40, 0.85)',
+            borderRadius: 4,
+            padding: 2,
             font: {
-              size: 14,
+              size: 11,
               weight: 'bold'
             },
-            formatter: (value, context) => {
+            formatter: (value) => {
               return `${number_format(value)}`;
             }
           }

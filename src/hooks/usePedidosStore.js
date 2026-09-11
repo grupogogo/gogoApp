@@ -66,19 +66,19 @@ export const usePedidosStore = () => {
         dispatch(setTotalGuantes(total));
     }
 
-    const startUpdatePedidoItems = async (pedido_id, items) => {
+    const startUpdatePedidoItems = async (pedido_id, items, info) => {
         try {
-            const { data } = await gogoApi.put(`/pedidos/items/${pedido_id}`, { items });
+            const { data } = await gogoApi.put(`/pedidos/items/${pedido_id}`, { items, info });
             if (data.ok) {
-                // Recargar pedidos para reflejar cambios
-                startLoadingPedidos();
+                await startLoadingPedidos();
                 return { ok: true, msg: data.msg };
             } else {
-                return { ok: false, msg: data.msg };
+                return { ok: false, msg: data.msg || 'Error al actualizar pedido' };
             }
         } catch (error) {
-            console.log(error);
-            return { ok: false, msg: 'Error al actualizar items' };
+            console.error('Error al actualizar pedido:', error);
+            const msg = error.response?.data?.msg || 'Error al actualizar items del pedido';
+            return { ok: false, msg };
         }
     }
 

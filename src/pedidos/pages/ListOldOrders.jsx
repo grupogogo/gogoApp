@@ -1,1042 +1,3085 @@
-import { useEffect, useRef, useState } from 'react'
-import { LayoutApp } from '../../layout/LayoutApp'
-import { useFuntions, usePedidosStore } from '../../hooks';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Table, Header, HeaderRow, Body, Row, Cell } from "@table-library/react-table-library/table";
-import { useSort, HeaderCellSort } from "@table-library/react-table-library/sort";
-import Swal from 'sweetalert2';
-import html2pdf from 'html2pdf.js';
-import { useMemo } from 'react';
-import { useTheme } from '@table-library/react-table-library/theme';
 import Form from 'react-bootstrap/Form';
-import { StackedChart, AreaChartOld, AreaChartOldYear } from '../../dashboard/js';
-
-
-import React, { Fragment } from 'react';
 import Button from 'react-bootstrap/Button';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Popover from 'react-bootstrap/Popover';
-import { useGastosStore } from '../../hooks/useGastosStore';
-import { AreaChartOldYearAcumulada } from '../../dashboard/js/AreaChartOldYearAcumulada';
+import Swal from 'sweetalert2';
+import html2pdf from 'html2pdf.js';
+import { useNavigate } from 'react-router-dom';
 
-const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+import { LayoutApp } from '../../layout/LayoutApp';
+import { useAuthStore, useFuntions, usePedidosStore, usePreciosStore } from '../../hooks';
+import { getVisiblePageNumbers } from '../../helpers';
+import { useGastosStore } from '../../hooks/useGastosStore';
+import { StackedChart, AreaChartOld, AreaChartOldYear } from '../../dashboard/js';
+import { AreaChartOldYearAcumulada } from '../../dashboard/js/AreaChartOldYearAcumulada';
+import { ChartKitsMultiAnual } from '../components/ChartKitsMultiAnual';
+
+import {
+    MONTH_LABELS,
+    CATEGORIAS_DEFINICION,
+    obtenerPedidosPorAnio,
+    obtenerGastosPorAnio,
+    calcularEstadisticasAnio,
+    compararDosAnios,
+    obtenerAniosDisponibles,
+    filtrarPedidosYGastosPorUsuario,
+    calcularDivisionSocios,
+    esOtrDeKit,
+    esOtrDeGuantes,
+    UID_LEONARDO,
+    UID_OSCAR,
+    UID_KAROL,
+} from '../helpers/historicalOrdersHelper';
 
 export const ListOldOrders = () => {
-    const modalRef = useRef();
-    const [search, setSearch] = useState("");
-    const { startLoadingOldOrders } = usePedidosStore();
-    const { startLoadingPedidos } = usePedidosStore();
-    const { startLoadingGastos } = useGastosStore();
-    const oldOrders = useSelector(state => state.pedidos.oldOrders) || [];
-    const pedidos = useSelector(state => state.pedidos.pedidos);
-    const gastos = useSelector(state => state.gastos.gastos);
-    const { formatearPrecio, convertirOldFecha, totalKitsXAnioResults, pastelColors, parsearFechaGasto, mensualGastosUsuarios, buscarPrecioxCategoriaAnio } = useFuntions();
-    const [fechaPedido, setFechaPedido] = useState('2024');
-    const [showColumns, setShowColumns] = useState('12');
-    const [excluirCliente, setExcluirCliente] = useState(false);
-    const [ventas2025, setVentas2025] = useState();
-    const [stackedChartData, setStackedChartData] = useState({ labels: [], datasets: [] });
-    const [stackedChartDataBrand, setStackedChartDataBrand] = useState({ labels: [], datasets: [] });
-    const [stackedChartDataOtros, setStackedChartDataOtros] = useState({ labels: [], datasets: [] });
-    const [stackedChartDataCategory, setStackedChartDataCategory] = useState({ labels: [], datasets: [] });
-    const [stackedChartDataCategoryQuantity, setStackedChartDataCategoryQuantity] = useState({ labels: [], datasets: [] });
-    const [gastosPorMesYAnio, setGastosPorMesYAnio] = useState({ labels: [], datasets: [] });
-    const [yearlySalesChartData, setYearlySalesChartData] = useState({ labels: [], datasets: [] });
-    const [totalCategorias, setTotalCategorias] = useState({
-        KCGA: 0,
-        KCGO: 0,
-        KCPA: 0,
-        KCPO: 0,
-        KBA: 0,
-        KBO: 0,
-        CBA: 0,
-        CBO: 0,
-        CCA: 0,
-        CCO: 0
-    });
+    const reportPrintRef = useRef();
+    const navigate = useNavigate();
 
+    // Stores
+    const { startLoadingOldOrders, startLoadingPedidos } = usePedidosStore();
+    const { startLoadingGastos } = useGastosStore();
+    const { startLoadingPrecios } = usePreciosStore();
+    const oldOrders = useSelector(state => state.pedidos.oldOrders) || [];
+    const pedidos = useSelector(state => state.pedidos.pedidos) || [];
+    const gastos = useSelector(state => state.gastos.gastos) || [];
+    const listaPrecios = useSelector(state => state.precios?.listaPrecios) || [];
+
+    // Utilities
+    const {
+        formatearPrecio,
+        pastelColors,
+        mensualGastosUsuarios,
+        aTitulo
+    } = useFuntions();
+
+    // User authentication and role identification
+    const { user } = useAuthStore();
+    const esKarol = user?.uid === UID_KAROL || (user?.email || '').toLowerCase().includes('karol') || (user?.name || '').toLowerCase().includes('karol');
+    const esLeonardo = user?.uid === UID_LEONARDO || (user?.name || '').toLowerCase().includes('leonardo');
+    const esOscar = user?.uid === UID_OSCAR || (user?.name || '').toLowerCase().includes('oscar');
+
+    // Local State (comienza dinámicamente en el año en curso y compara con el año previo)
+    const anioActualSistema = String(new Date().getFullYear());
+    const anioPrevioSistema = String(new Date().getFullYear() - 1);
+    const [fechaPedido, setFechaPedido] = useState(anioActualSistema);
+    const [anioComparar, setAnioComparar] = useState(anioPrevioSistema);
+    const [filtroUsuario, setFiltroUsuario] = useState(esKarol ? 'KAROL' : (esLeonardo ? 'LEONARDO' : 'GENERAL'));
+    const [soloPagados, setSoloPagados] = useState(false); // false por defecto (muestra todos los estados)
+    const [filtroCategoria, setFiltroCategoria] = useState('TODOS'); // 'TODOS' | 'KITS' | 'GUANTES' | 'OTROS'
+    const [activeTab, setActiveTab] = useState('finanzas'); // 'finanzas', 'categorias', 'clientes', 'comparativa', 'multianual', 'pedidos'
+    const [search, setSearch] = useState('');
+    const [excluirCliente, setExcluirCliente] = useState(false);
+    const [categoriaFiltro, setCategoriaFiltro] = useState('TODAS');
+    const [filtroGrupoMatriz, setFiltroGrupoMatriz] = useState('TODAS'); // 'TODAS' | 'Kits' | 'Guantes' | 'Otros'
+    const [paginaActual, setPaginaActual] = useState(1);
+    const itemsPorPagina = 25;
+
+    // Load initial data
     useEffect(() => {
-        startLoadingPedidos(); // Carga los pedidos al iniciar
         startLoadingOldOrders();
+        startLoadingPedidos();
         startLoadingGastos();
+        startLoadingPrecios();
     }, []);
 
-    const filteredData = useMemo(() => {
-        const nodes = oldOrders
-            .filter((item) =>
-                (
-                    excluirCliente
-                        ? !item.CLIENTE?.toLowerCase().includes(search.toLowerCase())
-                        : item.CLIENTE?.toLowerCase().includes(search.toLowerCase())
-                ) ||
-                item.FECHA?.toLowerCase().includes(search.toLowerCase()) ||
-                item.REMISION?.toLowerCase().includes(search.toLowerCase())
-            )
-            .filter((item) => item.FECHA?.toLowerCase().includes(fechaPedido)) // asegurar coincidencia con `fechaPedido`
-            .sort((a, b) => {
-                const fechaA = convertirOldFecha(a.FECHA);
-                const fechaB = convertirOldFecha(b.FECHA);
-                return fechaA - fechaB; // orden ascendente (de más antigua a más nueva)
-            });
-        return { nodes };
-    }, [oldOrders, search, fechaPedido, excluirCliente]);
-
-    const sort = useSort(
-        filteredData,
-        {
-            onChange: onSortChange,
-        },
-        {
-            sortFns: {
-                FECHA: (array) => array.slice().sort((a, b) => (convertirOldFecha(a.FECHA) - convertirOldFecha(b.FECHA))),
-                CLIENTE: (array) => array.sort((a, b) => a.CLIENTE.localeCompare(b.CLIENTE)),
-                REMISION: (array) => array.sort((a, b) => a.REMISION.localeCompare(b.REMISION)),
-                NIT: (array) => array.sort((a, b) => a.NIT.localeCompare(b.NIT)),
-                TOTAL: (array) => array.sort((a, b) => a.TOTAL - b.TOTAL),
-                ITEMS: (array) => array.sort((a, b) => a.items.length - b.items.length),
-            },
+    // Sincronizar filtro según rol de usuario
+    useEffect(() => {
+        if (esKarol) {
+            setFiltroUsuario('KAROL');
+        } else if (esLeonardo && filtroUsuario === 'OSCAR') {
+            setFiltroUsuario('LEONARDO');
         }
-    );
-    const totalAnio =
-        oldOrders
-            .filter(item => item.FECHA?.toLowerCase().includes(fechaPedido))
-            .reduce((acc, item) => acc + (item.TOTAL || 0), 0);
-    const totalcantidadAnio =
-        filteredData.nodes
-            .reduce((acc, item) => acc + (item.items.reduce((acc, curr) => acc + (curr.CANTIDAD || 0), 0) || 0), 0);
+    }, [esKarol, esLeonardo]);
 
-    function onSortChange(action, state) {
-        //console.log(action, state);
-    }
-    const handleSearch = (event) => {
-        setSearch(event.target.value);
+    // Años disponibles en la base de datos y archivo histórico
+    const aniosDisponibles = useMemo(() => {
+        return obtenerAniosDisponibles(oldOrders, pedidos);
+    }, [oldOrders, pedidos]);
+
+    // Filtro auxiliar por estado pagado
+    const filtrarPorEstadoPagado = useCallback((listaPedidos = []) => {
+        if (!soloPagados) return listaPedidos;
+        return listaPedidos.filter(o => {
+            if (o.origen === 'HISTORICO') return true; // Histórico son ventas cerradas
+            const st = String(o.estado || o.raw?.estado || '').toLowerCase().trim();
+            const fp = String(o.raw?.formaPago || '').toLowerCase().trim();
+            return st === 'pagado' || fp === 'pagado';
+        });
+    }, [soloPagados]);
+
+    // Pedidos y gastos totales del año seleccionado
+    const todosPedidosDelAnio = useMemo(() => {
+        const raw = obtenerPedidosPorAnio(oldOrders, pedidos, fechaPedido);
+        return filtrarPorEstadoPagado(raw);
+    }, [oldOrders, pedidos, fechaPedido, filtrarPorEstadoPagado]);
+
+    const todosGastosDelAnio = useMemo(() => {
+        return obtenerGastosPorAnio(gastos, fechaPedido);
+    }, [gastos, fechaPedido]);
+
+    // Ventas de guantes de Leonardo Gómez para destacar a Oscar (GUANTES + OTR)
+    const ventasGuantesLeoAnio = useMemo(() => {
+        let sum = 0;
+        todosPedidosDelAnio.forEach(ord => {
+            const userId = (ord.user?._id || ord.user || ord.raw?.user?._id || ord.raw?.user)?.toString();
+            const userName = (ord.user?.name || ord.raw?.user?.name || '').toLowerCase();
+            const isLeo = userId === UID_LEONARDO || userName.includes('leonardo');
+            if (isLeo) {
+                (ord.items || []).forEach(it => {
+                    const isGlove = it.categoriaId === 'GUANTES' || (it.producto || '').toLowerCase().includes('guante');
+                    if (isGlove) {
+                        sum += Number(it.total || (Number(it.precio || 0) * Number(it.cantidad || 0)));
+                    }
+                });
+            }
+        });
+        return sum;
+    }, [todosPedidosDelAnio]);
+
+    // Ventas de guantes de Leonardo vs Karol (separadas y sumadas)
+    const desgloseGuantesLeoYKarol = useMemo(() => {
+        let leo = 0;
+        let karol = 0;
+        todosPedidosDelAnio.forEach(ord => {
+            const userId = (ord.user?._id || ord.user || ord.raw?.user?._id || ord.raw?.user)?.toString();
+            const userName = (ord.user?.name || ord.raw?.user?.name || '').toLowerCase();
+            const userEmail = (ord.user?.email || ord.raw?.user?.email || '').toLowerCase();
+            const isLeo = userId === UID_LEONARDO || userName.includes('leonardo');
+            const isKarol = userId === UID_KAROL || userName.includes('karol') || userEmail.includes('karol');
+
+            (ord.items || []).forEach(it => {
+                const isGlove = it.categoriaId === 'GUANTES' || (it.producto || '').toLowerCase().includes('guante');
+                if (isGlove) {
+                    const val = Number(it.total || (Number(it.precio || 0) * Number(it.cantidad || 0)));
+                    if (isLeo) leo += val;
+                    if (isKarol) karol += val;
+                }
+            });
+        });
+        return { leo, karol, total: leo + karol };
+    }, [todosPedidosDelAnio]);
+
+    // División consolidada de cuentas por socio (Leonardo vs Oscar + Regla Karol)
+    const divisionSocios = useMemo(() => {
+        return calcularDivisionSocios(todosPedidosDelAnio, todosGastosDelAnio);
+    }, [todosPedidosDelAnio, todosGastosDelAnio]);
+
+    // Pedidos y gastos filtrados según la vista seleccionada ('GENERAL', 'LEONARDO', 'OSCAR') y categoría
+    const { pedidosFiltrados: pedidosDelAnio, gastosFiltrados: gastosDelAnio, descripcionFiltro } = useMemo(() => {
+        return filtrarPedidosYGastosPorUsuario(todosPedidosDelAnio, todosGastosDelAnio, filtroUsuario, esLeonardo, filtroCategoria);
+    }, [todosPedidosDelAnio, todosGastosDelAnio, filtroUsuario, esLeonardo, filtroCategoria]);
+
+    // Pedidos del año anterior con el mismo criterio de usuario para comparativa YoY
+    const anioAnterior = String(parseInt(fechaPedido, 10) - 1);
+    const todosPedidosAnioAnterior = useMemo(() => {
+        const raw = obtenerPedidosPorAnio(oldOrders, pedidos, anioAnterior);
+        return filtrarPorEstadoPagado(raw);
+    }, [oldOrders, pedidos, anioAnterior, filtrarPorEstadoPagado]);
+
+    const todosGastosAnioAnterior = useMemo(() => {
+        return obtenerGastosPorAnio(gastos, anioAnterior);
+    }, [gastos, anioAnterior]);
+
+    const { pedidosFiltrados: pedidosAnioAnterior } = useMemo(() => {
+        return filtrarPedidosYGastosPorUsuario(todosPedidosAnioAnterior, todosGastosAnioAnterior, filtroUsuario, esLeonardo, filtroCategoria);
+    }, [todosPedidosAnioAnterior, todosGastosAnioAnterior, filtroUsuario, esLeonardo, filtroCategoria]);
+
+    // Pedidos y gastos para la pestaña de Comparativa Cara a Cara
+    const todosPedidosComparar = useMemo(() => {
+        const raw = obtenerPedidosPorAnio(oldOrders, pedidos, anioComparar);
+        return filtrarPorEstadoPagado(raw);
+    }, [oldOrders, pedidos, anioComparar, filtrarPorEstadoPagado]);
+
+    const todosGastosComparar = useMemo(() => {
+        return obtenerGastosPorAnio(gastos, anioComparar);
+    }, [gastos, anioComparar]);
+
+    const { pedidosFiltrados: pedidosComparar, gastosFiltrados: gastosComparar } = useMemo(() => {
+        return filtrarPedidosYGastosPorUsuario(todosPedidosComparar, todosGastosComparar, filtroUsuario, esLeonardo, filtroCategoria);
+    }, [todosPedidosComparar, todosGastosComparar, filtroUsuario, esLeonardo, filtroCategoria]);
+
+    const statsComparar = useMemo(() => {
+        return calcularEstadisticasAnio(pedidosComparar, gastosComparar, [], listaPrecios);
+    }, [pedidosComparar, gastosComparar, listaPrecios]);
+
+    // Estadísticas y Métricas Ejecutivas de la vista activa
+    const stats = useMemo(() => {
+        return calcularEstadisticasAnio(pedidosDelAnio, gastosDelAnio, pedidosAnioAnterior, listaPrecios);
+    }, [pedidosDelAnio, gastosDelAnio, pedidosAnioAnterior, listaPrecios]);
+
+    // Comparativa Cara a Cara
+    const comparativaData = useMemo(() => {
+        return compararDosAnios(stats, statsComparar, fechaPedido, anioComparar);
+    }, [stats, statsComparar, fechaPedido, anioComparar]);
+
+    // Filtrado y totales para la Matriz Unificada de Categorías (Kits, Guantes, Otros)
+    const conteoMatrizKits = useMemo(() => (stats?.categoriasMatriz || []).filter(c => c.grupo === 'Kits').length, [stats?.categoriasMatriz]);
+    const conteoMatrizGuantes = useMemo(() => (stats?.categoriasMatriz || []).filter(c => c.grupo === 'Guantes').length, [stats?.categoriasMatriz]);
+    const conteoMatrizOtros = useMemo(() => (stats?.categoriasMatriz || []).filter(c => c.grupo === 'Otros').length, [stats?.categoriasMatriz]);
+
+    const categoriasMatrizFiltradas = useMemo(() => {
+        const list = stats?.categoriasMatriz || [];
+        if (filtroGrupoMatriz === 'TODAS') return list;
+        return list.filter(cat => String(cat.grupo || '').toLowerCase() === filtroGrupoMatriz.toLowerCase());
+    }, [stats?.categoriasMatriz, filtroGrupoMatriz]);
+
+    const totalesMatrizFiltrada = useMemo(() => {
+        const unidades = categoriasMatrizFiltradas.reduce((acc, c) => acc + (Number(c.unidades) || 0), 0);
+        const totalVenta = categoriasMatrizFiltradas.reduce((acc, c) => acc + (Number(c.totalVenta) || 0), 0);
+        const pctUnidades = (stats?.totalPrendas || 0) > 0 ? (unidades / stats.totalPrendas) * 100 : 0;
+        const pctVenta = (stats?.totalVentas || 0) > 0 ? (totalVenta / stats.totalVentas) * 100 : 0;
+        const precioPromedio = unidades > 0 ? totalVenta / unidades : 0;
+        return { unidades, totalVenta, pctUnidades, pctVenta, precioPromedio };
+    }, [categoriasMatrizFiltradas, stats?.totalPrendas, stats?.totalVentas]);
+
+    // Filtrado de pedidos para la tabla
+    const pedidosFiltrados = useMemo(() => {
+        const query = search.toLowerCase().trim();
+        return pedidosDelAnio.filter(order => {
+            const coincideCliente = order.cliente.toLowerCase().includes(query);
+            const coincideNIT = order.nit.toLowerCase().includes(query);
+            const coincideRemision = order.remision.toLowerCase().includes(query);
+            const coincideFecha = (order.fechaStr || '').toLowerCase().includes(query);
+
+            const matchTexto = excluirCliente
+                ? (!coincideCliente && (coincideNIT || coincideRemision || coincideFecha))
+                : (coincideCliente || coincideNIT || coincideRemision || coincideFecha);
+
+            if (!matchTexto) return false;
+
+            if (categoriaFiltro !== 'TODAS') {
+                const tieneCategoria = order.items.some(it => it.categoriaId === categoriaFiltro);
+                if (!tieneCategoria) return false;
+            }
+
+            return true;
+        });
+    }, [pedidosDelAnio, search, excluirCliente, categoriaFiltro]);
+
+    // Paginación de la tabla
+    const totalPaginas = Math.ceil(pedidosFiltrados.length / itemsPorPagina) || 1;
+    const pedidosPaginados = useMemo(() => {
+        const inicio = (paginaActual - 1) * itemsPorPagina;
+        return pedidosFiltrados.slice(inicio, inicio + itemsPorPagina);
+    }, [pedidosFiltrados, paginaActual, itemsPorPagina]);
+
+    // Resetear a página 1 cuando cambia filtro o año
+    useEffect(() => {
+        setPaginaActual(1);
+    }, [fechaPedido, search, categoriaFiltro, excluirCliente]);
+
+    // Preparación de datasets para gráficos multianuales
+    const multiAnualSalesData = useMemo(() => {
+        const yearsToCompare = aniosDisponibles.slice().reverse();
+        const datasets = yearsToCompare.map((yr, idx) => {
+            const raw = obtenerPedidosPorAnio(oldOrders, pedidos, yr);
+            const peds = filtrarPorEstadoPagado(raw);
+            const monthly = Array(12).fill(0);
+            peds.forEach(p => {
+                if (p.mes !== null && p.mes >= 0 && p.mes <= 11) {
+                    monthly[p.mes] += p.total;
+                }
+            });
+            const color = pastelColors[idx % pastelColors.length];
+            return {
+                label: String(yr),
+                data: monthly,
+                backgroundColor: color,
+                borderColor: color,
+            };
+        });
+
+        return {
+            labels: MONTH_LABELS,
+            datasets
+        };
+    }, [aniosDisponibles, oldOrders, pedidos, pastelColors, filtrarPorEstadoPagado]);
+
+    // Preparación de datasets para gastos multianuales
+    const multiAnualGastosData = useMemo(() => {
+        const yearsToCompare = aniosDisponibles.slice().reverse();
+        const datasets = yearsToCompare.map((yr, idx) => {
+            const g = obtenerGastosPorAnio(gastos, yr);
+            const color = pastelColors[(idx + 4) % pastelColors.length];
+            return {
+                label: String(yr),
+                data: g.mensual,
+                backgroundColor: color,
+                borderColor: color,
+            };
+        });
+
+        return {
+            labels: MONTH_LABELS,
+            datasets
+        };
+    }, [aniosDisponibles, gastos, pastelColors]);
+
+    // Datasets para gráfico de Ventas vs Gastos del año seleccionado
+    const chartVentasVsGastos = useMemo(() => {
+        return {
+            labels: MONTH_LABELS,
+            datasets: [
+                {
+                    label: `Ventas ${fechaPedido}`,
+                    data: stats.ventasMensuales,
+                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                },
+                {
+                    label: `Gastos ${fechaPedido}`,
+                    data: stats.gastosMensuales,
+                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                }
+            ]
+        };
+    }, [fechaPedido, stats]);
+
+    // Datasets para gráfico de ventas por categoría del año
+    const chartCategoriasData = useMemo(() => {
+        const datasets = stats.categoriasMatriz.map((cat, idx) => ({
+            label: cat.nombre,
+            data: cat.mensualVenta,
+            backgroundColor: cat.color || pastelColors[idx % pastelColors.length],
+        }));
+
+        return {
+            labels: MONTH_LABELS,
+            datasets
+        };
+    }, [stats, pastelColors]);
+
+    // Datasets para gráfico de cantidades por categoría del año
+    const chartCategoriasCantidad = useMemo(() => {
+        const datasets = stats.categoriasMatriz.map((cat, idx) => ({
+            label: cat.nombre,
+            data: cat.mensualUnidades,
+            backgroundColor: cat.color || pastelColors[idx % pastelColors.length],
+        }));
+
+        return {
+            labels: MONTH_LABELS,
+            datasets
+        };
+    }, [stats, pastelColors]);
+
+    // Preparación para AreaChartOld (mantener compatibilidad Brand Design vs Otros)
+    const areaChartProps = useMemo(() => {
+        const NIT_BRAND_DESIGN = '900879470';
+        const brandMensual = Array(12).fill(0);
+        const otrosMensual = Array(12).fill(0);
+
+        pedidosDelAnio.forEach(ord => {
+            if (ord.mes !== null && ord.mes >= 0 && ord.mes <= 11) {
+                const esBrand = ord.nit.includes(NIT_BRAND_DESIGN) || ord.cliente.toLowerCase().includes('brand');
+                if (esBrand) {
+                    brandMensual[ord.mes] += ord.total;
+                } else {
+                    otrosMensual[ord.mes] += ord.total;
+                }
+            }
+        });
+
+        const gastosData = mensualGastosUsuarios ? mensualGastosUsuarios(gastos, parseInt(fechaPedido, 10), 'K') : null;
+
+        return {
+            gastos: gastosData || {
+                gastosMensualesO: stats.gastosMensuales.map(v => Math.round(v * 0.5)),
+                gastosMensualesL: stats.gastosMensuales.map(v => Math.round(v * 0.5))
+            },
+            ventas: { data: stats.ventasMensuales },
+            ventasBrandDesign: { data: brandMensual },
+            ventasOtros: { data: otrosMensual },
+            porValor: false
+        };
+    }, [pedidosDelAnio, gastos, fechaPedido, stats, mensualGastosUsuarios]);
+
+    // Exportación CSV
+    const handleDownloadCsv = () => {
+        const delimiter = ";";
+        const headers = ["Fecha", "NIT/CC", "Remision", "Cliente", "Productos/Cant", "Items Variedad", "Total ($)", "Origen"];
+        const rows = pedidosFiltrados.map(p => [
+            `"${p.fechaStr}"`,
+            `"${p.nit}"`,
+            `"${p.remision}"`,
+            `"${p.cliente.replace(/"/g, '""')}"`,
+            p.cantidadPrendas,
+            p.itemsCount,
+            p.total,
+            `"${p.origen}"`
+        ]);
+
+        const csvContent = "\uFEFF" + [headers.join(delimiter), ...rows.map(r => r.join(delimiter))].join("\r\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Reporte_Detalle_Pedidos_${fechaPedido}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
+
+    // Exportación PDF Gerencial
     const handleDownloadPDF = () => {
-        let timerInterval;
         Swal.fire({
-            title: "Generando PDF!",
-            html: '<l-quantum   size="25"   speed="1.75"   color="black"  ></l-quantum>',
-            timer: 2000,
+            title: "Generando Informe Ejecutivo PDF...",
+            text: `Compilando balance financiero y métricas de ${fechaPedido}`,
+            timer: 2200,
             timerProgressBar: true,
             didOpen: () => {
                 Swal.showLoading();
-                const timer = Swal.getPopup().querySelector("b");
-                timerInterval = setInterval(() => {
-                    timer.textContent = `${Swal.getTimerLeft()}`;
-                }, 100);
-            },
-            willClose: () => {
-                clearInterval(timerInterval);
-            }
-        }).then((result) => {
-            /* Read more about handling dismissals below */
-            if (result.dismiss === Swal.DismissReason.timer) {
-                console.log("I was closed by the timer");
             }
         });
-        const element = modalRef.current; // tu contenido visible
+
+        const element = reportPrintRef.current;
         const opt = {
-            margin: 0.5,
-            filename: `Ventas Filtradas ${fechaPedido}_${Date.now()}.pdf`,
+            margin: [8, 8, 8, 8],
+            filename: `Informe_Gerencial_${fechaPedido}_${Date.now()}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
         html2pdf().set(opt).from(element).save();
     };
-    const customTheme = {
-        Table: `
-             --data-table-library_grid-template-columns: 
-                 auto auto auto auto auto auto auto !important;
-         `,
-    };
-    const theme = useTheme([customTheme]);
 
-    //* Resize *//
-    const handleConcatSales = () => {
-        if (!ventas2025 || !stackedChartData) return;
-
-        const newDatasets = [...stackedChartData.datasets];
-        const currentYear = new Date().getFullYear();
-
-        // Iterar desde 2025 hasta el año actual
-        for (let year = 2025; year <= currentYear; year++) {
-            const dataYear = ventas2025[year];
-            if (!dataYear) continue;
-
-            const existingIndex = newDatasets.findIndex(dataset => dataset.label === String(year));
-
-            if (existingIndex !== -1) {
-                // Update existing data
-                newDatasets[existingIndex].data = dataYear.monthlySales;
-            } else {
-                // Add new dataset
-                newDatasets.push({
-                    label: String(year),
-                    data: dataYear.monthlySales,
-                    backgroundColor: 'rgba(99, 255, 203, 1)', // You can choose a different color or dynamic color
-                });
-            }
-        }
-
-        setStackedChartData({
-            labels: stackedChartData.labels,
-            datasets: newDatasets,
-        });
-    };
-
-    const resize = { resizerHighlight: '#0a0a0aff' };
-
-    // Escapa adecuadamente las celdas para evitar errores con caracteres especiales
-    const escapeCsvCell = (cell) => {
-        if (cell == null) {
-            return "";
-        }
-        const sc = cell.toString().trim();
-        if (sc === "" || sc === '""') {
-            return sc;
-        }
-        if (
-            sc.includes('"') ||
-            sc.includes(";") || // También escapa el nuevo delimitador
-            sc.includes("\n") ||
-            sc.includes("\r")
-        ) {
-            return '"' + sc.replace(/"/g, '""') + '"';
-        }
-        return sc;
-    };
-
-    // Genera los datos CSV usando ";" como delimitador de columnas
-    const makeCsvData = (columns, data) => {
-        const delimiter = ";"; // ← CAMBIO CLAVE
-
-        // Encabezado
-        const header = columns.map(({ name }) => escapeCsvCell(name)).join(delimiter) + "\r\n";
-
-        // Filas de datos
-        const rows = data.map((rowItem) =>
-            columns.map(({ accessor }) => escapeCsvCell(accessor(rowItem))).join(delimiter)
-        ).join("\r\n");
-
-        return header + rows + "\r\n";
-    };
-
-    const returnPrice = (value) => {
-        if (value === 'KGCA') return 11100;
-        if (value === 'KGCO') return 11500;
-        if (value === 'KPCA' || value === 'KPCO') return 8200;
-        if (value === 'KBNA' || value === 'KBNO') return 6800;
-        if (value === 'CBNA' || value === 'CBNO' || value === 'CCNA' || value === 'CCNO') return 0.8;
-        if (value === 'LBC') return 1100;
-        if (value === 'CTC') return 0;
-        if (value === 'LBCP') return 890;
-        return 0;
-    }
-
-    // Descarga el archivo CSV generado
-    const downloadAsCsv = (columns, data, filename) => {
-        const csvData = makeCsvData(columns, data);
-        const csvFile = new Blob(["\uFEFF" + csvData], { type: "text/csv;charset=utf-8;" });
-        const downloadLink = document.createElement("a");
-
-        downloadLink.style.display = "none";
-        downloadLink.download = filename;
-        downloadLink.href = URL.createObjectURL(csvFile);
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-    };
-
-    // Llama esta función cuando quieras generar y descargar el archivo CSV
-    const handleDownloadCsv = () => {
-        const columns = [
-            { accessor: (item) => item.FECHA, name: "Fecha" },
-            { accessor: (item) => item.NIT, name: "NIT" },
-            { accessor: (item) => item.REMISION, name: "Remisión" },
-            { accessor: (item) => item.items.length, name: "Items" },
-            { accessor: (item) => item.items.reduce((acc, curr) => acc + (curr.CANTIDAD || 0), 0), name: "Cantidad Productos" },
-            { accessor: (item) => item.CLIENTE, name: "Cliente" },
-            { accessor: (item) => item.TOTAL, name: "Total" },
-        ];
-        downloadAsCsv(columns, filteredData.nodes, "Tabla Pedidos Antiguos.csv");
-    };
-
-    function agruparGastosPorAnioYMese(gastos, parsearFechaGasto) {
-        const agrupados = {};
-
-        gastos.forEach((gasto) => {
-            const fecha = parsearFechaGasto(gasto.fecha);
-            if (!fecha) return;
-
-            const year = fecha.getFullYear();
-            const month = fecha.getMonth(); // 0–11
-
-            if (!agrupados[year]) {
-                agrupados[year] = Array(12).fill(0);
-            }
-
-            const total = (gasto.precio || 0) * (gasto.cantidad || 1);
-            agrupados[year][month] += total;
-        });
-
-        return Object.entries(agrupados)
-            .sort(([a], [b]) => a - b)
-            .map(([year, data]) => ({
-                label: year,
-                data
-            }));
-    }
-
-
-    useEffect(() => { // Concatenar las ventas de 2025 al gráfico de ventas mensuales
-
-        if (ventas2025 && stackedChartData.datasets.length > 0) {
-            handleConcatSales();
-        }
-    }, [ventas2025, stackedChartData.datasets.length]); // Trigger when ventas2025 or stackedChartData changes
-
-    useEffect(() => { // TOTALES CANTIDAD PRODUCTOS POR CATEGORIA
-        if (!filteredData?.nodes) return;
-
-        const codigos = ['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'];
-
-        const nuevosTotales = codigos.reduce((acc, codigo) => {
-            const resultado = filteredData.nodes
-                .flatMap(order => order.items || [])
-                .filter(prod => prod.CODIGO === codigo)
-                .reduce(
-                    (sum, prod) => {
-                        sum.items += prod.CANTIDAD || 0;
-                        sum.total += (prod.CANTIDAD || 0) * (prod.PRECIO || 0);
-                        return sum;
-                    },
-                    { items: 0, total: 0 }
-                );
-
-            acc[codigo] = resultado;
-            return acc;
-        }, {});
-
-        setTotalCategorias(nuevosTotales);
-    }, [filteredData.nodes]);
-
-    useEffect(() => { // Calcula las ventas mensuales por categoría y CANTIDAD desde 2019 hasta 2024
-        if (!filteredData.nodes || filteredData.nodes.length === 0) {
-            setStackedChartData({ labels: [], datasets: [] });
-            return;
-        };
-
-        const salesByCategoryMonth = {};
-
-        // Procesar los datos filtrados para agrupar por categoría y mes
-        filteredData.nodes.forEach(order => {
-            const orderDate = convertirOldFecha(order.FECHA);
-            if (isNaN(orderDate.getTime())) return; // Skip invalid dates
-
-            const month = orderDate.getMonth(); // 0-11
-
-            order.items.forEach(item => {
-                const category = item.CODIGO;
-                if (!category || category === 'LBC' || category === 'LBCP' || category === 'LBC' || category === 'LBC') return;
-
-                if (!salesByCategoryMonth[category]) {
-                    salesByCategoryMonth[category] = Array(12).fill(0);
-                }
-                salesByCategoryMonth[category][month] += item.CANTIDAD || 0;
-            });
-        });
-
-        const categories = Object.keys(salesByCategoryMonth).sort();
-        const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        const backgroundColors = [
-            'rgba(255, 99, 132, 0.7)',
-            'rgba(54, 162, 235, 0.7)',
-            'rgba(255, 206, 86, 0.7)',
-            'rgba(75, 192, 192, 0.7)',
-            'rgba(153, 102, 255, 0.7)',
-            'rgba(255, 159, 64, 0.7)',
-            'rgba(199, 199, 199, 0.7)',
-            'rgba(83, 102, 255, 0.7)',
-            'rgba(255, 99, 83, 0.7)',
-            'rgba(64, 159, 255, 0.7)'
-        ];
-
-        const datasets = categories.map((category, index) => ({
-            label: category,
-            data: salesByCategoryMonth[category],
-            backgroundColor: backgroundColors[index % backgroundColors.length],
-        }));
-
-        setStackedChartDataCategoryQuantity({
-            labels: monthLabels,
-            datasets: datasets,
-        });
-
-    }, [filteredData.nodes]);
-
-    useEffect(() => { // VENTAS CATEGORIA $
-        if (!filteredData.nodes || filteredData.nodes.length === 0) {
-            setStackedChartData({ labels: [], datasets: [] });
-            return;
-        };
-
-        const salesByCategoryMonth = {};
-
-        // Procesar los datos filtrados para agrupar por categoría y mes
-        filteredData.nodes.forEach(order => {
-            const orderDate = convertirOldFecha(order.FECHA);
-            if (isNaN(orderDate.getTime())) return; // Skip invalid dates
-
-            const month = orderDate.getMonth(); // 0-11
-
-            order.items.forEach(item => {
-                const category = item.CODIGO;
-                if (!category) return;
-
-                if (!salesByCategoryMonth[category]) {
-                    salesByCategoryMonth[category] = Array(12).fill(0);
-                }
-                salesByCategoryMonth[category][month] += item.TOTAL || 0;
-            });
-        });
-
-        const categories = Object.keys(salesByCategoryMonth).sort();
-        const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        const backgroundColors = [
-            'rgba(255, 99, 132, 0.7)',
-            'rgba(54, 162, 235, 0.7)',
-            'rgba(255, 206, 86, 0.7)',
-            'rgba(75, 192, 192, 0.7)',
-            'rgba(153, 102, 255, 0.7)',
-            'rgba(255, 159, 64, 0.7)',
-            'rgba(199, 199, 199, 0.7)',
-            'rgba(83, 102, 255, 0.7)',
-            'rgba(255, 99, 83, 0.7)',
-            'rgba(64, 159, 255, 0.7)'
-        ];
-
-        const datasets = categories.map((category, index) => ({
-            label: category,
-            data: salesByCategoryMonth[category],
-            backgroundColor: backgroundColors[index % backgroundColors.length],
-        }));
-
-        setStackedChartDataCategory({
-            labels: monthLabels,
-            datasets: datasets,
-        });
-
-    }, [filteredData.nodes]);
-
-    useEffect(() => {
-        if (!oldOrders || oldOrders.length === 0) return;
-        if (!pedidos || pedidos.length === 0) return;
-
-        const NIT_BRAND_DESIGN = '900879470';
-
-        // Generar rango de años desde 2025 hasta el año actual
-        const currentYear = new Date().getFullYear();
-        const yearsRange = [];
-        for (let y = 2025; y <= currentYear; y++) {
-            yearsRange.push(y);
-        }
-
-        const ventasPorAnios = totalKitsXAnioResults(pedidos, yearsRange);
-        setVentas2025(ventasPorAnios); // Guardamos el objeto completo { 2025: {...}, 2026: {...} }
-
-        const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
-        const salesBD = {};     // Brand Design
-        const salesOtros = {};  // Otros
-        const salesTotal = {};  // Total por año
-
-        oldOrders.forEach(order => {
-            const rawFecha = order.FECHA || order.fecha;
-            if (!rawFecha || typeof rawFecha !== 'string') return;
-
-            const orderDate = convertirOldFecha(rawFecha);
-            if (isNaN(orderDate.getTime())) return;
-
-            const year = orderDate.getFullYear();
-            const month = orderDate.getMonth();
-            const total = order.TOTAL || 0;
-            const nit = order.NIT || order.nit || '';
-
-            const target = fechaPedido !== '2025' ? (nit === NIT_BRAND_DESIGN ? salesBD : salesOtros) : salesTotal;
-
-            if (!target[year]) target[year] = Array(12).fill(0);
-            if (!salesTotal[year]) salesTotal[year] = 0;
-
-            target[year][month] += total;
-            salesTotal[year] += total;
-        });
-
-        // Agregar datos calculados de años recientes (2025+) a las estructuras
-        yearsRange.forEach(year => {
-            const dataYear = ventasPorAnios[year];
-            if (dataYear) {
-                // Asumiendo que estos datos van a Otros (según lógica original) o según corresponda
-                // En el original: salesOtros['2025'] = ventas2025Local.monthlySales;
-                salesOtros[year] = dataYear.monthlySales;
-                salesTotal[year] = (salesTotal[year] || 0) + dataYear.totalSales;
-            }
-        });
-
-        const sortedYears = Object.keys(salesTotal).sort();
-
-        const pastel = (i) => pastelColors[i % pastelColors.length];
-
-        // 🔵 Dataset general (todos juntos)
-        const datasetsByMonth = sortedYears.map((year, i) => ({
-            label: year,
-            data: (salesBD[year] || Array(12).fill(0)).map((v, idx) =>
-                v + ((salesOtros[year] && salesOtros[year][idx]) || 0)
-            ),
-            backgroundColor: pastel(i),
-        }));
-
-        // 🔵 Solo Brand Design
-        const datasetsBrandDesign = Object.keys(salesBD).sort().map((year, i) => (
-            {
-                label: year,
-                data: salesBD[year],
-            }));
-
-        // 🔵 Solo Otros
-        const datasetsOtros = Object.keys(salesOtros).sort().map((year, i) => ({
-            label: year,
-            data: salesOtros[year],
-        }));
-
-        // ⬇️ Guardar todo por separado
-        setStackedChartData({ labels: monthLabels, datasets: datasetsByMonth });
-
-        // Lógica para mostrar detalle según el año seleccionado en el filtro
-        const selectedYearInt = parseInt(fechaPedido);
-        if (yearsRange.includes(selectedYearInt)) {
-            // Si es uno de los años nuevos (2025 en adelante)
-            const dataYear = ventasPorAnios[selectedYearInt];
-            if (dataYear) {
-                setStackedChartDataBrand({
-                    labels: monthLabels,
-                    datasets: {
-                        label: String(selectedYearInt),
-                        data: dataYear.monthlySalesBrand
-                    }
-                });
-
-                setStackedChartDataOtros({
-                    labels: monthLabels,
-                    datasets: {
-                        label: String(selectedYearInt),
-                        data: dataYear.monthlySalesOscar
-                    }
-                });
-            }
-        } else {
-            // Años anteriores (ListOldOrders puro)
-            setStackedChartDataBrand({
-                labels: monthLabels,
-                datasets: datasetsBrandDesign
-            });
-
-            setStackedChartDataOtros({
-                labels: monthLabels,
-                datasets: datasetsOtros
-            });
-        }
-
-        // Anual general
-        const totalData = sortedYears.map(year => salesTotal[year]);
-
-        setYearlySalesChartData({
-            labels: sortedYears,
-            datasets: [{
-                label: 'Ventas Anuales',
-                data: totalData,
-                backgroundColor: 'rgba(22, 97, 97, 1)',
-            }]
-        });
-
-    }, [oldOrders, pedidos, fechaPedido]);
-
-    useEffect(() => {
-        if (!gastos || gastos.length === 0) return;
-
-        const agrupados = agruparGastosPorAnioYMese(gastos, parsearFechaGasto);
-        setGastosPorMesYAnio({
-            labels: monthLabels,
-            datasets: agrupados
-        });
-
-    }, [gastos]);
-
-    const getDatasetByYear = (datasets, year) => {
-        const index = parseInt(year) - 2019;
-        return datasets && datasets[index] ? datasets[index] : [];
-    };
+    const esModerno = parseInt(fechaPedido, 10) >= 2025;
 
     return (
         <LayoutApp>
-            <div className='card p-3 mb-2 sticky-top bg-white z-3'
-                style={{
-                    position: 'sticky',
-                    top: 0,
-                    backgroundColor: 'white',
-                    zIndex: 1000,
-                    padding: '1rem',
-                    marginBottom: '1rem'
-                }} >
-                <div className='row justify-content-between g-3'>
-                    <div className="col text-end">
-                        <div className="input-group form-select-sm d-flex align-items-center">
-                            <span className='me-2'>Columnas a mostrar</span>
-                            <select
-                                className="form-select form-select-sm w-auto rounded"
-                                value={showColumns}
-                                style={{ maxWidth: 'fit-content' }}
-                                onChange={e => {
-                                    const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
-                                    setShowColumns(value);
-                                }}
-                            >
-                                <option value={'12'}>1</option>
-                                <option value={'6'}>2</option>
-                                <option value={'6'}>3</option>
-                                <option value={'3'}>4</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="col text-start">
-                        <div className="input-group form-select-sm d-flex align-items-center">
-                            <span className='me-2'>Año a filtrar</span>
-                            <select
-                                className="form-select form-select-sm w-auto rounded"
-                                value={fechaPedido}
-                                style={{ maxWidth: 'fit-content' }}
-                                onChange={e => {
-                                    const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
-                                    setFechaPedido(value);
-                                }}
-                            >
-                                <option value={'2024'}>2024</option>
-                                <option value={'2023'}>2023</option>
-                                <option value={'2022'}>2022</option>
-                                <option value={'2021'}>2021</option>
-                                <option value={'2020'}>2020</option>
-                                <option value={'2019'}>2019</option>
-                                <option value={'2025'}>2025</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="container-fluid">
-
-                {/* DIV PARA LOS GRÁFICOS  VENTAS POR MESES DURANTE LOS ULTIMO AÑOS*/}
-                <div className='row'>
-                    <div className={`col-${showColumns}`}>
-                        <div className='card mb-4'>
-                            {/* Div para Gemini */}
-                            <StackedChart
-                                labels={stackedChartData.labels}
-                                datasets={stackedChartData.datasets}
-                                title="Ventas mensuales desde 2019 a 2025"
-                            />
-                        </div>
-                    </div>
-                    {/* StackedChart */}
-                    <div className={`col-${showColumns}`}>
-                        <div className='card mb-4'>
-                            <StackedChart
-                                labels={stackedChartDataCategory.labels}
-                                datasets={stackedChartDataCategory.datasets}
-                                title={`Ventas $ mensual ${fechaPedido} por categoria`}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <div className='row mb-4'>
-                    {/* StackedChart */}
-                    <div className={`col-${showColumns} mb-4`}>
-                        <div className='card'>
-                            <StackedChart
-                                labels={stackedChartDataCategoryQuantity.labels}
-                                datasets={stackedChartDataCategoryQuantity.datasets}
-                                title={`Ventas ${fechaPedido} por cantidad de productos`}
-                            />
-                        </div>
-                    </div>
-                    {/* Area old Chart */}
-                    <div className={`col-${showColumns}`}>
-                        <div className='card'>
-                            {(stackedChartData.datasets?.length > 0) && (
-                                <AreaChartOld
-                                    gastos={mensualGastosUsuarios(gastos, parseInt(fechaPedido), 'K')}
-                                    ventas={
-                                        ventas2025?.[fechaPedido]
-                                            ? { data: ventas2025[fechaPedido].monthlySales }
-                                            : getDatasetByYear(stackedChartData.datasets, fechaPedido)
-                                    }
-                                    ventasBrandDesign={
-                                        ventas2025?.[fechaPedido]
-                                            ? stackedChartDataBrand.datasets
-                                            : getDatasetByYear(stackedChartDataBrand.datasets, fechaPedido)
-                                    }
-
-                                    ventasOtros={
-                                        ventas2025?.[fechaPedido]
-                                            ? stackedChartDataOtros.datasets
-                                            : getDatasetByYear(stackedChartDataOtros.datasets, fechaPedido)
-                                    }
-                                    porValor={false}
-                                />
-                            )}
-
-                        </div>
-                    </div>
-                </div>
-                {/* Area old Chart */}
-                <div className='row mb-4'>
-                    <div className={`col-${showColumns} mb-4`}>
-                        <div className=' card'>
-                            <AreaChartOldYear
-                                data={stackedChartData}
-                            />
-                        </div>
-                    </div>
-                    <div className={`col-${showColumns}`}>
-                        <div className=' card'>
-                            <AreaChartOldYear
-                                data={(gastosPorMesYAnio) ? gastosPorMesYAnio : []} />
-                        </div>
-                    </div>
-                </div>
-                {/* Area old Chart */}
-                <div className='row mb-4'>
-                    <div className={`col-${showColumns} mb-4`}>
-                        <div className=' card'>
-                            <AreaChartOldYearAcumulada
-                                data={stackedChartData}
-                            />
-                        </div>
-                    </div>
-                    <div className={`col-${showColumns}`}>
-                        <div className=' card'>
-                            <AreaChartOldYearAcumulada
-                                data={(gastosPorMesYAnio) ? gastosPorMesYAnio : []} />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Tabla totales por categoria */}
-                <div className={`col-12`}>
-                    <div className='card'>
-                        <div className='card-header text-center'>
-                            <h6 className='fw-bold text-secondary'>Detalle pedidos {fechaPedido}</h6>
-                        </div>
-                        <div className='card-body' style={{ fontSize: '0.9rem' }}>
-                            <div className="table-responsive" style={{ overflowX: 'auto' }}>
-                                <table className="table table-bordered table-sm text-center align-middle w-100 mx-auto">
-                                    <thead className="table-secondary">
-                                        <tr>
-                                            {[
-                                                'KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA',
-                                                'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO',
-                                                'LBC', 'CTC', 'LBCP'
-                                            ].map((codigo) => <th key={codigo}>{codigo}</th>)}
-                                            <th>Total</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody>
-                                        <tr>
-                                            {['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'].map((codigo) => (
-                                                <td key={codigo}>
-                                                    {totalCategorias[codigo]?.items || 0}
-                                                </td>
-                                            ))}
-                                            <td className="fw-bold">
-                                                {
-                                                    ['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'].reduce(
-                                                        (acc, codigo) => acc + (totalCategorias[codigo]?.items || 0),
-                                                        0
-                                                    )
-                                                }
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            {['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'].map((codigo) => (
-                                                <td key={codigo}>
-                                                    {formatearPrecio((totalCategorias[codigo]?.items) * (returnPrice(codigo)) || 0)}
-                                                </td>
-                                            ))}
-                                            <td className="fw-bold">
-                                                {
-                                                    formatearPrecio(
-                                                        ['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'].reduce(
-                                                            (acc, codigo) => acc + parseInt((totalCategorias[codigo]?.items) * (returnPrice(codigo))) || 0,
-                                                            0
-                                                        )
-                                                    )
-                                                }
-                                            </td>
-                                        </tr>
-
-                                        <tr>
-                                            {['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'].map((codigo) => (
-                                                <td key={codigo}>
-                                                    {formatearPrecio(totalCategorias[codigo]?.total || 0)}
-                                                </td>
-                                            ))}
-                                            <td className="fw-bold">
-                                                {
-                                                    formatearPrecio(
-                                                        ['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'].reduce(
-                                                            (acc, codigo) => acc + (totalCategorias[codigo]?.total || 0),
-                                                            0
-                                                        )
-                                                    )
-                                                }
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                    <tfoot className='text-end'>
-                                        <tr>
-                                            <td colSpan={14}>
-                                                D: <span className='fw-semibold'>{formatearPrecio
-                                                    ((['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'].reduce((acc, codigo) => acc + (totalCategorias[codigo]?.total || 0), 0) - (['KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CBNA', 'CBNO', 'CCNA', 'CCNO', 'LBC', 'CTC', 'LBCP'].reduce(
-                                                        (acc, codigo) => acc + parseInt((totalCategorias[codigo]?.items) * (returnPrice(codigo))) || 0,
-                                                        0
-                                                    ))))
-                                                }</span>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td colSpan={14}>
-                                                {totalcantidadAnio} Total pedidos: <span className='fw-semibold'>{filteredData.nodes.length}</span>
-                                            </td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
+            <div className="container-fluid py-3 px-3 px-md-4" ref={reportPrintRef}>
+                {/* Header Superior con Selector de Años y Acciones */}
+                <div className="card shadow-sm border-0 mb-4 bg-white rounded-4 overflow-hidden">
+                    <div className="card-body p-4">
+                        <div className="row align-items-center g-3">
+                            <div className="col-12 col-lg-7">
+                                <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                    <span className="badge rounded-pill bg-primary-subtle text-primary fw-bold px-3 py-1">
+                                        <i className="fa-solid fa-briefcase me-1"></i> Inteligencia del Negocio
+                                    </span>
+                                    <span className={`badge rounded-pill px-3 py-1 fw-bold ${esModerno ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-dark'}`}>
+                                        <i className={`fa-solid ${esModerno ? 'fa-database' : 'fa-box-archive'} me-1`}></i>
+                                        {esModerno ? 'Sistema en Curso (MongoDB)' : 'Archivo Histórico (Excel/OldOrders)'}
+                                    </span>
+                                </div>
+                                <h3 className="fw-bolder text-dark mb-1">
+                                    Reportes y Finanzas del Negocio ({fechaPedido})
+                                </h3>
+                                <p className="text-muted small mb-0">
+                                    Consolidado integral de ventas, egresos operativos, rentabilidad, estacionalidad y comportamiento de clientes.
+                                </p>
                             </div>
-                        </div>
 
-                        <div className="card-footer">
-                            <div className="row w-100 text-center" style={{ fontSize: '0.9rem' }}>
-                                <div className="col rounded bg-success d-flex align-items-center justify-content-center">
-                                    <p className="text-white mb-0">
-                                        Total {fechaPedido}: <span className="fw-semibold">{formatearPrecio(totalAnio) || 0}</span>
-                                    </p>
-                                </div>
-                                <div className="col rounded bg-info d-flex align-items-center justify-content-center">
-                                    <p className="text-white mb-0">
-                                        Total pedidos filtrados: <span className="fw-semibold">{formatearPrecio(filteredData.nodes.reduce((acc, item) => acc + item.TOTAL, 0)) || 0}</span>
-                                    </p>
-                                </div>
-                                <div className="col rounded bg-danger d-flex align-items-center justify-content-center">
-                                    <p className="text-white mb-0">
-                                        Diferencia: <span className="fw-semibold">{formatearPrecio((filteredData.nodes.reduce((acc, item) => acc + item.TOTAL, 0) - totalAnio) || 0)}</span>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="card mt-4 p-2">
-                    <div className="row mt-4 d-flex justify-content-between align-items-center m-2">
-                        <div className="col-auto">
-                            <h5 className="fw-bold text-secondary">Listado pedidos antiguos</h5>
-                        </div>
-                        <div className='col-auto d-flex'>
-                            <Button variant='danger-outline' className='btn btn-sm d-flex align-items-center gap-2 btn-outline-success m-1' onClick={handleDownloadCsv}>
-                                <i className="fa-solid fa-file-csv"></i>
-                                <span>Descargar CSV</span>
-                            </Button>
-                            <Button variant='danger-outline' className='btn btn-sm d-flex align-items-center gap-2 btn-outline-danger m-1' onClick={handleDownloadPDF}>
-                                <i className="fa-solid fa-file-pdf"></i>
-                                <span>Descargar PDF</span>
-                            </Button>
-                        </div>
-                    </div>
-                    <div className='row mt-2 d-flex justify-content-between align-items-center m-2'>
-                        {/* Columna para el input */}
-                        <div className="col">
-                            <div className="input-group">
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder="Buscar (Fecha, cliente, remisión, NIT)"
-                                    value={search}
-                                    onChange={handleSearch}
-                                />
-                                <div className="input-group-append">
-                                    <Button className="btn border" type="button">
-                                        <i className="fas fa-search fa-sm" />
-                                    </Button>
+                            {/* Selector Rápido de Años y Botones de Exportación */}
+                            <div className="col-12 col-lg-5">
+                                <div className="d-flex flex-column align-items-lg-end gap-2">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <span className="fw-semibold text-secondary small">Año principal:</span>
+                                        <select
+                                            className="form-select form-select-sm w-auto rounded-pill border-success fw-bold shadow-sm px-3"
+                                            value={fechaPedido}
+                                            onChange={(e) => {
+                                                const nuevo = e.target.value;
+                                                setFechaPedido(nuevo);
+                                                if (String(anioComparar) === nuevo) {
+                                                    const yrNum = Number(nuevo);
+                                                    const fallback = String(yrNum > 2017 ? yrNum - 1 : (yrNum + 1));
+                                                    setAnioComparar(fallback);
+                                                }
+                                            }}
+                                            style={{ cursor: 'pointer', minWidth: '100px' }}
+                                        >
+                                            {aniosDisponibles.map(yr => (
+                                                <option key={yr} value={yr}>
+                                                    {yr}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Total en Ventas Categoría Kits para el año seleccionado */}
+                                    <div className="text-lg-end mt-1">
+                                        <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill small fw-bold shadow-xs">
+                                            <i className="fa-solid fa-box-archive me-1"></i>
+                                            Ventas Kits {fechaPedido}: {formatearPrecio(stats.totalVentasKits || ((stats.gruposResumen?.Kits?.total || 0) + (stats.gruposResumen?.Cirios?.total || 0)))}
+                                        </span>
+                                    </div>
+
+                                    <div className="d-flex gap-2 mt-1">
+                                        <Button
+                                            variant="outline-danger"
+                                            className="btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
+                                            onClick={handleDownloadPDF}
+                                        >
+                                            <i className="fa-solid fa-file-pdf"></i>
+                                            <span>Exportar Informe PDF</span>
+                                        </Button>
+                                        <Button
+                                            variant="outline-success"
+                                            className="btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
+                                            onClick={handleDownloadCsv}
+                                        >
+                                            <i className="fa-solid fa-file-csv"></i>
+                                            <span>Descargar CSV</span>
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Checkbox para excluir coincidencias por cliente */}
-                        <div className='col'>
-                            <Form.Check
-                                type="checkbox"
-                                label="Excluir coincidencias por cliente"
-                                checked={excluirCliente}
-                                onChange={(e) => setExcluirCliente(e.target.checked)}
-                            />
-                        </div>
+                        {/* Selector de Cuentas por Usuario / Consolidado */}
+                        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-4 pt-3 border-top">
+                            <div className="d-flex align-items-center gap-2">
+                                <span className="p-2 bg-light rounded-3 border text-secondary">
+                                    <i className="fa-solid fa-users-gear"></i>
+                                </span>
+                                <div>
+                                    <span className="fw-bold text-dark d-block small">División de Cuentas:</span>
+                                    <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                        {filtroUsuario === 'KAROL'
+                                            ? 'Exclusivamente pedidos y métricas de Karol Gómez.'
+                                            : filtroUsuario === 'GENERAL'
+                                                ? (esLeonardo
+                                                    ? 'Consolidado filtrado para Leonardo: Todos los Kits, Guantes propios y Otros con categoría Kits.'
+                                                    : 'Visualizando 100% de la empresa (sin duplicar pedidos de clientes).')
+                                                : filtroUsuario === 'LEONARDO'
+                                                    ? 'Cuentas de Leonardo Gómez + Kits y Guantes de Karol Gómez (separados y consolidados).'
+                                                    : 'Cuentas de Oscar Gómez + Guantes vendidos por Karol Gómez.'}
+                                        {filtroCategoria !== 'TODOS' && (
+                                            <span className="badge bg-primary text-white rounded-pill ms-2">
+                                                Filtro activo: {filtroCategoria === 'KITS' ? 'Solo Kits' : filtroCategoria === 'GUANTES' ? 'Solo Guantes' : 'Solo Otros'}
+                                            </span>
+                                        )}
+                                    </small>
+                                </div>
+                            </div>
 
+                            <div className="d-flex flex-wrap align-items-center gap-2">
+                                {/* Botón Filtro Solo Pagados */}
+                                <button
+                                    type="button"
+                                    className={`btn btn-sm rounded-pill px-3 py-1 fw-bold transition-all shadow-sm ${
+                                        soloPagados 
+                                            ? 'btn-success text-white border-0' 
+                                            : 'btn-outline-secondary bg-white'
+                                    }`}
+                                    onClick={() => setSoloPagados(!soloPagados)}
+                                    title={soloPagados ? 'Haga clic para mostrar todos los estados' : 'Haga clic para filtrar y mostrar únicamente pedidos en estado PAGADO'}
+                                >
+                                    <i className={`fa-solid ${soloPagados ? 'fa-circle-check text-white' : 'fa-money-bill-wave text-success'} me-1.5`}></i>
+                                    {soloPagados ? 'Estado: Solo PAGADOS' : 'Todos los Estados (Por defecto)'}
+                                </button>
 
-                    </div>
+                                {/* Filtro por Categoría de Producto */}
+                                <div className="btn-group shadow-sm rounded-pill p-1 bg-light border" role="group" aria-label="Filtro de categoría">
+                                    <button
+                                        type="button"
+                                        className={`btn btn-sm rounded-pill px-2.5 py-1 fw-bold transition-all ${
+                                            filtroCategoria === 'TODOS'
+                                                ? 'btn-secondary text-white shadow-sm'
+                                                : 'btn-light text-secondary border-0 bg-transparent'
+                                        }`}
+                                        onClick={() => setFiltroCategoria('TODOS')}
+                                        title="Mostrar todas las categorías permitidas"
+                                    >
+                                        <i className="fa-solid fa-layer-group me-1"></i>
+                                        Todas
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`btn btn-sm rounded-pill px-2.5 py-1 fw-bold transition-all ${
+                                            filtroCategoria === 'KITS'
+                                                ? 'btn-info text-white shadow-sm'
+                                                : 'btn-light text-secondary border-0 bg-transparent'
+                                        }`}
+                                        onClick={() => setFiltroCategoria('KITS')}
+                                        title="Filtrar valores únicamente por la categoría Kits"
+                                    >
+                                        <i className="fa-solid fa-box-open me-1"></i>
+                                        Solo Kits
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`btn btn-sm rounded-pill px-2.5 py-1 fw-bold transition-all ${
+                                            filtroCategoria === 'GUANTES'
+                                                ? 'btn-warning text-dark shadow-sm'
+                                                : 'btn-light text-secondary border-0 bg-transparent'
+                                        }`}
+                                        onClick={() => setFiltroCategoria('GUANTES')}
+                                        title="Filtrar valores únicamente por la categoría Guantes"
+                                    >
+                                        <i className="fa-solid fa-mitten me-1"></i>
+                                        Solo Guantes
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`btn btn-sm rounded-pill px-2.5 py-1 fw-bold transition-all ${
+                                            filtroCategoria === 'OTROS'
+                                                ? 'btn-primary text-white shadow-sm'
+                                                : 'btn-light text-secondary border-0 bg-transparent'
+                                        }`}
+                                        onClick={() => setFiltroCategoria('OTROS')}
+                                        title="Filtrar valores únicamente por la categoría Otros (accesorios)"
+                                    >
+                                        <i className="fa-solid fa-tags me-1"></i>
+                                        Solo Otros
+                                    </button>
+                                </div>
 
-                    {/* TABLA DE DATOS */}
-                    <div className='row'>
-                        <div className="col-6 table-responsive" ref={modalRef} style={{ maxHeight: "none", overflow: "visible" }}>
-                            <Table
-                                className="table table-hover text-start w-100 compact-table table avoid-break shadow-lg p-4"
-                                style={{ maxWidth: "100%" }}
-                                data={filteredData}
-                                sort={sort}
-                                theme={theme}
-                                resize={resize}
-                            >
-                                {(tableList) => (
-                                    <>
-                                        <Header>
-                                            <HeaderRow className="text-center" style={{ background: "red" }}>
-                                                <HeaderCellSort resize sortKey="FECHA" className="fw-semibold">
-                                                    Fecha
-                                                </HeaderCellSort>
-                                                <HeaderCellSort resize sortKey="NIT" className="fw-semibold">
-                                                    NIT / CC
-                                                </HeaderCellSort>
-                                                <HeaderCellSort resize sortKey="REMISION" className="fw-semibold">
-                                                    Remisi
-                                                </HeaderCellSort>
-                                                <HeaderCellSort resize sortKey="ITEMS" className="fw-semibold">
-                                                    I
-                                                </HeaderCellSort>
-                                                <HeaderCellSort resize sortKey="ITEMS" className="fw-semibold">
-                                                    P
-                                                </HeaderCellSort>
-                                                <HeaderCellSort resize sortKey="CLIENTE" className="fw-semibold">
-                                                    Cliente
-                                                </HeaderCellSort>
-                                                <HeaderCellSort resize sortKey="TOTAL" className="fw-semibold">
-                                                    Total $
-                                                </HeaderCellSort>
-                                            </HeaderRow>
-                                        </Header>
-
-                                        <Body>
-                                            {tableList.map((item, index) => (
-                                                <React.Fragment key={index}>
-                                                    <Row item={item} className="text-left">
-                                                        <Cell className='text-end'>
-                                                            {convertirOldFecha(item.FECHA).toLocaleDateString()}
-                                                        </Cell>
-                                                        <Cell>{item.NIT}</Cell>
-                                                        <Cell className='cursor-pointer'>
-                                                            <OverlayTrigger
-                                                                trigger="click"
-                                                                key="top"
-                                                                placement="top"
-                                                                overlay={
-                                                                    <Popover id={`popover-positioned-top`}
-                                                                        style={{ maxWidth: 'none', width: 'auto' }} >
-                                                                        <Popover.Header as="h3" className='fw-bold text-end'>Remisión: {(item.REMISION).slice(-5)}</Popover.Header>
-                                                                        <Popover.Body>
-                                                                            <div className="table-responsive">
-                                                                                <table className="table table-sm table-bordered mb-0 w-auto rounded">
-                                                                                    <thead className="table-light">
-                                                                                        <tr>
-                                                                                            <th>Código</th>
-                                                                                            <th>Producto</th>
-                                                                                            <th>Cantidad</th>
-                                                                                            <th>Precio</th>
-                                                                                            <th>Total</th>
-                                                                                        </tr>
-                                                                                    </thead>
-                                                                                    <tbody>
-                                                                                        {item.items?.length > 0 && item.items.map((prod, i) => (
-                                                                                            <tr key={i}>
-                                                                                                <td>{prod.CODIGO}</td>
-                                                                                                <td>{prod.PRODUCTO}</td>
-                                                                                                <td className="text-center">{prod.CANTIDAD}</td>
-                                                                                                <td className="text-end">{formatearPrecio(prod.PRECIO)}</td>
-                                                                                                <td className="text-end">{formatearPrecio(prod.TOTAL)}</td>
-                                                                                            </tr>
-                                                                                        ))}
-
-                                                                                        {item.items?.length > 0 && (
-                                                                                            <tr className="fw-bold table-light">
-                                                                                                <td colSpan={4} className="text-end">Total</td>
-                                                                                                <td className="text-end">
-                                                                                                    {formatearPrecio(
-                                                                                                        item.items.reduce((acc, curr) => acc + (curr.TOTAL || 0), 0)
-                                                                                                    )}
-                                                                                                </td>
-                                                                                            </tr>
-                                                                                        )}
-
-                                                                                        {(item.items?.length === 0 || !item.items) && (
-                                                                                            <tr>
-                                                                                                <td colSpan={5} className="text-center text-muted">Sin productos</td>
-                                                                                            </tr>
-                                                                                        )}
-                                                                                    </tbody>
-                                                                                </table>
-                                                                            </div>
-                                                                        </Popover.Body>
-
-                                                                    </Popover>
-                                                                }
-                                                            >
-                                                                <div className='border rounded text-center text-truncate w-100 cursor-pointer block bg-secondary text-white'>
-                                                                    {(item.REMISION).slice(-5)}
-                                                                </div>
-                                                            </OverlayTrigger>
-                                                        </Cell>
-                                                        <Cell>{item.items?.length || 0}</Cell>
-                                                        <Cell>{item.items.reduce((acc, curr) => acc + (curr.CANTIDAD || 0), 0) || 0}</Cell>
-                                                        <Cell>{item.CLIENTE}</Cell>
-                                                        <Cell className="text-end">{formatearPrecio(item.TOTAL)}</Cell>
-                                                    </Row>
-                                                </React.Fragment>
-                                            ))}
-                                            {filteredData.nodes.length === 0 && (
-                                                <Row>
-                                                    <Cell colSpan={6} className="text-center text-muted">
-                                                        No hay pedidos antiguos que coincidan con los criterios de búsqueda.
-                                                    </Cell>
-                                                </Row>
-                                            )}
-                                        </Body>
-
-                                    </>
+                                {esKarol ? (
+                                    <span className="badge bg-primary text-white rounded-pill px-3 py-2 fw-semibold shadow-xs">
+                                        <i className="fa-solid fa-user me-1"></i> Karol Gómez (Mis Estadísticas)
+                                    </span>
+                                ) : (
+                                    <div className="btn-group shadow-sm rounded-pill p-1 bg-light border" role="group">
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${filtroUsuario === 'GENERAL'
+                                                ? 'btn-dark text-white shadow-sm'
+                                                : 'btn-light text-secondary border-0 bg-transparent'
+                                                }`}
+                                            onClick={() => setFiltroUsuario('GENERAL')}
+                                            title={esLeonardo ? 'Consolidado General filtrado: Kits globales, Guantes propios y Otros de Kits' : 'Consolidado General de la Empresa'}
+                                        >
+                                            <i className="fa-solid fa-building me-1"></i>
+                                            Consolidado General
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${filtroUsuario === 'LEONARDO'
+                                                ? 'btn-primary text-white shadow-sm'
+                                                : 'btn-light text-secondary border-0 bg-transparent'
+                                                }`}
+                                            onClick={() => setFiltroUsuario('LEONARDO')}
+                                        >
+                                            <i className="fa-solid fa-user me-1"></i>
+                                            Leonardo Gómez
+                                            <span className="badge bg-white text-primary rounded-pill ms-1" style={{ fontSize: '0.67rem' }}>
+                                                + Karol
+                                            </span>
+                                        </button>
+                                        {!esLeonardo && (
+                                            <button
+                                                type="button"
+                                                className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${filtroUsuario === 'OSCAR'
+                                                    ? 'btn-success text-white shadow-sm'
+                                                    : 'btn-light text-secondary border-0 bg-transparent'
+                                                    }`}
+                                                onClick={() => setFiltroUsuario('OSCAR')}
+                                            >
+                                                <i className="fa-solid fa-user-tie me-1"></i>
+                                                Oscar Gómez
+                                                <span className="badge bg-white text-success rounded-pill ms-1" style={{ fontSize: '0.67rem' }}>
+                                                    + Guantes Karol
+                                                </span>
+                                            </button>
+                                        )}
+                                    </div>
                                 )}
-                            </Table>
+                            </div>
                         </div>
-                        <div className='col-6'>
-                            <div className='row mr-2'>
-                                <div className='col-12'>
+
+                        {/* Pestañas de Navegación de Reportes */}
+                        <div className="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
+                            <button
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'finanzas' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                    }`}
+                                onClick={() => setActiveTab('finanzas')}
+                            >
+                                <i className="fa-solid fa-scale-balanced"></i>
+                                <span>Finanzas & P&L Mensual</span>
+                            </button>
+
+                            <button
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'categorias' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                    }`}
+                                onClick={() => setActiveTab('categorias')}
+                            >
+                                <i className="fa-solid fa-tags"></i>
+                                <span>Categorías & Género</span>
+                            </button>
+
+                            <button
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'clientes' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                    }`}
+                                onClick={() => setActiveTab('clientes')}
+                            >
+                                <i className="fa-solid fa-users"></i>
+                                <span>Clientes & Concentración</span>
+                                <span className="badge bg-secondary rounded-pill">{stats.totalClientesUnicos}</span>
+                            </button>
+
+                            <button
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'comparativa' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                    }`}
+                                onClick={() => setActiveTab('comparativa')}
+                            >
+                                <i className="fa-solid fa-code-compare"></i>
+                                <span>Comparativa Cara a Cara</span>
+                            </button>
+
+                            <button
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'multianual' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                    }`}
+                                onClick={() => setActiveTab('multianual')}
+                            >
+                                <i className="fa-solid fa-chart-line"></i>
+                                <span>Evolución Histórica</span>
+                            </button>
+
+                            <button
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'pedidos' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                    }`}
+                                onClick={() => setActiveTab('pedidos')}
+                            >
+                                <i className="fa-solid fa-table-list"></i>
+                                <span>Detalle de Pedidos</span>
+                                <span className="badge bg-primary rounded-pill">{stats.totalPedidos}</span>
+                            </button>
+
+                            <button
+                                className="btn btn-sm btn-primary rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-2 ms-auto shadow-xs"
+                                onClick={() => navigate('/pedidos/cruceCuentas')}
+                                title="Ir a la liquidación financiera y cruce de cuentas entre socios a precios de fábrica"
+                            >
+                                <i className="fa-solid fa-scale-balanced"></i>
+                                <span>Cruce de Cuentas (Socios)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Banner de Estado Pagado Activo */}
+                {soloPagados && (
+                    <div className="alert alert-success border-0 rounded-4 shadow-sm py-2 px-4 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 bg-success-subtle text-success-emphasis">
+                        <div className="d-flex align-items-center gap-2">
+                            <i className="fa-solid fa-circle-check fs-5 text-success"></i>
+                            <div>
+                                <strong className="d-block small">Filtro Activo: Calculando únicamente pedidos PAGADOS</strong>
+                                <small className="text-muted" style={{ fontSize: '0.78rem' }}>
+                                    Todas las métricas de finanzas, ventas, unidades y división por socios reflejan exclusivamente pedidos con estado pagado.
+                                </small>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold"
+                            onClick={() => setSoloPagados(false)}
+                        >
+                            <i className="fa-solid fa-rotate-left me-1"></i>
+                            Restablecer a Todos los Estados
+                        </button>
+                    </div>
+                )}
+
+                {/* Banners de Estado del Filtro de Usuario */}
+                {filtroUsuario === 'GENERAL' && esLeonardo && (
+                    <div className="alert border-0 rounded-4 shadow-sm py-3 px-4 d-flex flex-column gap-2 mb-4 text-white" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+                        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div className="d-flex align-items-center gap-3">
+                                <span className="badge rounded-circle bg-white text-dark p-3 shadow-xs">
+                                    <i className="fa-solid fa-building-user fs-5 text-primary"></i>
+                                </span>
+                                <div>
+                                    <strong className="text-white d-block fs-6">
+                                        Consolidado General Filtrado: Leonardo Gómez ({fechaPedido})
+                                    </strong>
+                                    <small className="text-white-50">
+                                        Visualizando <strong>Todos los Kits</strong> de la empresa, <strong>Guantes vendidos por Leonardo</strong> y <strong>Otros con categoría Kits</strong>.
+                                    </small>
+                                </div>
+                            </div>
+                            <div className="d-flex align-items-center gap-2">
+                                <button className="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold" onClick={() => setFiltroUsuario('LEONARDO')}>
+                                    <i className="fa-solid fa-user me-1"></i> Ver Cuenta Propia (Leonardo + Karol)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Banner de Filtro de Categoría Activo */}
+                {filtroCategoria !== 'TODOS' && (
+                    <div className="alert alert-info border-0 rounded-4 shadow-sm py-2 px-3 d-flex align-items-center justify-content-between mb-4">
+                        <div className="d-flex align-items-center gap-2 small">
+                            <i className="fa-solid fa-filter text-primary fs-6"></i>
+                            <span>
+                                Filtro de Categoría activo: <strong>{filtroCategoria === 'KITS' ? 'Solo Kits' : filtroCategoria === 'GUANTES' ? 'Solo Guantes' : 'Solo Otros'}</strong>. Todos los cálculos, gráficos, tarjetas ejecutivas y estados reflejan únicamente esta categoría.
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-light border rounded-pill px-3 py-1 fw-bold text-secondary shadow-xs"
+                            onClick={() => setFiltroCategoria('TODOS')}
+                        >
+                            <i className="fa-solid fa-xmark me-1 text-danger"></i> Quitar Filtro (Ver Todas)
+                        </button>
+                    </div>
+                )}
+
+                {filtroUsuario === 'KAROL' && (
+                    <div className="alert alert-primary border-0 rounded-4 shadow-sm py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                        <div className="d-flex align-items-center gap-3">
+                            <span className="badge rounded-circle bg-primary text-white p-3">
+                                <i className="fa-solid fa-user fs-5"></i>
+                            </span>
+                            <div>
+                                <strong className="text-dark d-block fs-6">
+                                    Mis Estadísticas y Pedidos: Karol Gómez ({fechaPedido})
+                                </strong>
+                                <small className="text-muted">
+                                    Mostrando exclusivamente las ventas, pedidos y operaciones asociadas a su cuenta de usuario.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {filtroUsuario === 'LEONARDO' && (
+                    <div className="alert alert-primary border-0 rounded-4 shadow-sm py-3 px-4 d-flex flex-column gap-2 mb-4">
+                        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div className="d-flex align-items-center gap-3">
+                                <span className="badge rounded-circle bg-primary text-white p-3">
+                                    <i className="fa-solid fa-user fs-5"></i>
+                                </span>
+                                <div>
+                                    <strong className="text-dark d-block fs-6">
+                                        Cuentas Desglosadas: Leonardo Gómez ({fechaPedido})
+                                    </strong>
+                                    <small className="text-muted">
+                                        Mostrando pedidos propios de Leonardo + Kits y Guantes vendidos por Karol Gómez (separados y consolidados).
+                                    </small>
+                                </div>
+                            </div>
+                            <button className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" onClick={() => setFiltroUsuario('GENERAL')}>
+                                <i className="fa-solid fa-rotate-left me-1"></i> Ver Consolidado General
+                            </button>
+                        </div>
+
+                        {/* Desglose de Guantes Leo vs Karol */}
+                        <div className="p-2 px-3 rounded-3 bg-white border border-primary-subtle d-flex flex-wrap align-items-center justify-content-between gap-2 mt-1">
+                            <span className="small fw-bold text-dark">
+                                <i className="fa-solid fa-hand-sparkles text-warning me-1"></i>
+                                Venta de Guantes (Separada & Sumada):
+                            </span>
+                            <div className="d-flex flex-wrap align-items-center gap-2">
+                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill">
+                                    Guantes Leonardo: {formatearPrecio(desgloseGuantesLeoYKarol.leo)}
+                                </span>
+                                <span className="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 rounded-pill">
+                                    Guantes Karol: {formatearPrecio(desgloseGuantesLeoYKarol.karol)}
+                                </span>
+                                <span className="badge bg-warning-subtle text-dark border border-warning px-2 py-1 rounded-pill fw-bold">
+                                    Total Guantes: {formatearPrecio(desgloseGuantesLeoYKarol.total)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {filtroUsuario === 'OSCAR' && (
+                    <div className="alert alert-success border-0 rounded-4 shadow-sm py-3 px-4 d-flex flex-column gap-2 mb-4">
+                        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div className="d-flex align-items-center gap-3">
+                                <span className="badge rounded-circle bg-success text-white p-3">
+                                    <i className="fa-solid fa-user-tie fs-5"></i>
+                                </span>
+                                <div>
+                                    <strong className="text-dark d-block fs-6">
+                                        Cuentas Desglosadas: Oscar Gómez ({fechaPedido})
+                                    </strong>
+                                    <small className="text-muted">
+                                        Mostrando pedidos propios de Oscar + Ítems de <strong>Guantes</strong> vendidos por Karol Gómez. Egresos operativos y de insumos.
+                                    </small>
+                                </div>
+                            </div>
+                            <button className="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" onClick={() => setFiltroUsuario('GENERAL')}>
+                                <i className="fa-solid fa-rotate-left me-1"></i> Ver Consolidado General
+                            </button>
+                        </div>
+
+                        {/* Destacado especial para Oscar: Ventas Guantes de Leonardo */}
+                        {ventasGuantesLeoAnio > 0 && (
+                            <div className="p-2 px-3 rounded-3 bg-white border border-warning-subtle d-flex flex-wrap align-items-center justify-content-between gap-2 mt-1">
+                                <span className="small fw-bold text-dark">
+                                    <i className="fa-solid fa-hand-sparkles text-warning me-1"></i>
+                                    Ventas de Guantes de Leonardo Gómez (GUANTES + OTR):
+                                </span>
+                                <span className="badge bg-warning-subtle text-dark border border-warning px-3 py-1 rounded-pill fw-bold fs-7">
+                                    {formatearPrecio(ventasGuantesLeoAnio)}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {!esModerno && (
+                    <div className="alert border-0 rounded-4 py-2 px-3 mb-4 small d-flex align-items-center gap-2 bg-primary bg-opacity-10 text-primary-emphasis border border-primary-subtle">
+                        <i className="fa-solid fa-circle-info fs-5 text-primary"></i>
+                        <span>
+                            <strong>Archivo Histórico ({fechaPedido}):</strong> Para los administradores, las ventas de <strong>Leonardo Gómez</strong> corresponden a <strong>BRAND DESIGN SAS</strong>, y las ventas de <strong>Oscar Gómez</strong> corresponden al <strong>resto de clientes</strong> de la empresa.
+                        </span>
+                    </div>
+                )}
+
+                {/* KPI CARDS EJECUTIVAS: CONTEXTO INMEDIATO */}
+                <div className="row g-3 mb-4">
+                    {/* Card 1: Ventas Totales */}
+                    <div className="col-12 col-sm-6 col-xl-3">
+                        <div className="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white border-start border-4 border-primary">
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span className="text-muted small fw-bold text-uppercase d-block">Ventas Totales</span>
+                                    <div className="d-flex align-items-center gap-1 mt-1">
+                                        <span className="badge bg-light text-secondary border">Año {fechaPedido}</span>
+                                        <span className="badge bg-primary-subtle text-primary border border-primary-subtle" style={{ fontSize: '0.68rem' }} title="Calculado con la facturación comercial real cobrada en los pedidos">
+                                            Precios de Pedidos
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style={{ width: 38, height: 38 }}>
+                                    <i className="fa-solid fa-sack-dollar"></i>
+                                </div>
+                            </div>
+                            <h4 className="fw-bolder text-dark mb-1">{formatearPrecio(stats.totalVentas)}</h4>
+                            <small className="text-muted d-block mb-1" style={{ fontSize: '0.72rem' }}>
+                                Facturación real cobrada en pedidos
+                            </small>
+                            <div className="d-flex align-items-center gap-2 mt-auto pt-2">
+                                {stats.totalVentasAnterior > 0 ? (
+                                    <span className={`badge rounded-pill ${stats.crecimientoYoY >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'} fw-bold`}>
+                                        <i className={`fa-solid ${stats.crecimientoYoY >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'} me-1`}></i>
+                                        {stats.crecimientoYoY >= 0 ? `+${stats.crecimientoYoY.toFixed(1)}%` : `${stats.crecimientoYoY.toFixed(1)}%`} vs {anioAnterior}
+                                    </span>
+                                ) : (
+                                    <span className="badge bg-light text-muted">Sin base previa</span>
+                                )}
+                                <span className="text-muted small ms-auto">{stats.totalPedidos} pedidos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card 2: Gastos Totales */}
+                    <div className="col-12 col-sm-6 col-xl-3">
+                        <div className="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white border-start border-4 border-danger">
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span className="text-muted small fw-bold text-uppercase d-block">Gastos Operativos</span>
+                                    <span className="badge bg-light text-secondary border">Costos registrados</span>
+                                </div>
+                                <div className="rounded-circle bg-danger-subtle text-danger p-2 d-flex align-items-center justify-content-center" style={{ width: 38, height: 38 }}>
+                                    <i className="fa-solid fa-receipt"></i>
+                                </div>
+                            </div>
+                            <h4 className="fw-bolder text-dark mb-1">{formatearPrecio(stats.totalGastos)}</h4>
+                            <div className="d-flex align-items-center justify-content-between mt-auto pt-2">
+                                <span className="text-muted small">
+                                    Impacto: <strong>{stats.totalVentas > 0 ? ((stats.totalGastos / stats.totalVentas) * 100).toFixed(1) : 0}%</strong> de ventas
+                                </span>
+                                <span className="badge bg-danger-subtle text-danger fw-semibold">Egresos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card 3: Utilidad Operativa */}
+                    <div className="col-12 col-sm-6 col-xl-3">
+                        <div className="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white border-start border-4 border-success">
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span className="text-muted small fw-bold text-uppercase d-block">Utilidad Operativa</span>
+                                    <span className="badge bg-light text-secondary border">Ventas - Gastos</span>
+                                </div>
+                                <div className="rounded-circle bg-success-subtle text-success p-2 d-flex align-items-center justify-content-center" style={{ width: 38, height: 38 }}>
+                                    <i className="fa-solid fa-hand-holding-dollar"></i>
+                                </div>
+                            </div>
+                            <h4 className={`fw-bolder mb-1 ${stats.utilidadOperativa >= 0 ? 'text-success' : 'text-danger'}`}>
+                                {formatearPrecio(stats.utilidadOperativa)}
+                            </h4>
+                            <small className="text-muted d-block mb-1" style={{ fontSize: '0.72rem' }}>
+                                Base: Precios reales facturados
+                            </small>
+                            <div className="d-flex align-items-center justify-content-between mt-auto pt-2">
+                                <span className={`badge rounded-pill fw-bold ${stats.margenOperativoPorcentaje >= 30 ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-dark'}`}>
+                                    Margen: {stats.margenOperativoPorcentaje.toFixed(1)}%
+                                </span>
+                                <span className="text-muted small">{stats.utilidadOperativa >= 0 ? 'Operación Rentable' : 'Déficit'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card 4: Volumen, Ticket y Clientes */}
+                    <div className="col-12 col-sm-6 col-xl-3">
+                        <div className="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white border-start border-4 border-info">
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span className="text-muted small fw-bold text-uppercase d-block">Volumen y Ticket</span>
+                                    <span className="badge bg-light text-secondary border">{stats.totalClientesUnicos} clientes</span>
+                                </div>
+                                <div className="rounded-circle bg-info-subtle text-info p-2 d-flex align-items-center justify-content-center" style={{ width: 38, height: 38 }}>
+                                    <i className="fa-solid fa-boxes-stacked"></i>
+                                </div>
+                            </div>
+                            <h4 className="fw-bolder text-dark mb-1">{stats.totalPrendas.toLocaleString()} productos</h4>
+                            <div className="d-flex align-items-center justify-content-between mt-auto pt-2">
+                                <span className="text-muted small">
+                                    Ticket prom: <strong className="text-dark">{formatearPrecio(stats.ticketPromedio)}</strong>
+                                </span>
+                                <span className="badge bg-info-subtle text-info fw-semibold">Producción</span>
+                            </div>
+                            <div className="mt-2 small text-muted border-top pt-1" style={{ fontSize: '0.73rem' }}>
+                                Kits: <strong>{stats.gruposResumen.Kits.unidades}</strong> • Guantes: <strong className="text-primary">{stats.gruposResumen.Guantes.unidades} docenas</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* VISTA 1: FINANZAS & P&L MENSUAL */}
+                {activeTab === 'finanzas' && (
+                    <div className="row g-4">
+                        {/* Gráfico Ventas vs Gastos del Año */}
+                        <div className="col-12 col-xl-8">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                                <div className="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <h5 className="fw-bold text-dark mb-0">
+                                                <i className="fa-solid fa-chart-column text-primary me-2"></i>
+                                                Flujo Mensual: Ventas vs Gastos ({fechaPedido})
+                                            </h5>
+                                            <span className="badge bg-primary-subtle text-primary border border-primary-subtle small fw-semibold">
+                                                <i className="fa-solid fa-receipt me-1"></i> Precios Reales de Pedidos
+                                            </span>
+                                        </div>
+                                        <p className="text-muted small mb-0">
+                                            Contraste de ingresos y egresos mes por mes (ingresos calculados con la facturación comercial real cobrada en los pedidos ya realizados).
+                                        </p>
+                                    </div>
+                                    <div className="d-flex gap-2">
+                                        <span className="badge bg-success-subtle text-success p-2">
+                                            <i className="fa-solid fa-circle me-1" style={{ fontSize: '0.6rem' }}></i> Ventas (Cobrado)
+                                        </span>
+                                        <span className="badge bg-danger-subtle text-danger p-2">
+                                            <i className="fa-solid fa-circle me-1" style={{ fontSize: '0.6rem' }}></i> Gastos (Egresos)
+                                        </span>
+                                    </div>
+                                </div>
+                                <div style={{ minHeight: 330 }}>
                                     <StackedChart
-                                        labels={yearlySalesChartData.labels}
-                                        datasets={yearlySalesChartData.datasets}
-                                        title="Ventas Totales por Año"
+                                        labels={chartVentasVsGastos.labels}
+                                        datasets={chartVentasVsGastos.datasets}
+                                        title={`Ventas vs Gastos ${fechaPedido}`}
+                                        stacked={false}
                                         formato={true}
                                     />
                                 </div>
                             </div>
                         </div>
+
+                        {/* Estacionalidad Trimestral (Q1 a Q4) */}
+                        <div className="col-12 col-xl-4">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                                <h6 className="fw-bold text-dark mb-1">
+                                    <i className="fa-solid fa-calendar-week text-warning me-2"></i>
+                                    Estacionalidad Trimestral ({fechaPedido})
+                                </h6>
+                                <p className="text-muted small mb-3">
+                                    Rendimiento por trimestres. Kits valorizados a precios de fábrica (2025+) y Guantes a precios reales de pedidos.
+                                </p>
+
+                                <div className="d-flex flex-column gap-2">
+                                    {Object.entries(stats.reporteTrimestres).map(([clave, tri]) => {
+                                        if (clave.startsWith('S')) return null; // solo mostrar Q1-Q4 aquí
+                                        return (
+                                            <div key={clave} className="p-3 bg-light rounded-3 border">
+                                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                                    <span className="fw-bold text-dark small">{tri.nombre}</span>
+                                                    <span className="badge bg-primary rounded-pill">{tri.participacion.toFixed(1)}% del año</span>
+                                                </div>
+
+                                                <div className="d-flex justify-content-between align-items-center">
+                                                    <span className="text-muted small">Venta: <strong className="text-dark">{formatearPrecio(tri.ventas)}</strong></span>
+                                                    <span className="text-muted small">Utilidad: <strong className={tri.utilidad >= 0 ? 'text-success' : 'text-danger'}>{formatearPrecio(tri.utilidad)}</strong></span>
+                                                </div>
+
+                                                {/* Desglose Separado: Kits (inc. Cirios) vs Guantes */}
+                                                <div className="d-flex gap-2 mt-2 pt-2 border-top">
+                                                    {/* Kits */}
+                                                    <div className="flex-fill p-2 rounded-2 bg-white border border-primary-subtle shadow-xs">
+                                                        <div className="d-flex align-items-center justify-content-between mb-1">
+                                                            <span className="badge bg-primary-subtle text-primary fw-bold" style={{ fontSize: '0.68rem' }} title="Incluye kits de comunión, bautizo y cirios">
+                                                                <i className="fa-solid fa-box me-1"></i> Kits (inc. Cirios)
+                                                            </span>
+                                                            <span className="fw-bolder text-dark" style={{ fontSize: '0.82rem' }}>
+                                                                {tri.kits || 0} <small className="text-muted fw-normal" style={{ fontSize: '0.68rem' }}>unds</small>
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-end text-primary fw-bold" style={{ fontSize: '0.78rem' }}>
+                                                            {formatearPrecio(tri.ventasKits || 0)}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Guantes */}
+                                                    <div className="flex-fill p-2 rounded-2 bg-white border border-purple-subtle shadow-xs" style={{ borderColor: 'rgba(139, 92, 246, 0.25)' }}>
+                                                        <div className="d-flex align-items-center justify-content-between mb-1">
+                                                            <span className="badge rounded-pill fw-bold" style={{ backgroundColor: '#f3e8ff', color: '#7e22ce', fontSize: '0.68rem' }}>
+                                                                <i className="fa-solid fa-hand-sparkles me-1"></i> Guantes
+                                                            </span>
+                                                            <span className="fw-bolder text-dark" style={{ fontSize: '0.82rem' }}>
+                                                                {tri.guantes || 0} <small className="text-muted fw-normal" style={{ fontSize: '0.68rem' }}>doc</small>
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-end fw-bold" style={{ color: '#7e22ce', fontSize: '0.78rem' }}>
+                                                            {formatearPrecio(tri.ventasGuantes || 0)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="d-flex justify-content-between align-items-center mt-2 text-muted" style={{ fontSize: '0.74rem' }}>
+                                                    <span>
+                                                        <i className="fa-solid fa-receipt me-1 text-secondary"></i>
+                                                        {tri.pedidos} pedidos ({tri.prendas} prods.)
+                                                        {(tri.otros > 0) && (
+                                                            <span className="ms-1 text-secondary">({tri.otros} otros)</span>
+                                                        )}
+                                                    </span>
+                                                    <span className="badge bg-light text-secondary border">
+                                                        Margen: {tri.margen.toFixed(1)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Tabla Estado de Resultados Mensual Completo (P&L) */}
+                        <div className="col-12">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                <div className="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <h5 className="fw-bold text-dark mb-0">
+                                                <i className="fa-solid fa-file-invoice-dollar text-success me-2"></i>
+                                                Estado de Resultados Mensual (P&L {fechaPedido})
+                                            </h5>
+                                            <span className="badge bg-primary-subtle text-primary border border-primary-subtle small fw-semibold">
+                                                <i className="fa-solid fa-receipt me-1"></i> Precios Reales Facturados en Pedidos
+                                            </span>
+                                        </div>
+                                        <p className="text-muted small mb-0">
+                                            Auditoría detallada mes por mes: ingresos facturados en pedidos, costos, utilidad operativa, margen y volumen de productos.
+                                        </p>
+                                    </div>
+                                    <div className="d-flex gap-2">
+                                        <span className="badge bg-light text-dark border p-2">
+                                            Mejor Mes: <strong>{stats.mejorMes.nombre} ({formatearPrecio(stats.mejorMes.total)})</strong>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="table-responsive">
+                                    <table className="table table-hover table-bordered align-middle text-center mb-0" style={{ fontSize: '0.88rem' }}>
+                                        <thead className="table-light">
+                                            <tr>
+                                                <th className="text-start ps-3">Mes</th>
+                                                <th className="text-end">
+                                                    Ventas ($)
+                                                    <small className="d-block text-muted fw-normal" style={{ fontSize: '0.68rem' }}>(Precios de Pedidos)</small>
+                                                </th>
+                                                <th className="text-end">Gastos ($)</th>
+                                                <th className="text-end">Utilidad Neta ($)</th>
+                                                <th>Margen %</th>
+                                                <th>Pedidos</th>
+                                                <th title="Kits (incluye cirios) y Docenas de Guantes">Productos*</th>
+                                                <th className="text-end">Ticket Prom.</th>
+                                                <th>% Anual</th>
+                                                <th>Desempeño</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {stats.reporteMensualPL.map((mes) => (
+                                                <tr key={mes.mesIndex}>
+                                                    <td className="text-start ps-3 fw-bold">{mes.nombreCompleto}</td>
+                                                    <td className="text-end fw-bold text-dark">{formatearPrecio(mes.ventas)}</td>
+                                                    <td className="text-end text-danger">{formatearPrecio(mes.gastos)}</td>
+                                                    <td className={`text-end fw-bold ${mes.utilidad >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                        {formatearPrecio(mes.utilidad)}
+                                                    </td>
+                                                    <td className="fw-semibold">
+                                                        {mes.ventas > 0 ? `${mes.margen.toFixed(1)}%` : '-'}
+                                                    </td>
+                                                    <td>{mes.pedidos}</td>
+                                                    <td>{mes.prendas.toLocaleString()}</td>
+                                                    <td className="text-end text-muted">{formatearPrecio(mes.ticketPromedio)}</td>
+                                                    <td>{mes.participacionAnual.toFixed(1)}%</td>
+                                                    <td>
+                                                        <span className={`badge rounded-pill ${mes.rendimiento === 'Excelente' ? 'bg-success text-white' :
+                                                            mes.rendimiento === 'Positivo' ? 'bg-success-subtle text-success' :
+                                                                mes.rendimiento === 'Déficit' ? 'bg-danger text-white' : 'bg-light text-muted'
+                                                            }`}>
+                                                            {mes.rendimiento}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot className="table-secondary fw-bold">
+                                            <tr>
+                                                <td className="text-start ps-3">TOTAL CONSOLIDADO</td>
+                                                <td className="text-end text-primary">{formatearPrecio(stats.totalVentas)}</td>
+                                                <td className="text-end text-danger">{formatearPrecio(stats.totalGastos)}</td>
+                                                <td className={`text-end ${stats.utilidadOperativa >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                    {formatearPrecio(stats.utilidadOperativa)}
+                                                </td>
+                                                <td>{stats.margenOperativoPorcentaje.toFixed(1)}%</td>
+                                                <td>{stats.totalPedidos}</td>
+                                                <td>{stats.totalPrendas.toLocaleString()}</td>
+                                                <td className="text-end">{formatearPrecio(stats.ticketPromedio)}</td>
+                                                <td>100%</td>
+                                                <td>-</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                                <span className="small text-muted mt-2 d-block">
+                                    <i className="fa-solid fa-circle-info me-1"></i> *Los productos totalizan kits y cirios (en unidades) junto con los guantes (en docenas).
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* División de Cuentas por Socio (Leonardo Gómez vs Oscar Gómez) */}
+                        <div className="col-12">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                <div className="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <div className="d-flex align-items-center gap-2">
+                                            <span className="badge rounded-pill bg-dark text-white px-3 py-1">
+                                                <i className="fa-solid fa-scale-balanced me-1"></i> Auditoría de Cuentas
+                                            </span>
+                                            <h5 className="fw-bold text-dark mb-0">
+                                                División por Socio: Leonardo Gómez vs Oscar Gómez ({fechaPedido})
+                                            </h5>
+                                        </div>
+                                        <p className="text-muted small mb-0 mt-1">
+                                            Desglose individual de ventas, costos operativos, utilidades y distribución de la regla comercial con Karol Gómez.
+                                        </p>
+                                    </div>
+                                    <div className="d-flex gap-2">
+                                        <span className="badge bg-primary-subtle text-primary border px-3 py-2 fw-semibold">
+                                            Leonardo: {divisionSocios.leonardo.share}% facturación
+                                        </span>
+                                        <span className="badge bg-success-subtle text-success border px-3 py-2 fw-semibold">
+                                            Oscar: {divisionSocios.oscar.share}% facturación
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Barra de Participación */}
+                                <div className="progress mb-3 rounded-pill overflow-hidden" style={{ height: 14 }}>
+                                    <div
+                                        className="progress-bar bg-primary"
+                                        role="progressbar"
+                                        style={{ width: `${divisionSocios.leonardo.share}%` }}
+                                        title={`Leonardo Gómez: ${divisionSocios.leonardo.share}%`}
+                                    >
+                                        {divisionSocios.leonardo.share > 10 && `Leonardo: ${divisionSocios.leonardo.share}%`}
+                                    </div>
+                                    <div
+                                        className="progress-bar bg-success"
+                                        role="progressbar"
+                                        style={{ width: `${divisionSocios.oscar.share}%` }}
+                                        title={`Oscar Gómez: ${divisionSocios.oscar.share}%`}
+                                    >
+                                        {divisionSocios.oscar.share > 10 && `Oscar: ${divisionSocios.oscar.share}%`}
+                                    </div>
+                                </div>
+
+                                {/* Tabla Comparativa de Negocios por Categoría (Kits vs Guantes vs Consolidado General) */}
+                                <div className="table-responsive mb-4">
+                                    <div className="d-flex align-items-center justify-content-between mb-2">
+                                        <div>
+                                            <h6 className="fw-bold text-dark mb-0">
+                                                <i className="fa-solid fa-layer-group text-primary me-2"></i>
+                                                Balance por Negocio & Categoría ({fechaPedido})
+                                            </h6>
+                                            <span className="small text-muted">
+                                                Kits y Guantes operan como líneas de negocio independientes con sus propios ingresos, costos, utilidades y totales generales.
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <table className="table table-hover table-bordered align-middle text-center mb-0 bg-white shadow-xs">
+                                        <thead className="table-dark small text-uppercase">
+                                            <tr>
+                                                <th className="text-start ps-3" style={{ width: '25%' }}>Negocio / Categoría</th>
+                                                <th style={{ width: '16%' }}>Ventas Totales ($)</th>
+                                                <th style={{ width: '15%' }}>Gastos Directos ($)</th>
+                                                <th style={{ width: '15%' }}>Utilidad Neta ($)</th>
+                                                <th style={{ width: '10%' }}>Margen %</th>
+                                                <th style={{ width: '12%' }}>Volumen</th>
+                                                <th style={{ width: '7%' }}>Cuota</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {/* Negocio Kits */}
+                                            <tr>
+                                                <td className="text-start ps-3">
+                                                    <div className="d-flex align-items-center gap-2">
+                                                        <span className="badge bg-primary-subtle text-primary border p-2 rounded-3">
+                                                            <i className="fa-solid fa-box-open"></i>
+                                                        </span>
+                                                        <div>
+                                                            <strong className="text-dark d-block">Negocio Kits</strong>
+                                                            <small className="text-muted">Socio: Leonardo Gómez (+ Kits Karol)</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="fw-bold text-dark">{formatearPrecio(divisionSocios.negociosPorCategoria?.kits.ventas || 0)}</td>
+                                                <td className="text-danger fw-semibold">{formatearPrecio(divisionSocios.negociosPorCategoria?.kits.gastos || 0)}</td>
+                                                <td className={`fw-bold ${(divisionSocios.negociosPorCategoria?.kits.utilidad || 0) >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                    {formatearPrecio(divisionSocios.negociosPorCategoria?.kits.utilidad || 0)}
+                                                </td>
+                                                <td>
+                                                    <span className="badge bg-primary-subtle text-primary fw-bold">
+                                                        {(divisionSocios.negociosPorCategoria?.kits.margen || 0).toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                                <td className="small fw-semibold text-secondary">
+                                                    {(divisionSocios.negociosPorCategoria?.kits.unidades || 0).toLocaleString()} uds
+                                                </td>
+                                                <td>
+                                                    <span className="badge rounded-pill bg-light text-dark border">
+                                                        {(divisionSocios.negociosPorCategoria?.kits.participacion || 0).toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                            {/* Negocio Guantes */}
+                                            <tr>
+                                                <td className="text-start ps-3">
+                                                    <div className="d-flex align-items-center gap-2">
+                                                        <span className="badge bg-success-subtle text-success border p-2 rounded-3">
+                                                            <i className="fa-solid fa-hand-sparkles"></i>
+                                                        </span>
+                                                        <div>
+                                                            <strong className="text-dark d-block">Negocio Guantes</strong>
+                                                            <small className="text-muted">Socio: Oscar Gómez (+ Guantes Karol)</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="fw-bold text-dark">{formatearPrecio(divisionSocios.negociosPorCategoria?.guantes.ventas || 0)}</td>
+                                                <td className="text-danger fw-semibold">{formatearPrecio(divisionSocios.negociosPorCategoria?.guantes.gastos || 0)}</td>
+                                                <td className={`fw-bold ${(divisionSocios.negociosPorCategoria?.guantes.utilidad || 0) >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                    {formatearPrecio(divisionSocios.negociosPorCategoria?.guantes.utilidad || 0)}
+                                                </td>
+                                                <td>
+                                                    <span className="badge bg-success-subtle text-success fw-bold">
+                                                        {(divisionSocios.negociosPorCategoria?.guantes.margen || 0).toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                                <td className="small fw-semibold text-primary">
+                                                    {(divisionSocios.negociosPorCategoria?.guantes.unidades || 0).toLocaleString()} doc.
+                                                </td>
+                                                <td>
+                                                    <span className="badge rounded-pill bg-light text-dark border">
+                                                        {(divisionSocios.negociosPorCategoria?.guantes.participacion || 0).toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                            {/* Otros si existen */}
+                                            {(divisionSocios.negociosPorCategoria?.otros.ventas > 0 || divisionSocios.negociosPorCategoria?.otros.gastos > 0) && (
+                                                <tr>
+                                                    <td className="text-start ps-3">
+                                                        <div className="d-flex align-items-center gap-2">
+                                                            <span className="badge bg-secondary-subtle text-secondary border p-2 rounded-3">
+                                                                <i className="fa-solid fa-tags"></i>
+                                                            </span>
+                                                            <div>
+                                                                <strong className="text-dark d-block">Otros / No Asignados</strong>
+                                                                <small className="text-muted">Accesorios, libros o gastos generales</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="fw-bold text-dark">{formatearPrecio(divisionSocios.negociosPorCategoria?.otros.ventas || 0)}</td>
+                                                    <td className="text-danger fw-semibold">{formatearPrecio(divisionSocios.negociosPorCategoria?.otros.gastos || 0)}</td>
+                                                    <td className={`fw-bold ${(divisionSocios.negociosPorCategoria?.otros.utilidad || 0) >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                        {formatearPrecio(divisionSocios.negociosPorCategoria?.otros.utilidad || 0)}
+                                                    </td>
+                                                    <td>
+                                                        <span className="badge bg-secondary-subtle text-secondary fw-bold">
+                                                            {(divisionSocios.negociosPorCategoria?.otros.margen || 0).toFixed(1)}%
+                                                        </span>
+                                                    </td>
+                                                    <td className="small fw-semibold text-secondary">
+                                                        {(divisionSocios.negociosPorCategoria?.otros.unidades || 0).toLocaleString()} uds
+                                                    </td>
+                                                    <td>
+                                                        <span className="badge rounded-pill bg-light text-dark border">
+                                                            {(divisionSocios.negociosPorCategoria?.otros.participacion || 0).toFixed(1)}%
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                        <tfoot className="table-secondary fw-bold">
+                                            <tr>
+                                                <td className="text-start ps-3 text-uppercase">
+                                                    <i className="fa-solid fa-building me-1"></i> Total Consolidado (General)
+                                                </td>
+                                                <td className="text-primary">{formatearPrecio(divisionSocios.negociosPorCategoria?.consolidado.ventas || 0)}</td>
+                                                <td className="text-danger">{formatearPrecio(divisionSocios.negociosPorCategoria?.consolidado.gastos || 0)}</td>
+                                                <td className={(divisionSocios.negociosPorCategoria?.consolidado.utilidad || 0) >= 0 ? 'text-success' : 'text-danger'}>
+                                                    {formatearPrecio(divisionSocios.negociosPorCategoria?.consolidado.utilidad || 0)}
+                                                </td>
+                                                <td>
+                                                    <span className="badge bg-dark text-white fw-bold">
+                                                        {(divisionSocios.negociosPorCategoria?.consolidado.margen || 0).toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                                <td className="small">{(divisionSocios.negociosPorCategoria?.consolidado.unidades || 0).toLocaleString()} productos</td>
+                                                <td>100%</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                    <span className="small text-muted mt-2 d-block" style={{ fontSize: '0.78rem' }}>
+                                        <i className="fa-solid fa-circle-info text-primary me-1"></i>
+                                        *Criterio de Precios: Para 2025 en adelante, el <strong>Negocio Kits</strong> se valoriza con <strong>Precios de Fábrica</strong> (tarifas de producción según vigencia en BD); mientras que el <strong>Negocio Guantes</strong> y <strong>Otros</strong> se valorizan con <strong>Precios Reales Facturados en los Pedidos</strong>.
+                                    </span>
+                                </div>
+
+                                <div className="row g-4">
+                                    {/* Columna Leonardo Gómez */}
+                                    <div className="col-12 col-lg-6">
+                                        <div className="card border border-primary-subtle rounded-4 p-3 bg-light-subtle h-100 shadow-xs">
+                                            <div className="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                                <div className="d-flex align-items-center gap-2">
+                                                    <div className="rounded-circle bg-primary text-white p-2 d-flex align-items-center justify-content-center" style={{ width: 36, height: 36 }}>
+                                                        <i className="fa-solid fa-user"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h6 className="fw-bolder text-dark mb-0">Leonardo Gómez</h6>
+                                                        <small className="text-muted">{divisionSocios.leonardo.pedidosCount} pedidos computados</small>
+                                                    </div>
+                                                </div>
+                                                <span className="badge bg-primary rounded-pill px-3 py-1">
+                                                    {divisionSocios.leonardo.share}% Cuota
+                                                </span>
+                                            </div>
+
+                                            <div className="row g-2 mb-3">
+                                                <div className="col-6">
+                                                    <div className="p-2 bg-white rounded-3 border">
+                                                        <span className="text-muted small d-block">Ventas Totales</span>
+                                                        <strong className="text-dark fs-6">{formatearPrecio(divisionSocios.leonardo.totalVentas)}</strong>
+                                                    </div>
+                                                </div>
+                                                <div className="col-6">
+                                                    <div className="p-2 bg-white rounded-3 border">
+                                                        <span className="text-muted small d-block">Gastos (Kits)</span>
+                                                        <strong className="text-danger fs-6">{formatearPrecio(divisionSocios.leonardo.totalGastos)}</strong>
+                                                    </div>
+                                                </div>
+                                                <div className="col-6">
+                                                    <div className="p-2 bg-white rounded-3 border">
+                                                        <span className="text-muted small d-block">Utilidad Neta</span>
+                                                        <strong className={divisionSocios.leonardo.utilidadOperativa >= 0 ? 'text-success fs-6' : 'text-danger fs-6'}>
+                                                            {formatearPrecio(divisionSocios.leonardo.utilidadOperativa)}
+                                                        </strong>
+                                                    </div>
+                                                </div>
+                                                <div className="col-6">
+                                                    <div className="p-2 bg-white rounded-3 border">
+                                                        <span className="text-muted small d-block">Margen Operativo</span>
+                                                        <strong className="text-dark fs-6">{divisionSocios.leonardo.margenOperativoPorcentaje.toFixed(1)}%</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Desglose Separado: Kits vs Guantes (Ventas y Gastos de Leonardo) */}
+                                            <div className="card border-0 bg-white rounded-3 shadow-xs p-3 mb-3">
+                                                <div className="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                                    <span className="small fw-bold text-uppercase text-secondary">
+                                                        <i className="fa-solid fa-code-compare me-1"></i> Desglose de Líneas: Kits vs Guantes
+                                                    </span>
+                                                    <span className="badge bg-light text-dark border">Auditoría Individual</span>
+                                                </div>
+
+                                                {/* Línea Kits */}
+                                                <div className="p-2 mb-2 rounded-3 border bg-light-subtle">
+                                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                                        <span className="fw-bold text-primary small">
+                                                            <i className="fa-solid fa-box-open me-1"></i> Línea Kits
+                                                        </span>
+                                                        <span className="badge bg-primary-subtle text-primary">
+                                                            {divisionSocios.leonardo.kits.unidades.toLocaleString()} productos
+                                                        </span>
+                                                    </div>
+                                                    <div className="row g-2 text-center small">
+                                                        <div className="col-4">
+                                                            <div className="bg-white p-1 rounded border">
+                                                                <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Ventas</span>
+                                                                <strong className="text-dark">{formatearPrecio(divisionSocios.leonardo.kits.ventas)}</strong>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-4">
+                                                            <div className="bg-white p-1 rounded border">
+                                                                <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Gastos (K)</span>
+                                                                <strong className="text-danger">{formatearPrecio(divisionSocios.leonardo.kits.gastos)}</strong>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-4">
+                                                            <div className="bg-white p-1 rounded border">
+                                                                <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Utilidad ({divisionSocios.leonardo.kits.margen.toFixed(0)}%)</span>
+                                                                <strong className={divisionSocios.leonardo.kits.utilidad >= 0 ? 'text-success' : 'text-danger'}>
+                                                                    {formatearPrecio(divisionSocios.leonardo.kits.utilidad)}
+                                                                </strong>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Línea Guantes */}
+                                                <div className="p-2 rounded-3 border bg-light-subtle">
+                                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                                        <span className="fw-bold text-success small">
+                                                            <i className="fa-solid fa-hand-sparkles me-1"></i> Línea Guantes
+                                                        </span>
+                                                        <span className="badge bg-success-subtle text-success">
+                                                            {divisionSocios.leonardo.guantes.unidades.toLocaleString()} doc.
+                                                        </span>
+                                                    </div>
+                                                    <div className="row g-2 text-center small">
+                                                        <div className="col-4">
+                                                            <div className="bg-white p-1 rounded border">
+                                                                <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Ventas</span>
+                                                                <strong className="text-dark">{formatearPrecio(divisionSocios.leonardo.guantes.ventas)}</strong>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-4">
+                                                            <div className="bg-white p-1 rounded border">
+                                                                <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Gastos (G)</span>
+                                                                <strong className="text-danger">{formatearPrecio(divisionSocios.leonardo.guantes.gastos)}</strong>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-4">
+                                                            <div className="bg-white p-1 rounded border">
+                                                                <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Utilidad ({divisionSocios.leonardo.guantes.margen.toFixed(0)}%)</span>
+                                                                <strong className={divisionSocios.leonardo.guantes.utilidad >= 0 ? 'text-success' : 'text-danger'}>
+                                                                    {formatearPrecio(divisionSocios.leonardo.guantes.utilidad)}
+                                                                </strong>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Atribución Perfil Karol Gómez (Kits) */}
+                                            <div className="p-3 bg-primary-subtle rounded-3 border border-primary-subtle mb-3 small">
+                                                <div className="d-flex align-items-center justify-content-between text-primary fw-bold mb-1">
+                                                    <span><i className="fa-solid fa-handshake me-1"></i> Atribución Karol Gómez (Kits):</span>
+                                                    <span>{formatearPrecio(divisionSocios.atribucionKarol.karolKitsVenta)}</span>
+                                                </div>
+                                                <div className="d-flex justify-content-between text-muted" style={{ fontSize: '0.75rem' }}>
+                                                    <span>Productos de Kits transferidos: <strong>{divisionSocios.atribucionKarol.karolKitsPrendas} productos</strong></span>
+                                                    <span>Gastos Kits Karol: <strong>{formatearPrecio(divisionSocios.atribucionKarol.karolKitsGastos)}</strong></span>
+                                                </div>
+                                                <div className="text-muted mt-1" style={{ fontSize: '0.72rem' }}>
+                                                    Karol actúa como cliente distribuidor de Leonardo. Toda su facturación y costos en Kits se computan en Leonardo.
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                className={`btn btn-sm rounded-pill fw-bold w-100 ${filtroUsuario === 'LEONARDO' ? 'btn-primary text-white shadow-sm' : 'btn-outline-primary'}`}
+                                                onClick={() => setFiltroUsuario('LEONARDO')}
+                                            >
+                                                <i className="fa-solid fa-filter me-1"></i>
+                                                {filtroUsuario === 'LEONARDO' ? 'Viendo cuentas de Leonardo actualmente' : 'Filtrar todo el informe por Leonardo Gómez'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                     {/* Columna Oscar Gómez */}
+                                    <div className="col-12 col-lg-6">
+                                        <div className="card border border-success-subtle rounded-4 p-3 bg-light-subtle h-100 shadow-xs">
+                                            <div className="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                                <div className="d-flex align-items-center gap-2">
+                                                    <div className="rounded-circle bg-success text-white p-2 d-flex align-items-center justify-content-center" style={{ width: 36, height: 36 }}>
+                                                        <i className="fa-solid fa-user-tie"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h6 className="fw-bolder text-dark mb-0">Oscar Gómez</h6>
+                                                        <small className="text-muted">
+                                                            {esLeonardo
+                                                                ? `${divisionSocios.oscarParaLeonardo?.pedidosCount || 0} pedidos de Kits computados`
+                                                                : `${divisionSocios.oscar.pedidosCount} pedidos computados`}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <span className="badge bg-success rounded-pill px-3 py-1">
+                                                    {esLeonardo
+                                                        ? `${divisionSocios.oscarParaLeonardo?.share || 0}% Cuota Kits`
+                                                        : `${divisionSocios.oscar.share}% Cuota`}
+                                                </span>
+                                            </div>
+
+                                            <div className="row g-2 mb-3">
+                                                <div className="col-6">
+                                                    <div className="p-2 bg-white rounded-3 border">
+                                                        <span className="text-muted small d-block">
+                                                            {esLeonardo ? 'Ventas (Kits)' : 'Ventas Totales'}
+                                                        </span>
+                                                        <strong className="text-dark fs-6">
+                                                            {formatearPrecio(esLeonardo ? (divisionSocios.oscarParaLeonardo?.totalVentas || 0) : divisionSocios.oscar.totalVentas)}
+                                                        </strong>
+                                                    </div>
+                                                </div>
+                                                <div className="col-6">
+                                                    <div className="p-2 bg-white rounded-3 border">
+                                                        <span className="text-muted small d-block">
+                                                            {esLeonardo ? 'Gastos (Kits)' : 'Gastos Totales'}
+                                                        </span>
+                                                        <strong className="text-danger fs-6">
+                                                            {formatearPrecio(esLeonardo ? (divisionSocios.oscarParaLeonardo?.totalGastos || 0) : divisionSocios.oscar.totalGastos)}
+                                                        </strong>
+                                                    </div>
+                                                </div>
+                                                <div className="col-6">
+                                                    <div className="p-2 bg-white rounded-3 border">
+                                                        <span className="text-muted small d-block">Utilidad Neta</span>
+                                                        {(() => {
+                                                            const ut = esLeonardo ? (divisionSocios.oscarParaLeonardo?.utilidadOperativa || 0) : divisionSocios.oscar.utilidadOperativa;
+                                                            return (
+                                                                <strong className={ut >= 0 ? 'text-success fs-6' : 'text-danger fs-6'}>
+                                                                    {formatearPrecio(ut)}
+                                                                </strong>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                                <div className="col-6">
+                                                    <div className="p-2 bg-white rounded-3 border">
+                                                        <span className="text-muted small d-block">Margen Operativo</span>
+                                                        <strong className="text-dark fs-6">
+                                                            {(esLeonardo
+                                                                ? (divisionSocios.oscarParaLeonardo?.margenOperativoPorcentaje || 0)
+                                                                : divisionSocios.oscar.margenOperativoPorcentaje
+                                                            ).toFixed(1)}%
+                                                        </strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Desglose Separado: Kits vs Guantes (Ventas y Gastos de Oscar) */}
+                                            <div className="card border-0 bg-white rounded-3 shadow-xs p-3 mb-3">
+                                                <div className="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                                    <span className="small fw-bold text-uppercase text-secondary">
+                                                        <i className="fa-solid fa-code-compare me-1"></i> {esLeonardo ? 'Línea Kits: Oscar Gómez' : 'Desglose de Líneas: Kits vs Guantes'}
+                                                    </span>
+                                                    <span className="badge bg-light text-dark border">
+                                                        {esLeonardo ? 'Negocio Kits' : 'Auditoría Individual'}
+                                                    </span>
+                                                </div>
+
+                                                {/* Línea Guantes: Bloqueada para Leonardo, Visible para Oscar */}
+                                                {esLeonardo ? (
+                                                    <div className="p-2 mb-2 rounded-3 border bg-light text-muted small d-flex align-items-center justify-content-between">
+                                                        <div className="d-flex align-items-center gap-2">
+                                                            <i className="fa-solid fa-lock text-warning"></i>
+                                                            <span><strong>Línea Guantes:</strong> Datos reservados para Oscar Gómez</span>
+                                                        </div>
+                                                        <span className="badge bg-secondary-subtle text-secondary border">Restringido</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-2 mb-2 rounded-3 border bg-light-subtle">
+                                                        <div className="d-flex justify-content-between align-items-center mb-1">
+                                                            <span className="fw-bold text-success small">
+                                                                <i className="fa-solid fa-hand-sparkles me-1"></i> Línea Guantes (Principal)
+                                                            </span>
+                                                            <span className="badge bg-success-subtle text-success">
+                                                                {divisionSocios.oscar.guantes.unidades.toLocaleString()} doc.
+                                                            </span>
+                                                        </div>
+                                                        <div className="row g-2 text-center small">
+                                                            <div className="col-4">
+                                                                <div className="bg-white p-1 rounded border">
+                                                                    <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Ventas</span>
+                                                                    <strong className="text-dark">{formatearPrecio(divisionSocios.oscar.guantes.ventas)}</strong>
+                                                                </div>
+                                                            </div>
+                                                            <div className="col-4">
+                                                                <div className="bg-white p-1 rounded border">
+                                                                    <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Gastos (G)</span>
+                                                                    <strong className="text-danger">{formatearPrecio(divisionSocios.oscar.guantes.gastos)}</strong>
+                                                                </div>
+                                                            </div>
+                                                            <div className="col-4">
+                                                                <div className="bg-white p-1 rounded border">
+                                                                    <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Utilidad ({divisionSocios.oscar.guantes.margen.toFixed(0)}%)</span>
+                                                                    <strong className={divisionSocios.oscar.guantes.utilidad >= 0 ? 'text-success' : 'text-danger'}>
+                                                                        {formatearPrecio(divisionSocios.oscar.guantes.utilidad)}
+                                                                    </strong>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Línea Kits */}
+                                                <div className="p-2 rounded-3 border bg-light-subtle">
+                                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                                        <span className="fw-bold text-primary small">
+                                                            <i className="fa-solid fa-box-open me-1"></i> Línea Kits
+                                                        </span>
+                                                        <span className="badge bg-primary-subtle text-primary">
+                                                            {divisionSocios.oscar.kits.unidades.toLocaleString()} productos
+                                                        </span>
+                                                    </div>
+                                                    <div className="row g-2 text-center small">
+                                                        <div className="col-4">
+                                                            <div className="bg-white p-1 rounded border">
+                                                                <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Ventas</span>
+                                                                <strong className="text-dark">{formatearPrecio(divisionSocios.oscar.kits.ventas)}</strong>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-4">
+                                                            <div className="bg-white p-1 rounded border">
+                                                                <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Gastos (K)</span>
+                                                                <strong className="text-danger">{formatearPrecio(divisionSocios.oscar.kits.gastos)}</strong>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-4">
+                                                            <div className="bg-white p-1 rounded border">
+                                                                <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Utilidad ({divisionSocios.oscar.kits.margen.toFixed(0)}%)</span>
+                                                                <strong className={divisionSocios.oscar.kits.utilidad >= 0 ? 'text-success' : 'text-danger'}>
+                                                                    {formatearPrecio(divisionSocios.oscar.kits.utilidad)}
+                                                                </strong>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Atribución Perfil Karol Gómez (Guantes) - solo visible para Oscar */}
+                                            {!esLeonardo && (
+                                                <div className="p-3 bg-success-subtle rounded-3 border border-success-subtle mb-3 small">
+                                                    <div className="d-flex align-items-center justify-content-between text-success fw-bold mb-1">
+                                                        <span><i className="fa-solid fa-mitten me-1"></i> Atribución Karol Gómez (Guantes):</span>
+                                                        <span>{formatearPrecio(divisionSocios.atribucionKarol.karolGuantesVenta)}</span>
+                                                    </div>
+                                                    <div className="d-flex justify-content-between text-muted" style={{ fontSize: '0.75rem' }}>
+                                                        <span>Docenas transferidas: <strong>{divisionSocios.atribucionKarol.karolGuantesDocenas} doc.</strong></span>
+                                                        <span>Gastos Guantes Karol: <strong>{formatearPrecio(divisionSocios.atribucionKarol.karolGuantesGastos)}</strong></span>
+                                                    </div>
+                                                    <div className="text-muted mt-1" style={{ fontSize: '0.72rem' }}>
+                                                        Todos los guantes facturados y gastos directos en el perfil de Karol Gómez se computan estrictamente a favor de Oscar.
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {esLeonardo ? (
+                                                <div className="text-center p-2 bg-white rounded-pill border text-muted small fw-semibold">
+                                                    <i className="fa-solid fa-eye me-1 text-primary"></i> Vista Exclusiva de Kits — Oscar Gómez
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    className={`btn btn-sm rounded-pill fw-bold w-100 ${filtroUsuario === 'OSCAR' ? 'btn-success text-white shadow-sm' : 'btn-outline-success'}`}
+                                                    onClick={() => setFiltroUsuario('OSCAR')}
+                                                >
+                                                    <i className="fa-solid fa-filter me-1"></i>
+                                                    {filtroUsuario === 'OSCAR' ? 'Viendo cuentas de Oscar actualmente' : 'Filtrar todo el informe por Oscar Gómez'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* CARD CATEGORÍA OTR (Otros / Accesorios) */}
+                                <div className="col-12 mt-4">
+                                    <div className="card border-0 rounded-4 shadow-sm overflow-hidden" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
+                                        <div className="card-header bg-white border-bottom p-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                            <div className="d-flex align-items-center gap-2">
+                                                <div className="rounded-circle bg-primary bg-opacity-10 text-primary p-2 d-flex align-items-center justify-content-center" style={{ width: 40, height: 40 }}>
+                                                    <i className="fa-solid fa-boxes-stacked fs-5"></i>
+                                                </div>
+                                                <div>
+                                                    <h5 className="fw-bolder text-dark mb-0 d-flex align-items-center gap-2">
+                                                        Categoría OTR (Otros / Accesorios)
+                                                        <span className="badge bg-secondary-subtle text-dark border rounded-pill px-2 py-1" style={{ fontSize: '0.75rem' }}>
+                                                            {esLeonardo ? 'Accesorios de Kits (Consolidado Global)' : 'Gestión Integral (Separado por Asesor)'}
+                                                        </span>
+                                                    </h5>
+                                                    <small className="text-muted">
+                                                        {esLeonardo
+                                                            ? 'Leonardo visualiza todos los productos OTR comercializados por todos los usuarios que pertenecen al negocio de Kits.'
+                                                            : 'Oscar visualiza todos los productos de la categoría OTR comercializados, desglosados individualmente por cada usuario.'}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <span className="badge bg-white text-dark border px-3 py-2 rounded-pill shadow-xs">
+                                                    <i className="fa-solid fa-calendar-day me-1 text-primary"></i> Año {fechaPedido}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="card-body p-4">
+                                            {esLeonardo ? (
+                                                /* VISTA LEONARDO: OTR DE KITS DE TODOS LOS USUARIOS */
+                                                <div>
+                                                    <div className="row g-3 mb-4">
+                                                        <div className="col-12 col-md-4">
+                                                            <div className="p-3 bg-white rounded-3 border shadow-xs">
+                                                                <div className="text-muted small mb-1 fw-semibold">
+                                                                    <i className="fa-solid fa-sack-dollar text-primary me-1"></i> Ventas OTR (Línea Kits)
+                                                                </div>
+                                                                <h4 className="fw-bold text-dark mb-0">
+                                                                    {formatearPrecio(divisionSocios.otrKitsTodos?.totalVentas || 0)}
+                                                                </h4>
+                                                                <small className="text-success fw-semibold">Consolidado de todos los asesores</small>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-12 col-md-4">
+                                                            <div className="p-3 bg-white rounded-3 border shadow-xs">
+                                                                <div className="text-muted small mb-1 fw-semibold">
+                                                                    <i className="fa-solid fa-box-archive text-info me-1"></i> Unidades Vendidas
+                                                                </div>
+                                                                <h4 className="fw-bold text-dark mb-0">
+                                                                    {(divisionSocios.otrKitsTodos?.totalUnidades || 0).toLocaleString()} uds.
+                                                                </h4>
+                                                                <small className="text-muted">Accesorios y complementos de kits</small>
+                            </div>
+                                                        </div>
+                                                        <div className="col-12 col-md-4">
+                                                            <div className="p-3 bg-white rounded-3 border shadow-xs">
+                                                                <div className="text-muted small mb-1 fw-semibold">
+                                                                    <i className="fa-solid fa-tags text-warning me-1"></i> Variedades OTR Registradas
+                                                                </div>
+                                                                <h4 className="fw-bold text-dark mb-0">
+                                                                    {divisionSocios.otrKitsTodos?.productos?.length || 0} referencias
+                                                                </h4>
+                                                                <small className="text-muted">{divisionSocios.otrKitsTodos?.totalItemsCount || 0} ítems computados</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Tabla de Productos OTR Kits */}
+                                                    <div className="card border rounded-3 bg-white overflow-hidden shadow-xs">
+                                                        <div className="card-header bg-light-subtle py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
+                                                            <span className="fw-bold small text-uppercase text-secondary">
+                                                                <i className="fa-solid fa-list-check me-1"></i> Desglose de Productos OTR de Kits (Todos los Asesores)
+                                                            </span>
+                                                            <span className="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                                {divisionSocios.otrKitsTodos?.productos?.length || 0} productos
+                                                            </span>
+                                                        </div>
+                                                        <div className="table-responsive">
+                                                            <table className="table table-hover align-middle mb-0" style={{ fontSize: '0.85rem' }}>
+                                                                <thead className="table-light text-secondary">
+                                                                    <tr>
+                                                                        <th>Producto</th>
+                                                                        <th className="text-center">Unidades</th>
+                                                                        <th className="text-end">Total Ventas</th>
+                                                                        <th className="text-center">Asesores Contribuyentes</th>
+                                                                        <th className="text-end">% Participación</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {(divisionSocios.otrKitsTodos?.productos || []).length === 0 ? (
+                                                                        <tr>
+                                                                            <td colSpan="5" className="text-center py-4 text-muted">
+                                                                                <i className="fa-solid fa-inbox fs-4 d-block mb-2"></i>
+                                                                                No se registraron productos OTR de la línea Kits en {fechaPedido}.
+                                                                            </td>
+                                                                        </tr>
+                                                                    ) : (
+                                                                        (divisionSocios.otrKitsTodos?.productos || []).map((prod, pIdx) => {
+                                                                            const totalOtr = divisionSocios.otrKitsTodos?.totalVentas || 1;
+                                                                            const part = ((prod.total / totalOtr) * 100).toFixed(1);
+                                                                            return (
+                                                                                <tr key={pIdx}>
+                                                                                    <td className="fw-bold text-dark">
+                                                                                        <i className="fa-solid fa-bookmark me-2 text-primary opacity-50"></i>
+                                                                                        {prod.producto}
+                                                                                    </td>
+                                                                                    <td className="text-center">
+                                                                                        <span className="badge bg-light text-dark border">
+                                                                                            {prod.cantidad.toLocaleString()} uds
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="text-end fw-bold text-dark">
+                                                                                        {formatearPrecio(prod.total)}
+                                                                                    </td>
+                                                                                    <td className="text-center">
+                                                                                        <div className="d-flex flex-wrap gap-1 justify-content-center">
+                                                                                            {(prod.vendedores || []).map((vend, vIdx) => (
+                                                                                                <span
+                                                                                                    key={vIdx}
+                                                                                                    className={`badge rounded-pill ${
+                                                                                                        vend.includes('Oscar') ? 'bg-success-subtle text-success border border-success-subtle' :
+                                                                                                        vend.includes('Leonardo') ? 'bg-primary-subtle text-primary border border-primary-subtle' :
+                                                                                                        'bg-warning-subtle text-warning-emphasis border border-warning-subtle'
+                                                                                                    }`}
+                                                                                                >
+                                                                                                    {vend}
+                                                                                                </span>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td className="text-end">
+                                                                                        <div className="d-flex align-items-center justify-content-end gap-2">
+                                                                                            <div className="progress flex-grow-1" style={{ height: 6, maxWidth: 60 }}>
+                                                                                                <div className="progress-bar bg-primary" style={{ width: `${Math.min(100, part)}%` }}></div>
+                                                                                            </div>
+                                                                                            <span className="small text-muted">{part}%</span>
+                                                                                        </div>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        })
+                                                                    )}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                /* VISTA OSCAR: TODOS LOS OTR SEPARADOS POR CADA USUARIO */
+                                                <div>
+                                                    <div className="row g-3 mb-4">
+                                                        <div className="col-12 col-md-4">
+                                                            <div className="p-3 bg-white rounded-3 border shadow-xs">
+                                                                <div className="text-muted small mb-1 fw-semibold">
+                                                                    <i className="fa-solid fa-sack-dollar text-success me-1"></i> Ventas OTR Globales
+                                                                </div>
+                                                                <h4 className="fw-bold text-dark mb-0">
+                                                                    {formatearPrecio(divisionSocios.otrPorUsuario?.totalVentasGlobal || 0)}
+                                                                </h4>
+                                                                <small className="text-muted">Todos los productos OTR del sistema</small>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-12 col-md-4">
+                                                            <div className="p-3 bg-white rounded-3 border shadow-xs">
+                                                                <div className="text-muted small mb-1 fw-semibold">
+                                                                    <i className="fa-solid fa-boxes-packing text-primary me-1"></i> Unidades OTR Totales
+                                                                </div>
+                                                                <h4 className="fw-bold text-dark mb-0">
+                                                                    {(divisionSocios.otrPorUsuario?.totalUnidadesGlobal || 0).toLocaleString()} uds.
+                                                                </h4>
+                                                                <small className="text-muted">Volumen total comercializado</small>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-12 col-md-4">
+                                                            <div className="p-3 bg-white rounded-3 border shadow-xs">
+                                                                <div className="text-muted small mb-1 fw-semibold">
+                                                                    <i className="fa-solid fa-users text-info me-1"></i> Asesores con Registros OTR
+                                                                </div>
+                                                                <h4 className="fw-bold text-dark mb-0">
+                                                                    {divisionSocios.otrPorUsuario?.totalUsuarios || 0} asesores
+                                                                </h4>
+                                                                <small className="text-muted">Separado por usuario individual</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Tarjetas Separadas por Cada Usuario */}
+                                                    <div className="row g-3">
+                                                        {(divisionSocios.otrPorUsuario?.usuarios || []).length === 0 ? (
+                                                            <div className="col-12">
+                                                                <div className="p-4 bg-white rounded-3 border text-center text-muted">
+                                                                    <i className="fa-solid fa-inbox fs-3 d-block mb-2"></i>
+                                                                    No se encontraron registros de la categoría OTR en el año {fechaPedido}.
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            (divisionSocios.otrPorUsuario?.usuarios || []).map((usr, uIdx) => {
+                                                                const isOscar = usr.nombre.toLowerCase().includes('oscar');
+                                                                const isLeo = usr.nombre.toLowerCase().includes('leonardo');
+
+                                                                const borderClass = isOscar ? 'border-success-subtle' : isLeo ? 'border-primary-subtle' : 'border-warning-subtle';
+                                                                const bgHeader = isOscar ? 'bg-success-subtle text-success' : isLeo ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-warning-emphasis';
+                                                                const iconClass = isOscar ? 'fa-user-tie text-success' : isLeo ? 'fa-user text-primary' : 'fa-user-check text-warning';
+
+                                                                return (
+                                                                    <div className="col-12 col-lg-4" key={uIdx}>
+                                                                        <div className={`card border ${borderClass} rounded-3 bg-white h-100 shadow-xs`}>
+                                                                            <div className="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+                                                                                <div className="d-flex align-items-center gap-2">
+                                                                                    <div className={`rounded-circle p-2 d-flex align-items-center justify-content-center ${bgHeader}`} style={{ width: 34, height: 34 }}>
+                                                                                        <i className={`fa-solid ${iconClass}`}></i>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <h6 className="fw-bold text-dark mb-0">{usr.nombre}</h6>
+                                                                                        <small className="text-muted">{usr.rol}</small>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <span className={`badge rounded-pill ${bgHeader}`}>
+                                                                                    {usr.items.length} regs
+                                                                                </span>
+                                                                            </div>
+
+                                                                            <div className="card-body p-3">
+                                                                                <div className="row g-2 mb-3 text-center">
+                                                                                    <div className="col-6">
+                                                                                        <div className="p-2 bg-light rounded-2 border">
+                                                                                            <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Ventas OTR</span>
+                                                                                            <strong className="text-dark fs-6">{formatearPrecio(usr.totalVentas)}</strong>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="col-6">
+                                                                                        <div className="p-2 bg-light rounded-2 border">
+                                                                                            <span className="text-muted d-block" style={{ fontSize: '0.7rem' }}>Unidades</span>
+                                                                                            <strong className="text-dark fs-6">{usr.totalUnidades.toLocaleString()} uds</strong>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <div className="border rounded-2 overflow-hidden">
+                                                                                    <div className="bg-light p-2 border-bottom small fw-bold text-secondary d-flex justify-content-between">
+                                                                                        <span>Producto OTR</span>
+                                                                                        <span>Cant. / Total</span>
+                                                                                    </div>
+                                                                                    <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                                                                                        {(usr.productos || []).length === 0 ? (
+                                                                                            <div className="p-3 text-center text-muted small">Sin productos</div>
+                                                                                        ) : (
+                                                                                            (usr.productos || []).map((pr, prIdx) => (
+                                                                                                <div key={prIdx} className="d-flex justify-content-between align-items-center p-2 border-bottom small hover-bg-light">
+                                                                                                    <div>
+                                                                                                        <span className="fw-semibold text-dark d-block">{pr.producto}</span>
+                                                                                                        <span className="badge bg-light text-secondary border" style={{ fontSize: '0.65rem' }}>
+                                                                                                            {pr.categoriaNegocio}
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                    <div className="text-end">
+                                                                                                        <strong className="text-dark d-block">{formatearPrecio(pr.total)}</strong>
+                                                                                                        <small className="text-muted">{pr.cantidad} uds</small>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            ))
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                </div>
+
+                                {/* Pie de Auditoría */}
+                                <div className="mt-3 p-3 bg-light rounded-3 border d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <i className="fa-solid fa-shield-halved text-secondary"></i>
+                                        <small className="text-muted">
+                                            <strong>Regla de No Duplicación:</strong> En el Consolidado General las ventas de Karol Gómez ({formatearPrecio(divisionSocios.atribucionKarol.totalKarol)}) se computan una sola vez. En los desgloses individuales se reparten estrictamente (Kits para Leonardo, Guantes para Oscar).
+                                        </small>
+                                    </div>
+                                    {filtroUsuario !== 'GENERAL' && (
+                                        <button className="btn btn-sm btn-dark rounded-pill px-3 fw-bold" onClick={() => setFiltroUsuario('GENERAL')}>
+                                            <i className="fa-solid fa-building me-1"></i> Ver Consolidado General
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
+
+                {/* VISTA 2: CATEGORÍAS & GÉNERO */}
+                {activeTab === 'categorias' && (
+                    <div className="row g-4">
+                        {/* Tarjetas de Producción por Género (Niña vs Niño) */}
+                        <div className="col-12">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                    <h6 className="fw-bold text-dark mb-0">
+                                        <i className="fa-solid fa-venus-mars text-primary me-2"></i>
+                                        Análisis de Producción por Género (Niña vs Niño en {fechaPedido})
+                                    </h6>
+                                    <span className="badge bg-light text-secondary border small">
+                                        Kits/Cirios: Precios Fábrica (2025+) | Pedidos (pre-2025)
+                                    </span>
+                                </div>
+                                <p className="text-muted small mb-3">
+                                    Métrica de taller para planificar confección, compras de telas, cintas y accesorios.
+                                </p>
+
+                                <div className="row g-3 align-items-center">
+                                    <div className="col-12 col-md-5">
+                                        <div className="p-3 bg-light rounded-3 border">
+                                            <div className="d-flex justify-content-between align-items-center mb-1">
+                                                <span className="fw-bold text-danger">
+                                                    <i className="fa-solid fa-venus me-1"></i> Línea Niña (Kits)
+                                                </span>
+                                                <span className="badge bg-danger rounded-pill">{stats.desgloseGenero.porcentajeNina.toFixed(1)}%</span>
+                                            </div>
+                                            <h4 className="fw-bold text-dark mb-1">{stats.desgloseGenero.prendasNina.toLocaleString()} productos</h4>
+                                            <div className="d-flex justify-content-between small text-muted">
+                                                <span>Kits Niña: <strong>{stats.desgloseGenero.kitsNina}</strong> | Cirios: <strong>{stats.desgloseGenero.ciriosNina}</strong></span>
+                                                <strong className="text-dark">{formatearPrecio(stats.desgloseGenero.ventasNina)}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="col-12 col-md-2 text-center">
+                                        <div className="progress" style={{ height: 16 }}>
+                                            <div
+                                                className="progress-bar bg-danger"
+                                                role="progressbar"
+                                                style={{ width: `${stats.desgloseGenero.porcentajeNina}%` }}
+                                                title={`Niña: ${stats.desgloseGenero.porcentajeNina.toFixed(1)}%`}
+                                            >
+                                                {stats.desgloseGenero.porcentajeNina.toFixed(0)}%
+                                            </div>
+                                            <div
+                                                className="progress-bar bg-primary"
+                                                role="progressbar"
+                                                style={{ width: `${stats.desgloseGenero.porcentajeNino}%` }}
+                                                title={`Niño: ${stats.desgloseGenero.porcentajeNino.toFixed(1)}%`}
+                                            >
+                                                {stats.desgloseGenero.porcentajeNino.toFixed(0)}%
+                                            </div>
+                                        </div>
+                                        <span className="small text-muted mt-1 d-block">Distribución de Género</span>
+                                    </div>
+
+                                    <div className="col-12 col-md-5">
+                                        <div className="p-3 bg-light rounded-3 border">
+                                            <div className="d-flex justify-content-between align-items-center mb-1">
+                                                <span className="fw-bold text-primary">
+                                                    <i className="fa-solid fa-mars me-1"></i> Línea Niño (Kits)
+                                                </span>
+                                                <span className="badge bg-primary rounded-pill">{stats.desgloseGenero.porcentajeNino.toFixed(1)}%</span>
+                                            </div>
+                                            <h4 className="fw-bold text-dark mb-1">{stats.desgloseGenero.prendasNino.toLocaleString()} productos</h4>
+                                            <div className="d-flex justify-content-between small text-muted">
+                                                <span>Kits Niño: <strong>{stats.desgloseGenero.kitsNino}</strong> | Cirios: <strong>{stats.desgloseGenero.ciriosNino}</strong></span>
+                                                <strong className="text-dark">{formatearPrecio(stats.desgloseGenero.ventasNino)}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Matriz Unificada de Categorías */}
+                        <div className="col-12">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                                    <div>
+                                        <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <h5 className="fw-bold text-dark mb-0">
+                                                <i className="fa-solid fa-layer-group text-primary me-2"></i>
+                                                Matriz Unificada de Categorías ({fechaPedido})
+                                            </h5>
+                                            <span className="badge bg-primary-subtle text-primary border border-primary-subtle fs-7">
+                                                {filtroUsuario === 'GENERAL'
+                                                    ? (esLeonardo ? 'Consolidado General (Kits, Guantes Leo, Otros Kits)' : 'Consolidado General')
+                                                    : filtroUsuario === 'LEONARDO' ? 'Leonardo Gómez' : 'Oscar Gómez'}
+                                            </span>
+                                            {filtroCategoria !== 'TODOS' && (
+                                                <span className="badge bg-info-subtle text-info border border-info-subtle fs-7 fw-semibold">
+                                                    Filtro: {filtroCategoria === 'KITS' ? 'Solo Kits' : filtroCategoria === 'GUANTES' ? 'Solo Guantes' : 'Solo Otros'}
+                                                </span>
+                                            )}
+                                            <span className="badge bg-warning-subtle text-dark border border-warning-subtle fs-7 fw-semibold">
+                                                Kits: Precios de Fábrica | Guantes/Otros: Precios de Pedidos
+                                            </span>
+                                        </div>
+                                        <p className="text-muted small mb-0">
+                                            Desglose armonizado: subcategorías de guantes (blancos, mitón, negros), productos específicos de otros y kits.
+                                        </p>
+                                    </div>
+                                    <div className="btn-group shadow-sm rounded-pill p-1 bg-light border" role="group">
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${filtroUsuario === 'GENERAL' ? 'btn-primary text-white shadow-sm' : 'text-secondary border-0'}`}
+                                            onClick={() => setFiltroUsuario('GENERAL')}
+                                            title="Ver todas las ventas consolidadas del negocio"
+                                        >
+                                            <i className="fa-solid fa-briefcase me-1"></i> Consolidado
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${filtroUsuario === 'LEONARDO' ? 'btn-primary text-white shadow-sm' : 'text-secondary border-0'}`}
+                                            onClick={() => setFiltroUsuario('LEONARDO')}
+                                            title="Ver ventas de Leonardo Gómez (incluye kits de Karol)"
+                                        >
+                                            <i className="fa-solid fa-user-tie me-1"></i> Leonardo
+                                        </button>
+                                        {!esLeonardo && (
+                                            <button
+                                                type="button"
+                                                className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${filtroUsuario === 'OSCAR' ? 'btn-success text-white shadow-sm' : 'text-secondary border-0'}`}
+                                                onClick={() => setFiltroUsuario('OSCAR')}
+                                                title="Ver ventas de Oscar Gómez (incluye guantes de Karol)"
+                                            >
+                                                <i className="fa-solid fa-user-gear me-1"></i> Oscar
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Barra de Filtro por Categoría / Grupo */}
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 mb-3 rounded-3 bg-light border">
+                                    <div className="d-flex flex-wrap align-items-center gap-2">
+                                        <span className="small fw-bold text-secondary text-uppercase ms-1 me-1">
+                                            <i className="fa-solid fa-filter me-1 text-primary"></i> Filtrar Categoría:
+                                        </span>
+                                        <div className="btn-group btn-group-sm shadow-xs rounded-pill bg-white border p-1" role="group">
+                                            <button
+                                                type="button"
+                                                className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${
+                                                    filtroGrupoMatriz === 'TODAS' ? 'btn-dark text-white shadow-sm' : 'btn-light text-secondary border-0'
+                                                }`}
+                                                onClick={() => setFiltroGrupoMatriz('TODAS')}
+                                            >
+                                                <i className="fa-solid fa-table-cells-large me-1"></i> Todas ({stats.categoriasMatriz?.length || 0})
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${
+                                                    filtroGrupoMatriz === 'Kits' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary border-0'
+                                                }`}
+                                                onClick={() => setFiltroGrupoMatriz('Kits')}
+                                            >
+                                                <i className="fa-solid fa-boxes-packing me-1"></i> Kits ({conteoMatrizKits})
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${
+                                                    filtroGrupoMatriz === 'Guantes' ? 'btn-warning text-dark shadow-sm' : 'btn-light text-secondary border-0'
+                                                }`}
+                                                onClick={() => setFiltroGrupoMatriz('Guantes')}
+                                            >
+                                                <i className="fa-solid fa-hand-sparkles me-1"></i> Guantes ({conteoMatrizGuantes})
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${
+                                                    filtroGrupoMatriz === 'Otros' ? 'btn-info text-white shadow-sm' : 'btn-light text-secondary border-0'
+                                                }`}
+                                                onClick={() => setFiltroGrupoMatriz('Otros')}
+                                            >
+                                                <i className="fa-solid fa-tags me-1"></i> Otros ({conteoMatrizOtros})
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="d-flex align-items-center gap-2 text-muted small me-2">
+                                        <span>Mostrando <strong>{categoriasMatrizFiltradas.length}</strong> de <strong>{stats.categoriasMatriz?.length || 0}</strong> filas</span>
+                                        {filtroGrupoMatriz !== 'TODAS' && (
+                                            <button
+                                                type="button"
+                                                className="btn btn-link btn-sm text-decoration-none p-0 text-muted"
+                                                onClick={() => setFiltroGrupoMatriz('TODAS')}
+                                                title="Quitar filtro de categoría"
+                                            >
+                                                <i className="fa-solid fa-xmark text-danger ms-1"></i> Limpiar
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Nota Metodológica de Precios en la Matriz */}
+                                <div className="alert alert-light border rounded-3 py-2 px-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2 small">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <i className="fa-solid fa-calculator text-primary"></i>
+                                        <span>
+                                            <strong>Criterio de Precios en la Matriz:</strong> La fila de <strong>Kits y Cirios</strong> (2025 en adelante) se calcula con los <strong>Precios de Fábrica</strong> vigentes en la Base de Datos; las filas de <strong>Guantes</strong> y <strong>Otros Productos</strong> se calculan con los <strong>Precios Reales Facturados en los Pedidos</strong>.
+                                        </span>
+                                    </div>
+                                    <span className="badge bg-light text-secondary border">
+                                        Metodología Mixta Identificada
+                                    </span>
+                                </div>
+
+                                <div className="table-responsive">
+                                    <table className="table table-hover table-bordered align-middle text-center mb-0">
+                                        <thead className="table-light">
+                                            <tr>
+                                                <th className="text-start ps-3">Categoría / Producto</th>
+                                                <th>Grupo</th>
+                                                <th>Unidad de Medida</th>
+                                                <th>Cantidad Producida / Vendida</th>
+                                                <th>% Cantidad</th>
+                                                <th className="text-end">
+                                                    Total Venta ($)
+                                                    <small className="d-block text-muted fw-normal" style={{ fontSize: '0.68rem' }}>(Fábrica en Kits / Pedidos en Guantes)</small>
+                                                </th>
+                                                <th>% Venta</th>
+                                                <th className="text-end pe-3">Precio Unitario Promedio</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {categoriasMatrizFiltradas.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="8" className="text-center py-4 text-muted">
+                                                        <i className="fa-solid fa-inbox fs-4 d-block mb-2 text-secondary opacity-50"></i>
+                                                        No se registraron productos en la categoría <strong>{filtroGrupoMatriz}</strong> para el año {fechaPedido}.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                categoriasMatrizFiltradas.map((cat) => (
+                                                    <tr key={cat.id}>
+                                                        <td className="text-start ps-3 fw-semibold">
+                                                            <span className="badge me-2" style={{ backgroundColor: cat.color }}>
+                                                                {cat.id}
+                                                            </span>
+                                                            {cat.nombre}
+                                                        </td>
+                                                        <td>
+                                                            <span className={`badge border ${
+                                                                cat.grupo === 'Kits' ? 'bg-primary-subtle text-primary border-primary-subtle' :
+                                                                cat.grupo === 'Guantes' ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' :
+                                                                'bg-light text-secondary border'
+                                                            }`}>
+                                                                {cat.grupo}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            {cat.grupo === 'Guantes' ? (
+                                                                <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold px-2 py-1">
+                                                                    <i className="fas fa-hand-sparkles me-1"></i>Docenas
+                                                                </span>
+                                                            ) : cat.grupo === 'Kits' ? (
+                                                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                                                    Kits
+                                                                </span>
+                                                            ) : (
+                                                                <span className="badge bg-light text-secondary border px-2 py-1">
+                                                                    {cat.unidad || 'Unidades'}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="fw-bold">
+                                                            {cat.unidades.toLocaleString()} {cat.grupo === 'Guantes' ? 'docenas' : (cat.grupo === 'Kits' ? 'kits' : 'uds')}
+                                                        </td>
+                                                        <td>{cat.porcentajeUnidades.toFixed(1)}%</td>
+                                                        <td className="text-end fw-bold text-primary">{formatearPrecio(cat.totalVenta)}</td>
+                                                        <td>{cat.porcentajeVenta.toFixed(1)}%</td>
+                                                        <td className="text-end pe-3 text-muted">
+                                                            {formatearPrecio(cat.precioPromedio)} {cat.grupo === 'Guantes' ? '/ docena' : (cat.grupo === 'Kits' ? '/ kit' : '/ ud')}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                        <tfoot className="table-secondary fw-bold">
+                                            <tr>
+                                                <td className="text-start ps-3">
+                                                    {filtroGrupoMatriz === 'TODAS' ? 'TOTAL CONSOLIDADO' : `TOTAL ${filtroGrupoMatriz.toUpperCase()}`}
+                                                </td>
+                                                <td>
+                                                    {filtroGrupoMatriz === 'TODAS' ? '-' : (
+                                                        <span className={`badge border ${
+                                                            filtroGrupoMatriz === 'Kits' ? 'bg-primary text-white' :
+                                                            filtroGrupoMatriz === 'Guantes' ? 'bg-warning text-dark' :
+                                                            'bg-info text-white'
+                                                        }`}>
+                                                            {filtroGrupoMatriz}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    {filtroGrupoMatriz === 'Guantes' ? 'Docenas' : (filtroGrupoMatriz === 'Kits' ? 'Kits / Cirios' : (filtroGrupoMatriz === 'Otros' ? 'Unidades' : 'Múltiples unidades'))}
+                                                </td>
+                                                <td>
+                                                    {totalesMatrizFiltrada.unidades.toLocaleString()} {filtroGrupoMatriz === 'Guantes' ? 'docenas' : (filtroGrupoMatriz === 'Kits' ? 'kits' : 'productos*')}
+                                                </td>
+                                                <td>{totalesMatrizFiltrada.pctUnidades.toFixed(1)}%</td>
+                                                <td className="text-end text-primary">{formatearPrecio(totalesMatrizFiltrada.totalVenta)}</td>
+                                                <td>{totalesMatrizFiltrada.pctVenta.toFixed(1)}%</td>
+                                                <td className="text-end pe-3">
+                                                    {formatearPrecio(totalesMatrizFiltrada.precioPromedio)} {filtroGrupoMatriz === 'Guantes' ? '/ docena' : (filtroGrupoMatriz === 'Kits' ? '/ kit' : '/ ud')}
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                                <span className="small text-muted mt-2 d-block">
+                                    <i className="fa-solid fa-circle-info me-1"></i> *Nota: Los guantes se miden y comercializan en <strong>docenas</strong>, mientras que los kits y otros productos se contabilizan en <strong>unidades</strong>. De la categoría Otros no se suma ningún producto de Karol Gómez.
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Gráficos de Categoría */}
+                        <div className="col-12 col-lg-6">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                    <h6 className="fw-bold text-dark mb-0">
+                                        <i className="fa-solid fa-chart-column text-primary me-2"></i>
+                                        Ventas Mensuales ($) por Categoría en {fechaPedido}
+                                    </h6>
+                                    <span className="badge bg-light text-secondary border small">
+                                        Kits: Fábrica | Guantes/Otros: Pedidos
+                                    </span>
+                                </div>
+                                <p className="text-muted small mb-3">
+                                    Kits valorizados a <strong>Precios de Fábrica</strong> (2025+); Guantes y Otros a <strong>Precios Reales de Pedidos</strong>.
+                                </p>
+                                <div style={{ minHeight: 320 }}>
+                                    <StackedChart
+                                        labels={chartCategoriasData.labels}
+                                        datasets={chartCategoriasData.datasets}
+                                        title={`Ventas $ por Categoría ${fechaPedido}`}
+                                        stacked={true}
+                                        formato={true}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-12 col-lg-6">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                    <h6 className="fw-bold text-dark mb-0">
+                                        <i className="fa-solid fa-boxes-stacked text-primary me-2"></i>
+                                        Unidades Mensuales por Categoría en {fechaPedido}
+                                    </h6>
+                                    <span className="badge bg-info-subtle text-info border border-info-subtle small">
+                                        Cantidades Físicas
+                                    </span>
+                                </div>
+                                <p className="text-muted small mb-3">
+                                    Volumen de producción y despacho en unidades (kits/otros) y docenas (guantes), independiente de precios.
+                                </p>
+                                <div style={{ minHeight: 320 }}>
+                                    <StackedChart
+                                        labels={chartCategoriasCantidad.labels}
+                                        datasets={chartCategoriasCantidad.datasets}
+                                        title={`Productos por Categoría ${fechaPedido}`}
+                                        stacked={true}
+                                        formato={true}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Histórico Multianual de Toda la Categoría Kits */}
+                        <div className="col-12 mt-2">
+                            <ChartKitsMultiAnual
+                                oldOrders={oldOrders}
+                                pedidos={pedidos}
+                                aniosDisponibles={aniosDisponibles}
+                                filtrarPorEstadoPagado={filtrarPorEstadoPagado}
+                                filtroUsuario="GENERAL"
+                                listaPrecios={listaPrecios}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* VISTA 3: CLIENTES & CONCENTRACIÓN */}
+                {activeTab === 'clientes' && (
+                    <div className="row g-4">
+                        {/* Métricas de Concentración */}
+                        <div className="col-12 col-md-4">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 border-start border-4 border-primary">
+                                <span className="text-muted small fw-bold text-uppercase d-block mb-1">Clientes Activos</span>
+                                <h3 className="fw-bold text-dark mb-2">{stats.totalClientesUnicos} clientes</h3>
+                                <p className="text-muted small mb-0">
+                                    Realizaron al menos un pedido durante el año {fechaPedido}.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="col-12 col-md-4">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 border-start border-4 border-warning">
+                                <span className="text-muted small fw-bold text-uppercase d-block mb-1">Concentración Top 3</span>
+                                <h3 className="fw-bold text-warning mb-2">{stats.concentracionTop3.toFixed(1)}%</h3>
+                                <p className="text-muted small mb-0">
+                                    Porcentaje de las ventas totales que depende de los 3 clientes más grandes.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="col-12 col-md-4">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 border-start border-4 border-info">
+                                <span className="text-muted small fw-bold text-uppercase d-block mb-1">Concentración Top 5</span>
+                                <h3 className="fw-bold text-info mb-2">{stats.concentracionTop5.toFixed(1)}%</h3>
+                                <p className="text-muted small mb-0">
+                                    Participación de los 5 clientes principales sobre el total facturado.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Ranking Detallado de Clientes */}
+                        <div className="col-12">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                    <h5 className="fw-bold text-dark mb-0">
+                                        <i className="fa-solid fa-trophy text-warning me-2"></i>
+                                        Ranking de Clientes del Año {fechaPedido}
+                                    </h5>
+                                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill small fw-semibold">
+                                        <i className="fa-solid fa-receipt me-1"></i> Precios Reales Facturados en Pedidos
+                                    </span>
+                                </div>
+                                <p className="text-muted small mb-3">
+                                    Listado ordenado por volumen de facturación comercial real cobrada, cantidad de pedidos y productos adquiridos.
+                                </p>
+
+                                <div className="table-responsive">
+                                    <table className="table table-hover table-bordered align-middle mb-0">
+                                        <thead className="table-light text-center small text-muted">
+                                            <tr>
+                                                <th style={{ width: '5%' }}>#</th>
+                                                <th className="text-start ps-3" style={{ width: '30%' }}>Cliente</th>
+                                                <th style={{ width: '15%' }}>NIT / CC</th>
+                                                <th style={{ width: '10%' }}>Pedidos</th>
+                                                <th style={{ width: '10%' }}>Productos</th>
+                                                <th className="text-end" style={{ width: '15%' }}>
+                                                    Total Comprado ($)
+                                                    <small className="d-block text-muted fw-normal" style={{ fontSize: '0.68rem' }}>(Precios de Pedidos)</small>
+                                                </th>
+                                                <th style={{ width: '15%' }}>Ticket Promedio</th>
+                                                <th style={{ width: '10%' }}>% del Negocio</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {stats.topClientes.map((cli, idx) => (
+                                                <tr key={idx} className="text-center">
+                                                    <td className="fw-bold text-secondary">{idx + 1}</td>
+                                                    <td className="text-start ps-3 fw-bold text-dark">
+                                                        {aTitulo(cli.nombre)}
+                                                    </td>
+                                                    <td className="small text-muted">{cli.nit || '-'}</td>
+                                                    <td>{cli.pedidos}</td>
+                                                    <td className="fw-bold">{cli.prendas.toLocaleString()}</td>
+                                                    <td className="text-end fw-bold text-primary">{formatearPrecio(cli.total)}</td>
+                                                    <td className="text-end text-muted">{formatearPrecio(cli.ticketPromedio)}</td>
+                                                    <td>
+                                                        <span className="badge bg-primary-subtle text-primary fw-bold">
+                                                            {cli.participacion.toFixed(1)}%
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {stats.topClientes.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={8} className="text-center text-muted py-4">No hay clientes registrados en este periodo</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* VISTA 4: COMPARATIVA CARA A CARA */}
+                {activeTab === 'comparativa' && (
+                    <div className="row g-4">
+                        <div className="col-12">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                <div className="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <h5 className="fw-bold text-dark mb-0">
+                                                <i className="fa-solid fa-code-compare text-primary me-2"></i>
+                                                Comparativa Directa: {fechaPedido} vs {anioComparar}
+                                            </h5>
+                                            <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill small fw-semibold">
+                                                <i className="fa-solid fa-receipt me-1"></i> Precios Reales Facturados en Pedidos
+                                            </span>
+                                        </div>
+                                        <p className="text-muted small mb-0">
+                                            Confronta directamente la facturación comercial real cobrada y los gastos operacionales entre el año analizado y el año comparado.
+                                        </p>
+                                    </div>
+                                    <div className="d-flex align-items-center gap-2">
+                                        <span className="small fw-semibold text-secondary">Comparar contra:</span>
+                                        <select
+                                            className="form-select form-select-sm w-auto rounded-pill border-primary"
+                                            value={anioComparar}
+                                            onChange={(e) => setAnioComparar(e.target.value)}
+                                        >
+                                            {aniosDisponibles.filter(y => String(y) !== String(fechaPedido)).map(y => (
+                                                <option key={y} value={y}>{y}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="table-responsive">
+                                    <table className="table table-bordered table-hover align-middle text-center mb-0">
+                                        <thead className="table-light">
+                                            <tr>
+                                                <th className="text-start ps-3">Métrica de Negocio</th>
+                                                <th>Año {fechaPedido} (Principal)</th>
+                                                <th>Año {anioComparar} (Comparado)</th>
+                                                <th>Diferencia Absoluta</th>
+                                                <th>Variación %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td className="text-start ps-3 fw-bold">
+                                                    Ventas Totales ($)
+                                                    <span className="badge bg-light text-secondary border fw-normal ms-1" style={{ fontSize: '0.7rem' }}>Precios de Pedidos</span>
+                                                </td>
+                                                <td className="fw-bold text-dark">{formatearPrecio(comparativaData.ventas.valA)}</td>
+                                                <td className="text-muted">{formatearPrecio(comparativaData.ventas.valB)}</td>
+                                                <td className={`fw-bold ${comparativaData.ventas.dif >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                    {comparativaData.ventas.dif >= 0 ? `+${formatearPrecio(comparativaData.ventas.dif)}` : formatearPrecio(comparativaData.ventas.dif)}
+                                                </td>
+                                                <td>
+                                                    <span className={`badge rounded-pill fw-bold ${comparativaData.ventas.pct >= 0 ? 'bg-success text-white' : 'bg-danger text-white'}`}>
+                                                        {comparativaData.ventas.pct >= 0 ? `+${comparativaData.ventas.pct.toFixed(1)}%` : `${comparativaData.ventas.pct.toFixed(1)}%`}
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td className="text-start ps-3 fw-bold">Gastos Operativos ($)</td>
+                                                <td className="text-danger fw-bold">{formatearPrecio(comparativaData.gastos.valA)}</td>
+                                                <td className="text-muted">{formatearPrecio(comparativaData.gastos.valB)}</td>
+                                                <td className={`fw-bold ${comparativaData.gastos.dif <= 0 ? 'text-success' : 'text-danger'}`}>
+                                                    {comparativaData.gastos.dif >= 0 ? `+${formatearPrecio(comparativaData.gastos.dif)}` : formatearPrecio(comparativaData.gastos.dif)}
+                                                </td>
+                                                <td>
+                                                    <span className="badge rounded-pill bg-light text-secondary border">
+                                                        {comparativaData.gastos.pct >= 0 ? `+${comparativaData.gastos.pct.toFixed(1)}%` : `${comparativaData.gastos.pct.toFixed(1)}%`}
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td className="text-start ps-3 fw-bold">Utilidad Operativa ($)</td>
+                                                <td className={`fw-bold ${comparativaData.utilidad.valA >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                    {formatearPrecio(comparativaData.utilidad.valA)}
+                                                </td>
+                                                <td className="text-muted">{formatearPrecio(comparativaData.utilidad.valB)}</td>
+                                                <td className={`fw-bold ${comparativaData.utilidad.dif >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                    {comparativaData.utilidad.dif >= 0 ? `+${formatearPrecio(comparativaData.utilidad.dif)}` : formatearPrecio(comparativaData.utilidad.dif)}
+                                                </td>
+                                                <td>
+                                                    <span className={`badge rounded-pill fw-bold ${comparativaData.utilidad.pct >= 0 ? 'bg-success text-white' : 'bg-danger text-white'}`}>
+                                                        {comparativaData.utilidad.pct >= 0 ? `+${comparativaData.utilidad.pct.toFixed(1)}%` : `${comparativaData.utilidad.pct.toFixed(1)}%`}
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td className="text-start ps-3 fw-bold">Margen de Rentabilidad (%)</td>
+                                                <td className="fw-bold">{comparativaData.margen.valA.toFixed(1)}%</td>
+                                                <td className="text-muted">{comparativaData.margen.valB.toFixed(1)}%</td>
+                                                <td className={`fw-bold ${comparativaData.margen.dif >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                    {comparativaData.margen.dif >= 0 ? `+${comparativaData.margen.dif.toFixed(1)} pts` : `${comparativaData.margen.dif.toFixed(1)} pts`}
+                                                </td>
+                                                <td>
+                                                    <span className="badge rounded-pill bg-light text-dark border">
+                                                        {comparativaData.margen.dif >= 0 ? 'Mejora de Margen' : 'Compresión de Margen'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td className="text-start ps-3 fw-bold">Total Productos Vendidos (Kits y Doc. Guantes)</td>
+                                                <td className="fw-bold">{comparativaData.prendas.valA.toLocaleString()} prod.</td>
+                                                <td className="text-muted">{comparativaData.prendas.valB.toLocaleString()} prod.</td>
+                                                <td className={`fw-bold ${comparativaData.prendas.dif >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                    {comparativaData.prendas.dif >= 0 ? `+${comparativaData.prendas.dif.toLocaleString()}` : comparativaData.prendas.dif.toLocaleString()}
+                                                </td>
+                                                <td>
+                                                    <span className={`badge rounded-pill fw-bold ${comparativaData.prendas.pct >= 0 ? 'bg-success text-white' : 'bg-danger text-white'}`}>
+                                                        {comparativaData.prendas.pct >= 0 ? `+${comparativaData.prendas.pct.toFixed(1)}%` : `${comparativaData.prendas.pct.toFixed(1)}%`}
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td className="text-start ps-3 fw-bold">Total de Pedidos</td>
+                                                <td className="fw-bold">{comparativaData.pedidos.valA} pedidos</td>
+                                                <td className="text-muted">{comparativaData.pedidos.valB} pedidos</td>
+                                                <td className="fw-bold">{comparativaData.pedidos.dif >= 0 ? `+${comparativaData.pedidos.dif}` : comparativaData.pedidos.dif}</td>
+                                                <td>
+                                                    <span className="badge rounded-pill bg-light text-secondary border">
+                                                        {comparativaData.pedidos.pct >= 0 ? `+${comparativaData.pedidos.pct.toFixed(1)}%` : `${comparativaData.pedidos.pct.toFixed(1)}%`}
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td className="text-start ps-3 fw-bold">Ticket Promedio por Pedido</td>
+                                                <td className="fw-bold text-dark">{formatearPrecio(comparativaData.ticket.valA)}</td>
+                                                <td className="text-muted">{formatearPrecio(comparativaData.ticket.valB)}</td>
+                                                <td className={`fw-bold ${comparativaData.ticket.dif >= 0 ? 'text-success' : 'text-danger'}`}>
+                                                    {comparativaData.ticket.dif >= 0 ? `+${formatearPrecio(comparativaData.ticket.dif)}` : formatearPrecio(comparativaData.ticket.dif)}
+                                                </td>
+                                                <td>
+                                                    <span className={`badge rounded-pill fw-bold ${comparativaData.ticket.pct >= 0 ? 'bg-success text-white' : 'bg-danger text-white'}`}>
+                                                        {comparativaData.ticket.pct >= 0 ? `+${comparativaData.ticket.pct.toFixed(1)}%` : `${comparativaData.ticket.pct.toFixed(1)}%`}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* VISTA 5: EVOLUCIÓN HISTÓRICA */}
+                {activeTab === 'multianual' && (
+                    <div className="row g-4">
+                        {/* Histórico Multianual de Toda la Categoría Kits */}
+                        <div className="col-12">
+                            <ChartKitsMultiAnual
+                                oldOrders={oldOrders}
+                                pedidos={pedidos}
+                                aniosDisponibles={aniosDisponibles}
+                                filtrarPorEstadoPagado={filtrarPorEstadoPagado}
+                                filtroUsuario="GENERAL"
+                                listaPrecios={listaPrecios}
+                            />
+                        </div>
+
+                        <div className="col-12 col-lg-6">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                    <h6 className="fw-bold text-dark mb-0">
+                                        <i className="fa-solid fa-chart-line text-success me-2"></i>
+                                        Curva Comparativa de Ventas Anuales
+                                    </h6>
+                                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle small fw-semibold">
+                                        <i className="fa-solid fa-receipt me-1"></i> Precios Reales de Pedidos
+                                    </span>
+                                </div>
+                                <p className="text-muted small mb-2">Compara la facturación comercial real cobrada mes a mes en cada año.</p>
+                                <div style={{ minHeight: 300 }}>
+                                    <AreaChartOldYear data={multiAnualSalesData} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-12 col-lg-6">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                    <h6 className="fw-bold text-dark mb-0">
+                                        <i className="fa-solid fa-arrow-trend-up text-primary me-2"></i>
+                                        Ventas Acumuladas Año a Año
+                                    </h6>
+                                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle small fw-semibold">
+                                        <i className="fa-solid fa-receipt me-1"></i> Precios Reales de Pedidos
+                                    </span>
+                                </div>
+                                <p className="text-muted small mb-2">Acumulación de ingresos comerciales reales cobrados a lo largo de cada año.</p>
+                                <div style={{ minHeight: 300 }}>
+                                    <AreaChartOldYearAcumulada data={multiAnualSalesData} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-12 col-lg-6">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                    <h6 className="fw-bold text-dark mb-0">
+                                        <i className="fa-solid fa-receipt text-danger me-2"></i>
+                                        Gastos Mensuales por Año
+                                    </h6>
+                                    <span className="badge bg-danger-subtle text-danger border border-danger-subtle small fw-semibold">
+                                        Egresos Registrados
+                                    </span>
+                                </div>
+                                <p className="text-muted small mb-2">Compara los egresos operacionales de cada periodo.</p>
+                                <div style={{ minHeight: 300 }}>
+                                    <AreaChartOldYear data={multiAnualGastosData} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-12 col-lg-6">
+                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                    <h6 className="fw-bold text-dark mb-0">
+                                        <i className="fa-solid fa-chart-pie text-secondary me-2"></i>
+                                        Brand Design vs Otros Clientes ({fechaPedido})
+                                    </h6>
+                                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle small fw-semibold">
+                                        <i className="fa-solid fa-receipt me-1"></i> Precios Reales de Pedidos
+                                    </span>
+                                </div>
+                                <p className="text-muted small mb-2">Desglose histórico de ventas reales cobradas a Brand Design frente al resto de clientes.</p>
+                                <div style={{ minHeight: 300 }}>
+                                    <AreaChartOld
+                                        gastos={areaChartProps.gastos}
+                                        ventas={areaChartProps.ventas}
+                                        ventasBrandDesign={areaChartProps.ventasBrandDesign}
+                                        ventasOtros={areaChartProps.ventasOtros}
+                                        porValor={false}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* VISTA 6: DETALLE DE PEDIDOS */}
+                {activeTab === 'pedidos' && (
+                    <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                        <div className="row g-3 align-items-center mb-3">
+                            <div className="col-12 col-md-6">
+                                <h5 className="fw-bold text-dark mb-1">
+                                    <i className="fa-solid fa-list-check text-primary me-2"></i>
+                                    Detalle de Pedidos Registrados ({fechaPedido})
+                                </h5>
+                                <p className="text-muted small mb-0">
+                                    {pedidosFiltrados.length} pedidos encontrados con los filtros actuales.
+                                </p>
+                            </div>
+
+                            <div className="col-12 col-md-6 d-flex flex-wrap justify-content-md-end gap-2">
+                                <Button
+                                    variant="outline-success"
+                                    className="btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
+                                    onClick={handleDownloadCsv}
+                                >
+                                    <i className="fa-solid fa-file-csv"></i>
+                                    <span>Descargar CSV</span>
+                                </Button>
+                                <Button
+                                    variant="outline-danger"
+                                    className="btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
+                                    onClick={handleDownloadPDF}
+                                >
+                                    <i className="fa-solid fa-file-pdf"></i>
+                                    <span>Descargar PDF</span>
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Filtros de Búsqueda */}
+                        <div className="row g-3 mb-4 p-3 bg-light rounded-3 align-items-center">
+                            <div className="col-12 col-md-5">
+                                <div className="input-group">
+                                    <span className="input-group-text bg-white border-end-0">
+                                        <i className="fa-solid fa-magnifying-glass text-muted"></i>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        className="form-control border-start-0"
+                                        placeholder="Buscar por cliente, NIT, remisión o fecha..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                    />
+                                    {search && (
+                                        <button className="btn btn-outline-secondary border-start-0 bg-white" onClick={() => setSearch('')}>
+                                            <i className="fa-solid fa-times"></i>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="col-12 col-md-4">
+                                <select
+                                    className="form-select"
+                                    value={categoriaFiltro}
+                                    onChange={(e) => setCategoriaFiltro(e.target.value)}
+                                >
+                                    <option value="TODAS">Todas las categorías de producto</option>
+                                    {CATEGORIAS_DEFINICION.map(c => (
+                                        <option key={c.id} value={c.id}>{c.nombre} ({c.id})</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="col-12 col-md-3">
+                                <Form.Check
+                                    type="checkbox"
+                                    id="checkExcluir"
+                                    label="Excluir coincidencias por cliente"
+                                    checked={excluirCliente}
+                                    onChange={(e) => setExcluirCliente(e.target.checked)}
+                                    className="small fw-semibold text-secondary"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Tabla de Datos */}
+                        <div className="table-responsive">
+                            <table className="table table-hover align-middle mb-0">
+                                <thead className="table-light">
+                                    <tr className="small text-muted text-uppercase">
+                                        <th className="text-center" style={{ width: '10%' }}>Fecha</th>
+                                        <th className="text-center" style={{ width: '12%' }}>Remisión</th>
+                                        <th style={{ width: '12%' }}>NIT / CC</th>
+                                        <th className="text-center" style={{ width: '8%' }} title="Kits y cirios en unidades, guantes en docenas">Productos*</th>
+                                        <th className="text-center" style={{ width: '8%' }}>Items</th>
+                                        <th style={{ width: '30%' }}>Cliente</th>
+                                        <th className="text-end pe-3" style={{ width: '15%' }}>Total ($)</th>
+                                        <th className="text-center" style={{ width: '5%' }}>Origen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pedidosPaginados.map((order, idx) => (
+                                        <tr key={order.id || idx}>
+                                            <td className="text-center small text-muted">
+                                                {order.fechaStr}
+                                            </td>
+
+                                            {/* Remisión con Popover de Items */}
+                                            <td className="text-center">
+                                                <OverlayTrigger
+                                                    trigger="click"
+                                                    rootClose
+                                                    placement="top"
+                                                    overlay={
+                                                        <Popover id={`popover-order-${idx}`} style={{ maxWidth: '650px', width: 'auto' }}>
+                                                            <Popover.Header as="h6" className="fw-bold d-flex justify-content-between align-items-center bg-dark text-white">
+                                                                <span>Remisión: {order.remision}</span>
+                                                                <span className="badge bg-primary">{order.origen}</span>
+                                                            </Popover.Header>
+                                                            <Popover.Body className="p-2">
+                                                                <div className="small mb-2">
+                                                                    <strong>Cliente:</strong> {order.cliente} <br />
+                                                                    <strong>NIT:</strong> {order.nit || 'S/N'}
+                                                                </div>
+                                                                <div className="table-responsive" style={{ maxHeight: '250px' }}>
+                                                                    <table className="table table-sm table-bordered text-center align-middle mb-0" style={{ fontSize: '0.8rem' }}>
+                                                                        <thead className="table-light">
+                                                                            <tr>
+                                                                                <th>Código / Cat.</th>
+                                                                                <th>Producto</th>
+                                                                                <th>Cant. / Medida</th>
+                                                                                <th className="text-end">Precio</th>
+                                                                                <th className="text-end">Total</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {order.items?.map((it, i) => {
+                                                                                const esGuante = it.categoriaId === 'GUANTES' || (it.producto && it.producto.toLowerCase().includes('guante'));
+                                                                                const esKit = ['KCG', 'KCP', 'KCE', 'KB'].includes(it.categoriaId);
+                                                                                const esCirio = ['CC', 'CB'].includes(it.categoriaId);
+                                                                                const unidadTexto = esGuante ? 'docenas' : (esKit ? 'kits' : (esCirio ? 'cirios' : 'uds'));
+
+                                                                                return (
+                                                                                    <tr key={i}>
+                                                                                        <td>
+                                                                                            <span className="badge bg-secondary-subtle text-secondary">{it.codigo}</span>
+                                                                                        </td>
+                                                                                        <td className="text-start">{it.producto}</td>
+                                                                                        <td className="fw-bold text-nowrap">
+                                                                                            {it.cantidad} <small className={esGuante ? 'badge bg-warning-subtle text-warning-emphasis' : 'text-muted fw-normal'}>({unidadTexto})</small>
+                                                                                        </td>
+                                                                                        <td className="text-end">{formatearPrecio(it.precio)}</td>
+                                                                                        <td className="text-end fw-bold">{formatearPrecio(it.total)}</td>
+                                                                                    </tr>
+                                                                                );
+                                                                            })}
+                                                                            {(!order.items || order.items.length === 0) && (
+                                                                                <tr>
+                                                                                    <td colSpan={5} className="text-muted">Sin detalle de productos</td>
+                                                                                </tr>
+                                                                            )}
+                                                                        </tbody>
+                                                                        <tfoot className="table-light fw-bold">
+                                                                            <tr>
+                                                                                <td colSpan={2} className="text-end">Total:</td>
+                                                                                <td>{order.cantidadPrendas}</td>
+                                                                                <td colSpan={2} className="text-end text-primary">{formatearPrecio(order.total)}</td>
+                                                                            </tr>
+                                                                        </tfoot>
+                                                                    </table>
+                                                                </div>
+                                                            </Popover.Body>
+                                                        </Popover>
+                                                    }
+                                                >
+                                                    <span className="badge bg-light text-primary border rounded-pill px-3 py-1 cursor-pointer hover-shadow" style={{ cursor: 'pointer' }}>
+                                                        <i className="fa-solid fa-eye me-1"></i> {order.remision}
+                                                    </span>
+                                                </OverlayTrigger>
+                                            </td>
+
+                                            <td className="small text-secondary">{order.nit || '-'}</td>
+                                            <td className="text-center fw-bold">{order.cantidadPrendas}</td>
+                                            <td className="text-center text-muted small">{order.itemsCount}</td>
+                                            <td className="fw-semibold text-dark text-truncate" style={{ maxWidth: 240 }}>
+                                                {aTitulo(order.cliente)}
+                                                {order.atribuidoKarol && (
+                                                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill ms-2" style={{ fontSize: '0.65rem' }}>
+                                                        <i className="fa-solid fa-handshake me-1"></i>
+                                                        {order.tipoAtribucion || 'Karol'}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="text-end pe-3 fw-bold text-dark">
+                                                {formatearPrecio(order.total)}
+                                            </td>
+                                            <td className="text-center">
+                                                <span className={`badge rounded-pill ${order.origen === 'SISTEMA' ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}`} style={{ fontSize: '0.65rem' }}>
+                                                    {order.origen === 'SISTEMA' ? '2025+' : 'Histórico'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+
+                                    {pedidosFiltrados.length === 0 && (
+                                        <tr>
+                                            <td colSpan={8} className="text-center text-muted py-5">
+                                                <i className="fa-solid fa-box-open fa-2x mb-2 text-secondary d-block"></i>
+                                                No se encontraron pedidos que coincidan con los criterios de búsqueda para {fechaPedido}.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <span className="small text-muted mt-2 d-block">
+                            <i className="fa-solid fa-circle-info me-1"></i> *Nota: Los guantes se contabilizan en <strong>docenas</strong>; los kits, cirios y accesorios se contabilizan por <strong>unidades</strong>.
+                        </span>
+
+                        {/* Paginador y Resumen */}
+                        {pedidosFiltrados.length > 0 && (
+                            <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top">
+                                <span className="small text-muted">
+                                    Mostrando {((paginaActual - 1) * itemsPorPagina) + 1} a {Math.min(paginaActual * itemsPorPagina, pedidosFiltrados.length)} de {pedidosFiltrados.length} pedidos
+                                </span>
+
+                                <div className="d-flex align-items-center gap-1 flex-wrap">
+                                    <button
+                                        className="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                        disabled={paginaActual === 1}
+                                        onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+                                    >
+                                        <i className="fa-solid fa-chevron-left me-1"></i> Anterior
+                                    </button>
+                                    {getVisiblePageNumbers(paginaActual - 1, totalPaginas, 5).map((pageIndex) => (
+                                        <button
+                                            key={pageIndex}
+                                            className={`btn btn-sm rounded-circle px-2 py-1 ${paginaActual === pageIndex + 1 ? 'btn-primary' : 'btn-light border'}`}
+                                            style={{ width: '32px', height: '32px', fontSize: '0.8rem' }}
+                                            onClick={() => setPaginaActual(pageIndex + 1)}
+                                        >
+                                            {pageIndex + 1}
+                                        </button>
+                                    ))}
+                                    <button
+                                        className="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                        disabled={paginaActual === totalPaginas}
+                                        onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+                                    >
+                                        Siguiente <i className="fa-solid fa-chevron-right ms-1"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
-        </LayoutApp >
-    )
-}
+        </LayoutApp>
+    );
+};

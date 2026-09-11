@@ -5,7 +5,7 @@ import { MainDashboard } from "../dashboard/pages/MainDashboard";
 import { Pedidos } from "../pedidos/pages/Pedidos";
 import { Budget } from "../budget/pages/budget";
 import { Clientes } from "../clients/pages/Clientes";
-import { useAuthStore } from "../hooks";
+import { useAuthStore, usePreciosStore } from "../hooks";
 import { useEffect } from "react";
 import { ListaPedidos } from "../pedidos/pages/ListaPedidos";
 import { grid } from 'ldrs'
@@ -14,13 +14,18 @@ import { C } from "@table-library/react-table-library/Cell-a4350b14";
 import { CuentasXCobrar } from "../cxc/pages/CuentasXCobrar";
 import { OldOrders } from "../pedidos/pages/OldOrders";
 import { ListOldOrders } from "../pedidos/pages/ListOldOrders";
+import { CruceCuentas } from "../pedidos/pages/CruceCuentas";
+import { GestionPrecios } from "../precios/pages/GestionPrecios";
+import { TareasPage } from "../tareas/pages/TareasPage";
 grid.register()
 
 export const AppRouter = () => {
   const { status, checkAuthToken } = useAuthStore();
   const { user } = useAuthStore();
+  const { startLoadingPrecios } = usePreciosStore();
   useEffect(() => {
     checkAuthToken();
+    startLoadingPrecios();
   }, [])
 
   if (status === 'checking') {
@@ -59,11 +64,14 @@ export const AppRouter = () => {
                   <Route path="/pedidos" element={<Pedidos />} />
                   <Route path="/pedidos/old" element={<OldOrders />} />
                   <Route path="/pedidos/listOldOrders" element={<ListOldOrders />} />
+                  <Route path="/pedidos/cruceCuentas" element={<CruceCuentas />} />
                   <Route path="/gastos/*" element={<Gastos />} />
-                  <Route path="/listaPedidos/*" element={<ListaPedidos />} />0
+                  <Route path="/listaPedidos/*" element={<ListaPedidos />} />
                   <Route path="/budget/*" element={<Budget />} />
                   <Route path="/clientes/*" element={<Clientes />} />
+                  <Route path="/precios" element={<GestionPrecios />} />
                   <Route path="/CuentasXCobrar/*" element={<CuentasXCobrar />} />
+                  <Route path="/tareas" element={<TareasPage />} />
                   <Route path="/*" element={<Navigate to={"/"} />}> </Route>
                 </>
               )}
@@ -71,11 +79,12 @@ export const AppRouter = () => {
                 <>
                   <Route path="/*" element={<MainDashboard />} />
                   <Route path="/calendar/*" element={<CalendarPage />} />
-                  <Route path="/pedidos" element={<Pedidos />} />                  
-                  <Route path="/listaPedidos/*" element={<ListaPedidos />} />0
+                  <Route path="/pedidos" element={<Pedidos />} />
+                  <Route path="/listaPedidos/*" element={<ListaPedidos />} />
                   <Route path="/budget/*" element={<Budget />} />
                   <Route path="/clientes/*" element={<Clientes />} />
                   <Route path="/CuentasXCobrar/*" element={<CuentasXCobrar />} />
+                  <Route path="/tareas" element={<TareasPage />} />
                   <Route path="/*" element={<Navigate to={"/"} />}> </Route>
                 </>
               )}

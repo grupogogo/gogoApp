@@ -1,7 +1,0 @@
-export * from './AreaChart'
-export * from './BarChart'
-export * from './DataTable'
-export * from './PieChart'
-export * from './AreaChartOld'
-export * from './AreaChartOldYear'
-export * from './StackedChart'

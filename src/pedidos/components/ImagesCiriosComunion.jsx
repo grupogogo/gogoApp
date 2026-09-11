@@ -128,147 +128,186 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
 
   return (
     <>
-      <div className="row">
-        {/* TIPO PEDIDO DETALLADO - SURTIDO */}
-        <div className="col-md-3">
-          <div className="form-group">
-            <div className="input-group mb-2 mt-2">
-              <div className="input-group-prepend">
-                <span className="input-group-text" id="icono-select">
-                  <i className="fas fa-chevron-down"></i>
-                </span>
-              </div>
-              <select id="inputPedido" className="form-control form-control-sm" aria-describedby="icono-select" onChange={cargarTipoForm}>
-                <option value="opSurtido">Surtido</option>
-                <option value="opDetallado">Detallado</option>
-              </select>
-            </div>
-            {/* TALLA */}
-            {(tipoPedido === 'opDetallado' && categoria === 'kcg') && (
-              <div className="input-group mt-2">
-                <div className="input-group-prepend">
-                  <span className="input-group-text" id="icono-select">
-                    <i className="fas fa-hand"></i>
-                  </span>
-                </div>
-                <select
-                  id="inputTalla"
-                  className="form-control form-control-sm"
-                  aria-describedby="icono-select"
-                  onChange={cargarTalla}
-                  value={talla}
-                >
-                  {genero === '0' ? (
-                    <>
-                      <option value="t0">Talla surtida</option>
-                      <option value="t6">Talla 6</option>
-                      <option value="t7">Talla 7</option>
-                      <option value="t8">Talla 8</option>
-                      <option value="t9">Talla 9</option>
-                      <option value="t10">Talla 10</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="t0">Talla surtida</option>
-                      <option value="t7">Talla 7</option>
-                      <option value="t8">Talla 8</option>
-                      <option value="t9">Talla 9</option>
-                      <option value="t10">Talla 10</option>
-                    </>
-                  )}
-                </select>
-              </div>
-            )}
+      <div className="card border border-light-subtle shadow-xs rounded-4 p-3 bg-white mb-3">
+        {/* BARRA SUPERIOR DE MODO Y CONTROLES */}
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 border-bottom mb-3">
+          {/* SEGMENTED CONTROL: SURTIDO VS DETALLADO */}
+          <div className="btn-group p-1 bg-light rounded-pill border border-light-subtle" role="group">
+            <button
+              type="button"
+              className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold transition-all ${
+                tipoPedido === 'opSurtido'
+                  ? 'btn-primary text-white shadow-xs'
+                  : 'btn-light text-secondary border-0'
+              }`}
+              onClick={() => setTipoPedido('opSurtido')}
+            >
+              <i className="fa-solid fa-layer-group me-1"></i>
+              Surtido
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold transition-all ${
+                tipoPedido === 'opDetallado'
+                  ? 'btn-primary text-white shadow-xs'
+                  : 'btn-light text-secondary border-0'
+              }`}
+              onClick={() => setTipoPedido('opDetallado')}
+            >
+              <i className="fa-solid fa-table-cells-large me-1"></i>
+              Detallado
+            </button>
           </div>
+
+          {/* CONTROLES CONDICIONALES EN MODO DETALLADO */}
+          {tipoPedido === 'opDetallado' && (
+            <div className="d-flex align-items-center gap-2 flex-wrap">
+              {/* SELECTOR DE TALLA SI ES KCG */}
+              {categoria === 'kcg' && (
+                <div className="input-group input-group-sm" style={{ width: 170 }}>
+                  <span className="input-group-text bg-light text-secondary border-light-subtle">
+                    <i className="fa-solid fa-ruler-horizontal"></i>
+                  </span>
+                  <select
+                    id="inputTalla"
+                    className="form-select form-select-sm shadow-none border-light-subtle"
+                    onChange={cargarTalla}
+                    value={talla}
+                  >
+                    {genero === '0' ? (
+                      <>
+                        <option value="t0">Talla surtida</option>
+                        <option value="t6">Talla 6</option>
+                        <option value="t7">Talla 7</option>
+                        <option value="t8">Talla 8</option>
+                        <option value="t9">Talla 9</option>
+                        <option value="t10">Talla 10</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="t0">Talla surtida</option>
+                        <option value="t7">Talla 7</option>
+                        <option value="t8">Talla 8</option>
+                        <option value="t9">Talla 9</option>
+                        <option value="t10">Talla 10</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              )}
+
+              {/* BOTONES GÉNERO NIÑO / NIÑA */}
+              {categoria !== 'kce' && (
+                <div className="btn-group p-1 bg-light rounded-pill border border-light-subtle" role="group">
+                  <button
+                    type="button"
+                    className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold transition-all ${
+                      genero === '0'
+                        ? 'btn-primary text-white shadow-xs'
+                        : 'btn-light text-secondary border-0'
+                    }`}
+                    onClick={() => handleGenero('0')}
+                  >
+                    <i className="fa-solid fa-child me-1"></i>
+                    Niño
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold transition-all ${
+                      genero === '1'
+                        ? 'btn-danger text-white shadow-xs'
+                        : 'btn-light text-secondary border-0'
+                    }`}
+                    onClick={() => handleGenero('1')}
+                  >
+                    <i className="fa-solid fa-child-dress me-1"></i>
+                    Niña
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {tipoPedido === 'opDetallado' ? (
-          <>
-            {/* DETALLADO */}
-            <div className="col"></div>
-            {/* CONTENEDOR */}
-            {categoria !== 'kce' && (
-              <div className="col-md-3 m-2 border p-3 rounded shadow">
-                <div className="d-flex gap-2">
-                  {/* BOTÓN NIÑO */}
-                  <button
-                    type="button"
-                    className={`d-flex flex-column align-items-center justify-content-center ${genero === '0' ? 'btn btn-primary text-white' : 'btn btn-outline-primary'
-                      }`}
-                    style={{ flex: 1, minHeight: 84 }}
-                    onClick={() => handleGenero('0')}
-                    aria-pressed={genero === '0'}
-                  >
-                    <i className="fa-solid fa-child fa-2x mb-1"></i>
-                    <span className="fw-bold">Niño</span>
-                  </button>
-
-                  {/* BOTÓN NIÑA */}
-                  <button
-                    type="button"
-                    className={`d-flex flex-column align-items-center justify-content-center ${genero === '1' ? 'btn btn-danger text-white' : 'btn btn-outline-danger'
-                      }`}
-                    style={{ flex: 1, minHeight: 84 }}
-                    onClick={() => handleGenero('1')}
-                    aria-pressed={genero === '1'}
-                  >
-                    <i className="fa-solid fa-child-dress fa-2x mb-1"></i>
-                    <span className="fw-bold">Niña</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            {/* SURTIDO */}
-            <div className="col-lg-12">
-              <div className="col-md-6">
-                <div className="input-group has-validation mb-2">
-                  <div className="input-group-prepend">
-                    <span className="input-group-text">Cantidad niño</span>
+        {/* CONTENIDO SEGÚN EL MODO SELECCIONADO */}
+        {tipoPedido === 'opSurtido' ? (
+          <div className="row g-3">
+            {/* SURTIDO NIÑO */}
+            <div className="col-12 col-sm-6">
+              <div className="p-3 rounded-4 border border-primary-subtle bg-primary bg-opacity-10 d-flex flex-column gap-2">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="p-2 rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style={{ width: 34, height: 34 }}>
+                      <i className="fa-solid fa-child"></i>
+                    </div>
+                    <span className="fw-bold text-primary">Surtido Niño</span>
                   </div>
+                  <span className="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">
+                    Talla surtida
+                  </span>
+                </div>
+                <div className="input-group mt-1">
+                  <span className="input-group-text bg-white text-muted border-primary-subtle">
+                    Cant.
+                  </span>
                   <input
                     type="number"
-                    className="form-control"
+                    className="form-control form-control-lg text-center fw-bold shadow-none border-primary-subtle"
                     name="inputSurtidoNino"
-                    value={pedido.find(item => item.nombreInput === 'inputSurtidoNino')?.cantidad || '0'} // Busca el objeto correspondiente
+                    value={pedido.find(item => item.nombreInput === 'inputSurtidoNino')?.cantidad || '0'}
                     onChange={(event) => onInputChangeCont(event, '0')}
                     onFocus={(e) => e.target.select()}
-                  /* onBlur={handleBlur()} */
+                    min="0"
                   />
-
                 </div>
-                <div className="input-group has-validation">
-                  <div className="input-group-prepend">
-                    <span className="input-group-text">Cantidad niña</span>
+              </div>
+            </div>
+
+            {/* SURTIDO NIÑA */}
+            <div className="col-12 col-sm-6">
+              <div className="p-3 rounded-4 border border-danger-subtle bg-danger bg-opacity-10 d-flex flex-column gap-2">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="p-2 rounded-circle bg-danger text-white d-flex align-items-center justify-content-center" style={{ width: 34, height: 34 }}>
+                      <i className="fa-solid fa-child-dress"></i>
+                    </div>
+                    <span className="fw-bold text-danger">Surtido Niña</span>
                   </div>
+                  <span className="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
+                    Talla surtida
+                  </span>
+                </div>
+                <div className="input-group mt-1">
+                  <span className="input-group-text bg-white text-muted border-danger-subtle">
+                    Cant.
+                  </span>
                   <input
                     type="number"
-                    className="form-control"
+                    className="form-control form-control-lg text-center fw-bold shadow-none border-danger-subtle"
                     name="inputSurtidoNina"
                     value={pedido.find(item => item.nombreInput === 'inputSurtidoNina')?.cantidad || '0'}
                     onChange={(event) => onInputChangeCont(event, '1')}
                     onFocus={(e) => e.target.select()}
+                    min="0"
                   />
                 </div>
               </div>
             </div>
-          </>
-        )}
-      </div>
-
-      {/* DETALLADO - PEDIDO POR TALLA */}
-      <div className="row card-body">
-        {tipoPedido === 'opDetallado' && (
-          <>
-            <div className="row">
-              <CargaImagesTipo onInputChangeCont={onInputChangeCont} pedido={pedido} talla={talla} genero={genero} categoria={categoria} />
-            </div>
-          </>
+          </div>
+        ) : (
+          /* MODO DETALLADO - CARGA DE IMÁGENES */
+          <div className="pt-2">
+            <CargaImagesTipo
+              onInputChangeCont={onInputChangeCont}
+              pedido={pedido}
+              talla={talla}
+              genero={genero}
+              categoria={categoria}
+            />
+          </div>
         )}
       </div>
     </>
-
   );
-}
+};
+

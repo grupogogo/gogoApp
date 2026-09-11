@@ -11,6 +11,8 @@ export * from './components/Guantes'
 export * from './components/KitComuPeque'
 export * from './components/KitBautizo'
 export * from './components/OtrosProductos'
+export * from './components/CardEstadisticasCliente'
+export * from './components/ChartKitsMultiAnual'
 
 
 

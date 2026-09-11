@@ -394,17 +394,15 @@ export const AreaChartOld = ({ gastos, porValor, ventas, ventasBrandDesign, vent
             }
           },
           y: {
+            beginAtZero: true,
             ticks: {
+              display: false, // ❌ Oculta los valores numéricos del eje Y
               callback: function (value) {
                 // Puedes personalizar aún más si quieres otros formatos
                 if (value >= 1_000_000) return (value / 1_000_000).toFixed(0) + 'M';
                 if (value >= 1_000) return (value / 1_000).toFixed(0) + 'K';
                 return value;
               },
-            },
-            beginAtZero: true,
-            ticks: {
-              display: false // ❌ Oculta los valores numéricos del eje Y
             },
             grid: {
               display: false // ❌ Oculta las líneas horizontales

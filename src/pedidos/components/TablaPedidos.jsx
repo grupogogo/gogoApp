@@ -31,7 +31,14 @@ export const TablaPedidos = () => {
 
         const userEdit = user.name + '-' + user.uid;
         const estado = event.target.value;
-        const nuevoPedido = { ...pedido, estado, userEdit }
+        const ahora = new Date().toISOString();
+        const nuevoPedido = {
+            ...pedido,
+            estado,
+            userEdit,
+            fechaModificacionEstado: ahora,
+            ...(estado === 'pagado' ? { fechaPagado: ahora } : {})
+        };
 
         console.log(pedido.user._id, user.uid, estado);
 

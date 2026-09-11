@@ -6,6 +6,6 @@ export * from './pedidos/pedidosSlice'
 export * from './productos/productosSlice'
 export * from './gastos/gastosSlice'
 export * from './productos/preciosSlice'
-export * from './productos/preciosSlice' 
+export * from './tareas/tareasSlice'
 
 export * from './store'

@@ -7,11 +7,27 @@ import { Collapse } from 'bootstrap';
             
 
 
-export const CirioComunion = ({ agregarPedidoGeneral, resetearPedido }) => {
-    const [cantidadItems, setCantidadItems] = useState(0)
+export const CirioComunion = ({ agregarPedidoGeneral, resetearPedido, initialItems }) => {
+    const [cantidadItems, setCantidadItems] = useState(() => {
+        return (initialItems?.pedido || []).reduce((acc, item) => acc + (parseInt(item.cantidad, 10) || 0), 0);
+    });
 
-    const [pedidoCC, setPedidoCC] = useState([]);
-    const { detalle = '', onInputChange } = useForm();
+    const [pedidoCC, setPedidoCC] = useState(() => initialItems?.pedido || []);
+    const { detalle = '', onInputChange, setFormState } = useForm({
+        detalle: initialItems?.detalleGeneral || ''
+    });
+
+    useEffect(() => {
+        if (initialItems) {
+            const items = initialItems.pedido || [];
+            setPedidoCC(items);
+            const qty = items.reduce((acc, item) => acc + (parseInt(item.cantidad, 10) || 0), 0);
+            setCantidadItems(qty);
+            if (initialItems.detalleGeneral !== undefined) {
+                setFormState(prev => ({ ...prev, detalle: initialItems.detalleGeneral || '' }));
+            }
+        }
+    }, [initialItems]);
 
     useEffect(() => {
         agregarPedidoGeneral('CC', pedidoCC, detalle); // Llamamos al callback con el pedido y la categoría
@@ -42,14 +58,19 @@ export const CirioComunion = ({ agregarPedidoGeneral, resetearPedido }) => {
                         <div className="col-lg-7">
                             {/* Segunda fila */}
                             <ImagesCiriosComunion pedido={pedidoCC} setPedido={setPedidoCC} categoria='cc' setCantidadItems={setCantidadItems} />
-                            <hr />
-                            <div className="row">
-                                <div className="col-md">
-                                    <div className="form-group card-body">
-                                        <label htmlFor="detalleCG">Detalle general de la categoría CC</label>
-                                        <textarea className="form-control" id="detalleCG" name='detalle' value={detalle} onChange={onInputChange}></textarea>
-                                    </div>
-                                </div>
+                            <div className="card border border-light-subtle shadow-xs rounded-4 p-3 bg-white mb-3">
+                                <label className="form-label small fw-semibold text-muted mb-1" htmlFor="detalleCC">
+                                    <i className="fa-regular fa-comment-dots me-1 text-primary"></i> Observaciones de Cirio Comunión (opcional)
+                                </label>
+                                <textarea
+                                    className="form-control shadow-none border-light-subtle"
+                                    id="detalleCC"
+                                    name="detalle"
+                                    value={detalle}
+                                    onChange={onInputChange}
+                                    rows={2}
+                                    placeholder="Nombres, detalles especiales o empaque..."
+                                ></textarea>
                             </div>
                         </div>
                         {/* COLUMNA DERECHA TABLA */}

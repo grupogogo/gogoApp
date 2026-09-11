@@ -1,4 +1,4 @@
-import { pedidosSlice, uiSlice, calendarSlice, clientesSlice, authSlice, productosSlice, gastosSlice,preciosSlice } from "./";
+import { pedidosSlice, uiSlice, calendarSlice, clientesSlice, authSlice, productosSlice, gastosSlice, preciosSlice, tareasSlice } from "./";
 import { configureStore } from "@reduxjs/toolkit";
 
 export const store = configureStore({
@@ -11,6 +11,7 @@ export const store = configureStore({
         productos: productosSlice.reducer,
         gastos: gastosSlice.reducer,
         precios: preciosSlice.reducer,
+        tareas: tareasSlice.reducer,
     },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware({
         serializableCheck: false

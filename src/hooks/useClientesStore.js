@@ -29,14 +29,17 @@ export const useClientesStore = () => {//* 3. Crear el hook que expone propiedad
         console.log(cliente)
         // TODO: Llegar al Backend        
         //*Si Todo bien          
-        if (cliente.cliente_id) {
+        if (cliente.cliente_id || cliente.id) {
             try {
-                const { data } = await gogoApi.put(`/clientes/${cliente.id}`, cliente)
+                const targetId = cliente.cliente_id || cliente.id;
+                const { data } = await gogoApi.put(`/clientes/${targetId}`, cliente);
                 dispatch(onUpdateClient(cliente));
                 return data;
             } catch (error) {
-                console.log(error)
+                console.log(error);
+                throw error;
             }
+
         } else {
             try {
                 const { data } = await gogoApi.post('/clientes', cliente);

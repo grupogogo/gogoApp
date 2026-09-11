@@ -71,38 +71,62 @@ export const ClienteLoadInput = () => {
     };    
 
     return (
-        <div className="input-group">
-            <input
-                ref={inputRef}
-                type="text"
-                className="form-control"
-                placeholder="Razón social o nombre"
-                value={searchTerm}
-                onKeyDown={handleKeyDown}
-                onBlur={handleBlur}
-                onFocus={() => setMostrarLista(true)}
-                onChange={handleInputChange}
-            />
+        <div className="position-relative w-100">
+            <div className="input-group">
+                <span className="input-group-text bg-white border-end-0 text-muted">
+                    <i className="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input
+                    ref={inputRef}
+                    type="text"
+                    className="form-control border-start-0 ps-0 shadow-none"
+                    placeholder="Escribe el nombre o razón social del cliente..."
+                    value={searchTerm}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleBlur}
+                    onFocus={() => setMostrarLista(true)}
+                    onChange={handleInputChange}
+                />
+                {searchTerm && (
+                    <button
+                        type="button"
+                        className="btn btn-link text-muted position-absolute end-0 top-50 translate-middle-y me-2 text-decoration-none"
+                        style={{ zIndex: 10 }}
+                        onClick={() => setSearchTerm('')}
+                    >
+                        <i className="fa-solid fa-xmark"></i>
+                    </button>
+                )}
+            </div>
             {suggestions.length > 0 && (
                 <ul
-                    className="list-group position-absolute w-100 rounded-1"
-                    style={{ top: "100%", left: 0, zIndex: 1000 }}
+                    className="list-group position-absolute w-100 rounded-3 shadow-lg mt-1 border"
+                    style={{ top: "100%", left: 0, zIndex: 1060, maxHeight: "250px", overflowY: "auto" }}
                 >
                     {suggestions.map((cliente, index) => (
                         <li
-                            className={`list-group-item list-group-item-action ${index === selectedIndex ? 'active' : ''}`}
+                            className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-bottom ${index === selectedIndex ? 'active' : ''}`}
                             style={{ cursor: 'pointer' }}
                             key={cliente.cliente_id}
                             onClick={() => handleSuggestionClick(cliente)}
                         >
-                            {cliente.nombre}
+                            <div>
+                                <i className="fa-solid fa-user text-primary me-2"></i>
+                                <strong className="text-dark">{cliente.nombre}</strong>
+                                {cliente.ciudad && (
+                                    <small className="text-muted ms-2">
+                                        <i className="fa-solid fa-location-dot me-1 text-secondary"></i>
+                                        {cliente.ciudad}
+                                    </small>
+                                )}
+                            </div>
+                            <span className={`badge rounded-pill px-2 py-1 ${cliente.distribuidor ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-secondary border'}`} style={{ fontSize: '0.72rem' }}>
+                                {cliente.distribuidor ? 'Distribuidor' : 'Casual'}
+                            </span>
                         </li>
                     ))}
                 </ul>
             )}
-            <span className="input-group-text">
-                <i className="fa-solid fa-magnifying-glass"></i>
-            </span>
         </div>
     )
 }

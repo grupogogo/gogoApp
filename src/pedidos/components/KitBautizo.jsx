@@ -6,10 +6,26 @@ import { useForm } from "../../hooks";
 import { Collapse } from 'bootstrap';
 
 
-export const KitBautizo = ({ agregarPedidoGeneral, resetearPedido }) => {
-    const [cantidadItems, setCantidadItems] = useState(0)
-    const [pedidoKB, setPedidoKB] = useState([]);
-    const { detalle = '', onInputChange } = useForm();
+export const KitBautizo = ({ agregarPedidoGeneral, resetearPedido, initialItems }) => {
+    const [cantidadItems, setCantidadItems] = useState(() => {
+        return (initialItems?.pedido || []).reduce((acc, item) => acc + (parseInt(item.cantidad, 10) || 0), 0);
+    });
+    const [pedidoKB, setPedidoKB] = useState(() => initialItems?.pedido || []);
+    const { detalle = '', onInputChange, setFormState } = useForm({
+        detalle: initialItems?.detalleGeneral || ''
+    });
+
+    useEffect(() => {
+        if (initialItems) {
+            const items = initialItems.pedido || [];
+            setPedidoKB(items);
+            const qty = items.reduce((acc, item) => acc + (parseInt(item.cantidad, 10) || 0), 0);
+            setCantidadItems(qty);
+            if (initialItems.detalleGeneral !== undefined) {
+                setFormState(prev => ({ ...prev, detalle: initialItems.detalleGeneral || '' }));
+            }
+        }
+    }, [initialItems]);
 
     useEffect(() => {
         if (resetearPedido) {
@@ -41,14 +57,19 @@ export const KitBautizo = ({ agregarPedidoGeneral, resetearPedido }) => {
                         <div className="col-lg-7">
                             {/* Segunda fila */}
                             <ImagesCiriosComunion pedido={pedidoKB} setPedido={setPedidoKB} categoria='kb' setCantidadItems={setCantidadItems} />
-                            <hr />
-                            <div className="row">
-                                <div className="col-md">
-                                    <div className="form-group card-body">
-                                        <label htmlFor="detalleCG">Detalle general de la categoría KB</label>
-                                        <textarea className="form-control" id="detalleCG" name='detalle' value={detalle} onChange={onInputChange}></textarea>
-                                    </div>
-                                </div>
+                            <div className="card border border-light-subtle shadow-xs rounded-4 p-3 bg-white mb-3">
+                                <label className="form-label small fw-semibold text-muted mb-1" htmlFor="detalleKB">
+                                    <i className="fa-regular fa-comment-dots me-1 text-primary"></i> Observaciones de Kit Bautizo (opcional)
+                                </label>
+                                <textarea
+                                    className="form-control shadow-none border-light-subtle"
+                                    id="detalleKB"
+                                    name="detalle"
+                                    value={detalle}
+                                    onChange={onInputChange}
+                                    rows={2}
+                                    placeholder="Nombres, detalles especiales o empaque..."
+                                ></textarea>
                             </div>
                         </div>
                         {/* COLUMNA DERECHA TABLA */}

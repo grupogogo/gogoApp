@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux';
 import { useAuthStore, useFuntions, usePedidosStore } from '../../hooks';
-import { Table, Header, HeaderRow, Body, Row, Cell } from "@table-library/react-table-library/table";
+import { getVisiblePageNumbers } from '../../helpers';
+import { Table, Header, HeaderRow, Body, Row, HeaderCell, Cell } from "@table-library/react-table-library/table";
 import { useTheme } from "@table-library/react-table-library/theme";
 import { usePagination } from "@table-library/react-table-library/pagination";
 import { useSort, HeaderCellSort } from "@table-library/react-table-library/sort";
@@ -14,7 +15,7 @@ import { Button, Row as Fila } from 'react-bootstrap';
 import { ModalUserDetail } from '../components/ModalUserDetail';
 
 export const CuentasXCobrar = () => {
-  const { limpiarFecha, calcularTotalesPedidoCxC, formatearPrecio, buscarNombre, convertirFechaIngles } = useFuntions();
+  const { limpiarFecha, calcularTotalesPedidoCxC, formatearPrecio, buscarNombre, convertirFechaIngles, aTitulo } = useFuntions();
   const [search, setSearch] = useState("");
   const { user } = useAuthStore();
   const { startLoadingPedidos } = usePedidosStore();
@@ -157,6 +158,10 @@ export const CuentasXCobrar = () => {
     return totales;
   };
   const totalesAgrupados = calcularTotalesAgrupados(filteredData.nodes);
+  const totalCartera = filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0);
+  const totalGuantesCartera = (totalesAgrupados.guantes[0] || 0) + (totalesAgrupados.guantes[1] || 0) + (totalesAgrupados.guantes[2] || 0);
+  const totalKitsCartera = (totalesAgrupados.kits || []).reduce((acc, val) => acc + (val || 0), 0);
+  const totalOtrosCartera = totalesAgrupados.otros || 0;
 
   // Escapa adecuadamente las celdas para evitar errores con caracteres especiales
   const escapeCsvCell = (cell) => {
@@ -260,39 +265,123 @@ export const CuentasXCobrar = () => {
 
   useEffect(() => {
     startLoadingPedidos();
-  }, [])
-
+  }, []);
 
   return (
     <LayoutApp>
-      <div>
-        <div className='container'>
-          <div className="card shadow-none p-3 mb-5 rounded">
-            {/* header */}
-            <div className="card-header bg-white py-3">
-              <div className="row align-items-center">
-                <div className="col-12 col-md-6 mb-2 mb-md-0">
-                  <h5 className="m-0 font-weight-bold text-primary text-center text-md-start">Listado de cuentas por estado</h5>
-                </div>
-                <div className="col-12 col-md-6 d-flex justify-content-center justify-content-md-end flex-wrap">
-                  <Button variant='danger-outline' className='btn btn-sm d-flex align-items-center gap-2 btn-outline-success m-1' onClick={handleDownloadCsv}>
-                    <i className="fa-solid fa-file-csv"></i>
-                    <span>Descargar CSV</span>
-                  </Button>
-                  <Button variant='danger-outline' className='btn btn-sm d-flex align-items-center gap-2 btn-outline-danger m-1' onClick={handleDownloadPDF}>
-                    <i className="fa-solid fa-file-pdf"></i>
-                    <span>Descargar PDF</span>
-                  </Button>
-                </div>
+      <div className="container-fluid px-2 px-md-3 py-2">
+        {/* TARJETAS KPI DE CARTERA */}
+        <div className="row g-3 mb-4">
+          {/* 1. TOTAL CARTERA */}
+          <div className="col-12 col-sm-6 col-xl-3">
+            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <span className="p-2 bg-primary-subtle text-primary rounded-3">
+                  <i className="fas fa-hand-holding-usd fa-lg"></i>
+                </span>
+                <span className="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 small">
+                  {filteredData.nodes.length} remisiones
+                </span>
+              </div>
+              <small className="text-muted fw-medium">Total Cartera ({aTitulo(estado)})</small>
+              <h4 className="fw-bolder text-dark mb-0 mt-1">
+                {formatearPrecio(totalCartera)}
+              </h4>
+            </div>
+          </div>
+
+          {/* 2. KITS EN CARTERA */}
+          <div className="col-12 col-sm-6 col-xl-3">
+            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <span className="p-2 bg-info-subtle text-info rounded-3">
+                  <i className="fas fa-box-open fa-lg"></i>
+                </span>
+                <span className="badge bg-info-subtle text-info rounded-pill px-2 py-1 small">
+                  Kits
+                </span>
+              </div>
+              <small className="text-muted fw-medium">Kits en Cartera</small>
+              <h4 className="fw-bolder text-dark mb-0 mt-1">
+                {formatearPrecio(totalKitsCartera)}
+              </h4>
+            </div>
+          </div>
+
+          {/* 3. GUANTES EN CARTERA */}
+          <div className="col-12 col-sm-6 col-xl-3">
+            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <span className="p-2 bg-warning-subtle text-warning rounded-3">
+                  <i className="fas fa-hand-sparkles fa-lg"></i>
+                </span>
+                <span className="badge bg-warning-subtle text-warning rounded-pill px-2 py-1 small">
+                  Guantes
+                </span>
+              </div>
+              <small className="text-muted fw-medium">Guantes en Cartera</small>
+              <h4 className="fw-bolder text-dark mb-0 mt-1">
+                {formatearPrecio(totalGuantesCartera)}
+              </h4>
+            </div>
+          </div>
+
+          {/* 4. OTROS EN CARTERA */}
+          <div className="col-12 col-sm-6 col-xl-3">
+            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <span className="p-2 bg-secondary-subtle text-secondary rounded-3">
+                  <i className="fas fa-tags fa-lg"></i>
+                </span>
+                <span className="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1 small">
+                  Otros
+                </span>
+              </div>
+              <small className="text-muted fw-medium">Otros Productos</small>
+              <h4 className="fw-bolder text-dark mb-0 mt-1">
+                {formatearPrecio(totalOtrosCartera)}
+              </h4>
+            </div>
+          </div>
+        </div>
+
+        {/* BARRA DE FILTROS Y CONTROLES */}
+        <div className="card border border-light-subtle shadow-sm rounded-4 mb-4 bg-white">
+          <div className="card-body p-3">
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
+              <div>
+                <h5 className="mb-0 fw-bold text-dark">
+                  <i className="fas fa-receipt me-2 text-primary"></i>Listado de Cuentas por Cobrar
+                </h5>
+                <small className="text-muted">Filtra por estado, cliente o rango de fecha</small>
+              </div>
+
+              {/* Botones de Exportación */}
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <button
+                  className="btn btn-sm btn-outline-success rounded-pill d-flex align-items-center gap-2 px-3 shadow-xs"
+                  onClick={handleDownloadCsv}
+                >
+                  <i className="fa-solid fa-file-csv"></i>
+                  <span>Exportar CSV</span>
+                </button>
+                <button
+                  className="btn btn-sm btn-outline-danger rounded-pill d-flex align-items-center gap-2 px-3 shadow-xs"
+                  onClick={handleDownloadPDF}
+                >
+                  <i className="fa-solid fa-file-pdf"></i>
+                  <span>Descargar PDF</span>
+                </button>
               </div>
             </div>
-            <Fila className="p-3 justify-content-between">
-              {/* Columna para el Select */}
-              <div className="col-12 col-md-3 mb-3 mb-md-0">
-                <label htmlFor="estadoSelect" className="form-label fw-semibold">Filtrar por estado:</label>
+
+            <div className="row g-2 align-items-end">
+              {/* Filtro Estado */}
+              <div className="col-12 col-sm-6 col-md-3">
+                <label className="form-label fw-semibold small text-muted mb-1">Estado de Pedido:</label>
                 <select
                   id="estadoSelect"
-                  className="form-select"
+                  className="form-select form-select-sm rounded-3"
                   value={estado}
                   onChange={handleEstadoChange}
                 >
@@ -303,424 +392,486 @@ export const CuentasXCobrar = () => {
                   <option value="preparado">Preparado</option>
                 </select>
               </div>
-              {/* Columna para el input */}
-              <div className="col-12 col-md-5">
-                <label htmlFor="estadoSelect" className="form-label fw-semibold">Buscar:</label>
-                <div className="input-group">
+
+              {/* Buscador */}
+              <div className="col-12 col-sm-6 col-md-4">
+                <label className="form-label fw-semibold small text-muted mb-1">Buscador:</label>
+                <div className="input-group input-group-sm">
                   <input
                     type="text"
-                    className="form-control"
-                    placeholder="Filtro (Fecha, Cliente)"
+                    className="form-control rounded-start-3 ps-3"
+                    placeholder="Cliente, fecha, remisión..."
                     value={search}
                     onChange={handleSearch}
                   />
-                  <div className="input-group-append">
-                    <button className="btn border" type="button">
-                      <i className="fas fa-search fa-sm" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </Fila>
-            <Fila className='justify-content-between'>
-              {/* Columna para el select cantidad items a mostrar */}
-              <div className="col-12 col-md-3 align-items-center mb-2 mb-md-0">
-
-                <div className="input-group form-select-sm">
-                  <span className='m-2'>Año a filtrar</span>
-                  <select
-                    className="form-select form-select-sm w-auto"
-                    title='Filtro por año'
-                    value={fechaPedido}
-                    style={{ maxWidth: 'fit-content' }}
-                    onChange={e => {
-                      const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
-                      setFechaPedido(value);
-                      pagination.fns.onSetPage(0);
-                    }}
-                  >
-                    <option value={'2026'}>2026</option>
-                    <option value={'2025'}>2025</option>
-                  </select>
-                </div>
-              </div>
-              {/* Columna para el select cantidad items a mostrar */}
-              <div className="col-12 col-md-2 align-items-center m-1 text-md-end">
-                <div className="input-group form-select-sm justify-content-md-end">
-                  <span className='m-2'>
-                    Items
-                  </span>
-                  <select
-                    className="form-select form-select-sm w-auto"
-                    value={itemsMostrar}
-                    title='Cantidad de items a mostrar'
-                    style={{ maxWidth: 'fit-content' }}
-                    onChange={e => {
-                      const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
-                      setItemsMostrar(value);
-                      pagination.fns.onSetPage(0);
-                    }}
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                    <option value={100000}>Todos</option>
-                  </select>
-                </div>
-              </div>
-            </Fila>
-            <div
-              ref={modalRef}
-              className="table-responsive"
-            >
-              <div className='text-center'>
-                <div className="alert alert-primary" role="alert">
-                  <span className='fw-semibold'></span>
-                  <span className='fw-semibold'>Listado de cuentas por cobrar</span>
+                  <button className="btn btn-outline-secondary rounded-end-3" type="button">
+                    <i className="fas fa-search" />
+                  </button>
                 </div>
               </div>
 
-              {/* Mobile Card View */}
-              <div className="d-block d-md-none">
-                {filteredData.nodes.map((item, index) => (
-                  <div key={index} className="card mb-3 shadow-sm" onClick={() => abrirModalDetalle(item)}>
-                    <div className="card-header d-flex justify-content-between align-items-center bg-light">
-                      <span className="fw-bold text-primary">{item.cliente.nombre}</span>
-                      <small className="text-muted">{limpiarFecha(item.fechaCreacion)}</small>
-                    </div>
-                    <div className="card-body">
-                      <div className="d-flex justify-content-between mb-2">
-                        <span>Remisión:</span>
-                        <span className="fw-semibold">{(item.pedido_id).slice(-6)}</span>
-                      </div>
-                      <div className="d-flex justify-content-between mb-2">
-                        <span>Ciudad:</span>
-                        <span>{(item.cliente?.ciudad).toUpperCase()}</span>
-                      </div>
-                      <div className="d-flex justify-content-between mb-2">
-                        <span>Items:</span>
-                        <span>{calcularTotalesPedidoCxC(item).totalItems}</span>
-                      </div>
-                      <hr className="my-2" />
-                      <div className="d-flex justify-content-between align-items-center">
-                        <span className="fw-bold">Total:</span>
-                        <span className="fs-5 fw-bold text-success">{formatearPrecio(calcularTotalesPedidoCxC(item).total)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop Table View */}
-              <div className="d-none d-md-block">
-                <Table
-                  className="table table-hover text-start w-100 compact-table table-sm"
-                  style={{ maxWidth: "100%" }}
-                  data={filteredData}
-                  theme={theme}
-                  pagination={pagination}
-                  sort={sort}
+              {/* Año */}
+              <div className="col-6 col-sm-6 col-md-2">
+                <label className="form-label fw-semibold small text-muted mb-1">Año:</label>
+                <select
+                  className="form-select form-select-sm rounded-3"
+                  value={fechaPedido}
+                  onChange={e => {
+                    const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                    setFechaPedido(value);
+                    pagination.fns.onSetPage(0);
+                  }}
                 >
-                  {(tableList) => (
-                    <>
-                      <Header>
-                        {/* Fila de encabezados de la tabla */}
-                        <HeaderRow className="text-center"
-                          style={{ background: 'red' }}
-                        >
-                          <HeaderCellSort sortKey="FECHA" className="text-center fw-semibold">Fecha</HeaderCellSort>
-                          <HeaderCellSort className="text-center fw-semibold">Ver remisión</HeaderCellSort>
-                          <HeaderCellSort sortKey="CLIENTE" className="text-center fw-semibold">Cliente</HeaderCellSort>
-                          <HeaderCellSort className="text-center fw-semibold">Ciudad</HeaderCellSort>
-                          <HeaderCellSort sortKey="CANTIDAD" className="text-center fw-semibold">Items</HeaderCellSort>
-                          <HeaderCellSort sortKey="TOTAL" className="text-center fw-semibold">Total $</HeaderCellSort>
-                        </HeaderRow>
-                      </Header>
+                  <option value={'2026'}>2026</option>
+                  <option value={'2025'}>2025</option>
+                </select>
+              </div>
 
-                      <Body>
-                        {tableList.map((item, index) => (
-                          <Row key={index} item={item}>
-                            <Cell title={item.fechaCreacion}>{limpiarFecha(item.fechaCreacion)}</Cell>
-                            <Cell className="cursor-pointer"
+              {/* Items por página */}
+              <div className="col-6 col-sm-6 col-md-3">
+                <label className="form-label fw-semibold small text-muted mb-1">Mostrar por página:</label>
+                <select
+                  className="form-select form-select-sm rounded-3"
+                  value={itemsMostrar}
+                  onChange={e => {
+                    const value = e.target.value === "todos" ? data.nodes.length : Number(e.target.value);
+                    setItemsMostrar(value);
+                    pagination.fns.onSetPage(0);
+                  }}
+                >
+                  <option value={5}>5 registros</option>
+                  <option value={10}>10 registros</option>
+                  <option value={20}>20 registros</option>
+                  <option value={50}>50 registros</option>
+                  <option value={100}>100 registros</option>
+                  <option value={100000}>Todos los registros</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* TABLA PRINCIPAL DE CUENTAS POR COBRAR */}
+        <div className="card border border-light-subtle shadow-sm rounded-4 mb-4 bg-white p-3">
+          <div ref={modalRef} className="table-responsive">
+            {/* Mobile Card View */}
+            <div className="d-block d-md-none">
+              {filteredData.nodes.map((item, index) => (
+                <div key={index} className="card border border-light-subtle rounded-3 mb-3 shadow-xs" onClick={() => abrirModalDetalle(item)}>
+                  <div className="card-header d-flex justify-content-between align-items-center bg-light rounded-top-3 py-2">
+                    <span className="fw-bold text-primary">{aTitulo(item.cliente.nombre)}</span>
+                    <small className="text-muted">{limpiarFecha(item.fechaCreacion)}</small>
+                  </div>
+                  <div className="card-body p-3">
+                    <div className="d-flex justify-content-between mb-2">
+                      <span className="text-muted small">Remisión:</span>
+                      <span className="badge bg-primary-subtle text-primary rounded-pill">#{(item.pedido_id).slice(-6)}</span>
+                    </div>
+                    <div className="d-flex justify-content-between mb-2">
+                      <span className="text-muted small">Ciudad:</span>
+                      <span className="fw-medium text-dark small">{aTitulo(item.cliente?.ciudad)}</span>
+                    </div>
+                    <div className="d-flex justify-content-between mb-2">
+                      <span className="text-muted small">Items:</span>
+                      <span className="badge bg-light text-dark border">{calcularTotalesPedidoCxC(item).totalItems}</span>
+                    </div>
+                    <hr className="my-2" />
+                    <div className="d-flex justify-content-between align-items-center">
+                      <span className="fw-bold small text-muted">Total:</span>
+                      <span className="fs-6 fw-bold text-dark">{formatearPrecio(calcularTotalesPedidoCxC(item).total)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="d-none d-md-block">
+              <Table
+                className="table table-hover text-start w-100 compact-table table-sm align-middle"
+                style={{ maxWidth: "100%" }}
+                data={filteredData}
+                theme={theme}
+                pagination={pagination}
+                sort={sort}
+              >
+                {(tableList) => (
+                  <>
+                    <Header>
+                      <HeaderRow className="table-light text-center fw-semibold">
+                        <HeaderCellSort sortKey="FECHA" className="text-center fw-semibold">Fecha</HeaderCellSort>
+                        <HeaderCell className="text-center fw-semibold">Remisión</HeaderCell>
+                        <HeaderCellSort sortKey="CLIENTE" className="text-start ps-3 fw-semibold">Cliente</HeaderCellSort>
+                        <HeaderCell className="text-center fw-semibold">Ciudad</HeaderCell>
+                        <HeaderCellSort sortKey="CANTIDAD" className="text-center fw-semibold">Items</HeaderCellSort>
+                        <HeaderCellSort sortKey="TOTAL" className="text-end pe-3 fw-semibold">Total ($)</HeaderCellSort>
+                      </HeaderRow>
+                    </Header>
+
+                    <Body>
+                      {tableList.map((item, index) => (
+                        <Row key={index} item={item}>
+                          <Cell className="text-center small text-muted" title={item.fechaCreacion}>{limpiarFecha(item.fechaCreacion)}</Cell>
+                          <Cell className="text-center">
+                            <button
+                              className="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 fw-semibold"
+                              style={{ fontSize: '0.78rem' }}
                               onClick={() => abrirModalDetalle(item)}
-                            ><button className="btn btn-xs">{(item.pedido_id).slice(-6)}</button></Cell>
-                            <Cell title={item.cliente.nombre}>{item.cliente.nombre}</Cell>
-                            <Cell title={item.ciudad?.ciudad}>{(item.cliente?.ciudad).toUpperCase()}</Cell>
-                            <Cell className='text-center' title={item.cliente.nombre}>{(calcularTotalesPedidoCxC(item).totalItems)}</Cell>
-                            <Cell className='text-end fw-semibold' title={item.cliente.nombre}>{formatearPrecio(calcularTotalesPedidoCxC(item).total)}</Cell>
-                          </Row>
-
-                        ))}
-                        <Row>
-                          <Cell></Cell>
-                          <Cell></Cell>
-                          <Cell></Cell>
-                          <Cell colSpan={3} className="text-end fw-semibold">Total CXC:</Cell>
-                          <Cell className="text-end fw-bold">
-                            {formatearPrecio(filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0))}
+                            >
+                              #{(item.pedido_id).slice(-6)}
+                            </button>
+                          </Cell>
+                          <Cell className="ps-3 fw-medium text-dark" title={item.cliente.nombre}>{aTitulo(item.cliente.nombre)}</Cell>
+                          <Cell className="text-center text-muted small" title={item.cliente?.ciudad}>{aTitulo(item.cliente?.ciudad)}</Cell>
+                          <Cell className='text-center'>
+                            <span className="badge bg-light text-secondary border px-2 py-1">
+                              {calcularTotalesPedidoCxC(item).totalItems}
+                            </span>
+                          </Cell>
+                          <Cell className='text-end pe-3 fw-bold text-dark' title={item.cliente.nombre}>
+                            {formatearPrecio(calcularTotalesPedidoCxC(item).total)}
                           </Cell>
                         </Row>
-                      </Body>
-                    </>
-                  )}
-                </Table>
+                      ))}
+                      <Row className="table-light fw-bold border-top">
+                        <Cell colSpan={4} className="text-end fw-bold pe-3">Total Cuentas por Cobrar:</Cell>
+                        <Cell className="text-center">
+                          <span className="badge bg-primary-subtle text-primary">
+                            {filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).totalItems, 0)} unds
+                          </span>
+                        </Cell>
+                        <Cell className="text-end pe-3 fw-bolder text-primary fs-6">
+                          {formatearPrecio(totalCartera)}
+                        </Cell>
+                      </Row>
+                    </Body>
+                  </>
+                )}
+              </Table>
+            </div>
+
+            {/* PAGINACIÓN */}
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 pt-2 border-top">
+              <div className="small text-muted">
+                Mostrando {filteredData.nodes.length} registros • Página {pagination.state.page + 1} de {pagination.state.getTotalPages(filteredData.nodes) || 1}
               </div>
-              {/* PAGINACION */}
-              <div style={{ display: "flex", justifyContent: "space-between", width: "99%" }}>
-                <span>Total registros: {filteredData.nodes.length}</span>
-                <span>Páginas: {pagination.state.getTotalPages(filteredData.nodes)}</span>
-                <span>
-                  Página:{" "}
-                  {(() => {
-                    const totalPages = pagination.state.getTotalPages(filteredData.nodes);
-                    const currentPage = pagination.state.page;
-                    const maxVisible = 3; // Número de páginas visibles
-                    const startPage = Math.max(0, currentPage - 1);
-                    const endPage = Math.min(totalPages, startPage + maxVisible);
-
-                    const pages = [];
-                    // Botón para retroceder
-                    if (startPage > 0) {
-                      pages.push(
-                        <button
-                          key="prev"
-                          className="btn btn-light btn-sm m-1 border"
-                          onClick={() => pagination.fns.onSetPage(currentPage - 1)}
-                        >
-                          &laquo;
-                        </button>
-                      );
-                    }
-
-                    // Rango de páginas visibles
-                    for (let i = startPage; i < endPage; i++) {
-                      pages.push(
-                        <button
-                          key={i}
-                          className={
-                            currentPage === i
-                              ? "btn btn-secondary btn-sm m-1 border"
-                              : "btn btn-light btn-sm m-1 border"
-                          }
-                          style={{
-                            fontWeight: currentPage === i ? "bold" : "normal",
-                          }}
-                          onClick={() => pagination.fns.onSetPage(i)}
-                        >
-                          {i + 1}
-                        </button>
-                      );
-                    }
-
-                    // Botón para avanzar
-                    if (endPage < totalPages) {
-                      pages.push(
-                        <button
-                          key="next"
-                          className="btn btn-light btn-sm m-1 border"
-                          onClick={() => pagination.fns.onSetPage(currentPage + 1)}
-                        >
-                          &raquo;
-                        </button>
-                      );
-                    }
-
-                    return pages;
-                  })()}
-                </span>
+              <div className="d-flex align-items-center gap-1">
+                {pagination.state.page > 0 && (
+                  <button
+                    className="btn btn-light btn-sm border rounded-pill px-3"
+                    onClick={() => pagination.fns.onSetPage(pagination.state.page - 1)}
+                  >
+                    &laquo; Anterior
+                  </button>
+                )}
+                {getVisiblePageNumbers(pagination.state.page, pagination.state.getTotalPages(filteredData.nodes) || 1, 5).map((pageIndex) => (
+                  <button
+                    key={pageIndex}
+                    className={`btn btn-sm rounded-circle px-2 py-1 ${pagination.state.page === pageIndex ? 'btn-primary' : 'btn-light border'}`}
+                    style={{ width: '32px', height: '32px', fontSize: '0.8rem' }}
+                    onClick={() => pagination.fns.onSetPage(pageIndex)}
+                  >
+                    {pageIndex + 1}
+                  </button>
+                ))}
+                {pagination.state.page < pagination.state.getTotalPages(filteredData.nodes) - 1 && (
+                  <button
+                    className="btn btn-light btn-sm border rounded-pill px-3"
+                    onClick={() => pagination.fns.onSetPage(pagination.state.page + 1)}
+                  >
+                    Siguiente &raquo;
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
-        <div className='container'>
-          <div className="card">
-            <div className="card-header text-center fw-semibold text-gray-800">Total cuentas por cobrar: {formatearPrecio(filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0))}</div>
-            <div className="card-body">
-              <div className="progress-stacked ">
-                <div className="progress" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
-                  <div className="progress-bar fw-bold bg-primary" title={`${buscarNombre('GB')}: (${formatearPrecio(totalesAgrupados.guantes[0])}) ${`${parseInt((totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
-                    GB {`${(parseInt((totalesAgrupados.guantes[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}
-                  </div>
-                </div>
-                <div className="progress" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
-                  <div className="progress-bar fw-bold bg-success" title={`${buscarNombre('GN')}: (${formatearPrecio(totalesAgrupados.guantes[1])}) ${`${parseInt((totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
-                    GN {`${(parseInt((totalesAgrupados.guantes[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}</div>
-                </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.guantes[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
-                  <div className="progress-bar fw-bold bg-info" title={`${buscarNombre('GM')}: (${formatearPrecio(totalesAgrupados.guantes[2])}) ${`${parseInt((totalesAgrupados.guantes[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
-                    GM {`${(parseInt((totalesAgrupados.guantes[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}</div>
-                </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
-                  <div className="progress-bar fw-bold bg-danger" title={`${buscarNombre('KCG')}: ${`${parseInt((totalesAgrupados.kits[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
-                    KCG {`${(parseInt((totalesAgrupados.kits[0] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}</div>
-                </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
-                  <div className="progress-bar fw-bold bg-warning" title={`${buscarNombre('KCP')}: ${`${parseInt((totalesAgrupados.kits[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
-                    KCP {`${(parseInt((totalesAgrupados.kits[1] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}</div>
-                </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
-                  <div className="progress-bar fw-bold bg-light text-black" title={`${buscarNombre('KCE')}: ${`${parseInt((totalesAgrupados.kits[5] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
-                    KCE {`${(parseInt((totalesAgrupados.kits[5] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)) || 0}%`}</div>
-                </div>
-                <div className="progress" role="secondary" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
-                  <div className="progress-bar fw-bold bg-secondary" title={`${buscarNombre('KB')}: ${`${parseInt((totalesAgrupados.kits[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
-                    KB {`${parseInt((totalesAgrupados.kits[2] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10) || 0}%`}</div>
-                </div>
-                <div className="progress" role="black" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[3] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
-                  <div className="progress-bar fw-bold bg-black" title={`${buscarNombre('CC')}: ${`${parseInt((totalesAgrupados.kits[3] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
-                    CC {`${parseInt((totalesAgrupados.kits[3] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10) || 0}%`}</div>
-                </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0)}%` }}>
-                  <div className="progress-bar fw-bold bg-orange" title={`${buscarNombre('CB')}: ${`${parseInt((totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>
-                    CB {`${parseInt((totalesAgrupados.kits[4] * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10) || 0}%`}</div>
-                </div>
-                <div className="progress" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style={{ width: `${(totalesAgrupados.otros * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0) || 0}%` }}>
-                  <div className="progress-bar fw-bold bg-indigo" title={`${buscarNombre('OTROS')}: ${`${parseInt((totalesAgrupados.otros * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10)}%`}`}>OTROS {`${parseInt((totalesAgrupados.otros * 100) / filteredData.nodes.reduce((acc, item) => acc + calcularTotalesPedidoCxC(item).total, 0), 10) || 0}%`}</div>
-                </div>
-              </div>
+
+        {/* DISTRIBUCIÓN DE CARTERA POR PRODUCTO */}
+        <div className="card border border-light-subtle shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
+          <div className="card-header bg-white border-0 pt-3 px-3 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+              <h6 className="mb-0 fw-bold text-dark">
+                <i className="fas fa-chart-pie me-2 text-primary"></i>Distribución de Cartera por Tipo de Producto
+              </h6>
+              <small className="text-muted">Proporción del valor por cobrar según referencia</small>
             </div>
-            <div className="card-footer text-muted">
-              <div className="table-responsive">
-                <table className="table table-sm mb-0">
-                  <tbody>
-                    <tr className='small'>
-                      <td style={{ borderBottom: '3px solid #0d6efd' }}>GB: {formatearPrecio(totalesAgrupados.guantes[0])}</td>
-                      <td style={{ borderBottom: '3px solid #198754' }}>GN: {formatearPrecio(totalesAgrupados.guantes[1])}</td>
-                      <td style={{ borderBottom: '3px solid #0dcaf0' }}>GM: {formatearPrecio(totalesAgrupados.guantes[2])}</td>
-                      <td style={{ borderBottom: '3px solid #dc3545' }}>KCG: {formatearPrecio(totalesAgrupados.kits[0])}</td>
-                      <td style={{ borderBottom: '3px solid #ffc107' }}>KCP: {formatearPrecio(totalesAgrupados.kits[1])}</td>
-                      <td style={{ borderBottom: '3px solid #f00db7ff' }}>KCE: {formatearPrecio(totalesAgrupados.kits[5])}</td>
-                      <td style={{ borderBottom: '3px solid #6c757d' }}>KB: {formatearPrecio(totalesAgrupados.kits[2])}</td>
-                      <td style={{ borderBottom: '3px solid #000' }}>CC: {formatearPrecio(totalesAgrupados.kits[3])}</td>
-                      <td style={{ borderBottom: '3px solid orange' }}>CB: {formatearPrecio(totalesAgrupados.kits[4])}</td>
-                      <td style={{ borderBottom: '3px solid indigo' }}>OTROS: {formatearPrecio(totalesAgrupados.otros)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+            <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-bold">
+              Total Cartera: {formatearPrecio(totalCartera)}
+            </span>
+          </div>
+
+          <div className="card-body p-3">
+            {/* Barra de progreso apilada */}
+            <div className="progress rounded-pill mb-3" style={{ height: '14px', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+              {totalesAgrupados.guantes[0] > 0 && (
+                <div
+                  className="progress-bar bg-primary"
+                  style={{ width: `${totalCartera > 0 ? (totalesAgrupados.guantes[0] * 100) / totalCartera : 0}%` }}
+                  title={`Guantes Blancos: ${formatearPrecio(totalesAgrupados.guantes[0])}`}
+                ></div>
+              )}
+              {totalesAgrupados.guantes[1] > 0 && (
+                <div
+                  className="progress-bar bg-success"
+                  style={{ width: `${totalCartera > 0 ? (totalesAgrupados.guantes[1] * 100) / totalCartera : 0}%` }}
+                  title={`Guantes Negros: ${formatearPrecio(totalesAgrupados.guantes[1])}`}
+                ></div>
+              )}
+              {totalesAgrupados.guantes[2] > 0 && (
+                <div
+                  className="progress-bar bg-info"
+                  style={{ width: `${totalCartera > 0 ? (totalesAgrupados.guantes[2] * 100) / totalCartera : 0}%` }}
+                  title={`Guantes Mitón: ${formatearPrecio(totalesAgrupados.guantes[2])}`}
+                ></div>
+              )}
+              {totalesAgrupados.kits[0] > 0 && (
+                <div
+                  className="progress-bar bg-danger"
+                  style={{ width: `${totalCartera > 0 ? (totalesAgrupados.kits[0] * 100) / totalCartera : 0}%` }}
+                  title={`Kit Comunión Grande: ${formatearPrecio(totalesAgrupados.kits[0])}`}
+                ></div>
+              )}
+              {totalesAgrupados.kits[1] > 0 && (
+                <div
+                  className="progress-bar bg-warning text-dark"
+                  style={{ width: `${totalCartera > 0 ? (totalesAgrupados.kits[1] * 100) / totalCartera : 0}%` }}
+                  title={`Kit Comunión Pequeño: ${formatearPrecio(totalesAgrupados.kits[1])}`}
+                ></div>
+              )}
+              {totalesAgrupados.kits[5] > 0 && (
+                <div
+                  className="progress-bar"
+                  style={{ backgroundColor: '#ec4899', width: `${totalCartera > 0 ? (totalesAgrupados.kits[5] * 100) / totalCartera : 0}%` }}
+                  title={`Kit Comunión Económico: ${formatearPrecio(totalesAgrupados.kits[5])}`}
+                ></div>
+              )}
+              {totalesAgrupados.kits[2] > 0 && (
+                <div
+                  className="progress-bar bg-secondary"
+                  style={{ width: `${totalCartera > 0 ? (totalesAgrupados.kits[2] * 100) / totalCartera : 0}%` }}
+                  title={`Kit de Bautizo: ${formatearPrecio(totalesAgrupados.kits[2])}`}
+                ></div>
+              )}
+              {totalesAgrupados.kits[3] > 0 && (
+                <div
+                  className="progress-bar bg-dark"
+                  style={{ width: `${totalCartera > 0 ? (totalesAgrupados.kits[3] * 100) / totalCartera : 0}%` }}
+                  title={`Cirio Comunión: ${formatearPrecio(totalesAgrupados.kits[3])}`}
+                ></div>
+              )}
+              {totalesAgrupados.kits[4] > 0 && (
+                <div
+                  className="progress-bar"
+                  style={{ backgroundColor: '#f97316', width: `${totalCartera > 0 ? (totalesAgrupados.kits[4] * 100) / totalCartera : 0}%` }}
+                  title={`Cirio Bautizo: ${formatearPrecio(totalesAgrupados.kits[4])}`}
+                ></div>
+              )}
+              {totalesAgrupados.otros > 0 && (
+                <div
+                  className="progress-bar"
+                  style={{ backgroundColor: '#8b5cf6', width: `${totalCartera > 0 ? (totalesAgrupados.otros * 100) / totalCartera : 0}%` }}
+                  title={`Otros Productos: ${formatearPrecio(totalesAgrupados.otros)}`}
+                ></div>
+              )}
+            </div>
+
+            {/* Badges de desglose en Title Case */}
+            <div className="d-flex flex-wrap gap-2 pt-2">
+              <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                Guantes Blancos: {formatearPrecio(totalesAgrupados.guantes[0])}
+              </span>
+              <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                Guantes Negros: {formatearPrecio(totalesAgrupados.guantes[1])}
+              </span>
+              <span className="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                Guantes Mitón: {formatearPrecio(totalesAgrupados.guantes[2])}
+              </span>
+              <span className="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                Kit Comunión Grande: {formatearPrecio(totalesAgrupados.kits[0])}
+              </span>
+              <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                Kit Comunión Pequeño: {formatearPrecio(totalesAgrupados.kits[1])}
+              </span>
+              <span className="badge bg-pink-subtle text-dark border px-2 py-1" style={{ backgroundColor: '#fce7f3' }}>
+                Kit Comunión Económico: {formatearPrecio(totalesAgrupados.kits[5])}
+              </span>
+              <span className="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                Kit Bautizo: {formatearPrecio(totalesAgrupados.kits[2])}
+              </span>
+              <span className="badge bg-dark-subtle text-dark border px-2 py-1">
+                Cirio Comunión: {formatearPrecio(totalesAgrupados.kits[3])}
+              </span>
+              <span className="badge bg-light text-dark border px-2 py-1">
+                Cirio Bautizo: {formatearPrecio(totalesAgrupados.kits[4])}
+              </span>
+              <span className="badge bg-light text-dark border px-2 py-1">
+                Otros Productos: {formatearPrecio(totalesAgrupados.otros)}
+              </span>
+            </div>
+
+            <div className="row g-2 mt-3 pt-3 border-top">
+              <div className="col-12 col-md-6">
+                <div className="p-2 bg-light rounded-3 d-flex justify-content-between align-items-center">
+                  <span className="fw-semibold text-dark small"><i className="fas fa-hand-sparkles me-2 text-primary"></i>Total Guantes en Cartera:</span>
+                  <strong className="text-primary">{formatearPrecio(totalGuantesCartera)}</strong>
+                </div>
               </div>
-              <br />
-              <div className="table-responsive">
-                <table className='border w-100 text-center rounded'>
-                  <tbody>
-                    <tr className='fw-semibold'>
-                      <td style={{ borderBottom: '3px solid #0d6efd', minWidth: '150px' }}>TOTAL GUANTES: {formatearPrecio((totalesAgrupados.guantes[0]) + (totalesAgrupados.guantes[1]) + (totalesAgrupados.guantes[2]))}</td>
-                      <td style={{ borderBottom: '3px solid #dc3545', minWidth: '150px' }}>TOTAL KITS: {formatearPrecio((totalesAgrupados.kits[0]) + (totalesAgrupados.kits[1]) + (totalesAgrupados.kits[2]) + (totalesAgrupados.kits[3]) + (totalesAgrupados.kits[4]) + (totalesAgrupados.kits[5]))}</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="col-12 col-md-6">
+                <div className="p-2 bg-light rounded-3 d-flex justify-content-between align-items-center">
+                  <span className="fw-semibold text-dark small"><i className="fas fa-box-open me-2 text-danger"></i>Total Kits en Cartera:</span>
+                  <strong className="text-danger">{formatearPrecio(totalKitsCartera)}</strong>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* TABLA: RESUMEN GENERAL VENTAS POR ESTADO */}
+        <div className="card border border-light-subtle shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
+          <div className="card-header bg-white border-0 pt-3 px-3 pb-2">
+            <h6 className="mb-0 fw-bold text-dark">
+              <i className="fas fa-layer-group me-2 text-primary"></i>Resumen General Ventas {fechaPedido} por Estado
+            </h6>
+            <small className="text-muted">Consolidado de ventas según el estado del pedido</small>
+          </div>
+
+          <div className="table-responsive">
+            <table className="table table-hover table-sm align-middle mb-0" style={{ fontSize: '13px' }}>
+              <thead className="table-light">
+                <tr>
+                  <th className="ps-3">Estado</th>
+                  <th className="text-end">Guantes</th>
+                  <th className="text-end">Kits</th>
+                  <th className="text-end">Otros</th>
+                  <th className="text-end pe-3">Total Facturado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {['entregado', 'pendiente', 'pagado', 'enviado', 'preparado', 'devuelto', 'anulado'].map((estadoIteracion) => {
+                  const pedidosUsuario = pedidos.filter(p => p.user._id === user.uid && p.estado === estadoIteracion);
+                  const totalesUsuario = calcularTotalesAgrupados(pedidosUsuario);
+                  const totalGuantes = totalesUsuario.guantes.reduce((a, b) => a + b, 0);
+                  const totalKits = totalesUsuario.kits.reduce((a, b) => a + b, 0);
+                  const totalGeneral = totalGuantes + totalKits + totalesUsuario.otros;
+
+                  const badgeClass = estadoIteracion === 'pagado'
+                    ? 'bg-success-subtle text-success'
+                    : estadoIteracion === 'entregado'
+                      ? 'bg-primary-subtle text-primary'
+                      : estadoIteracion === 'pendiente'
+                        ? 'bg-warning-subtle text-warning'
+                        : estadoIteracion === 'anulado'
+                          ? 'bg-danger-subtle text-danger'
+                          : 'bg-light text-secondary border';
+
+                  return (
+                    <tr key={estadoIteracion}>
+                      <td className="ps-3">
+                        <span className={`badge rounded-pill px-2 py-1 ${badgeClass}`}>
+                          {aTitulo(estadoIteracion)}
+                        </span>
+                      </td>
+                      <td className="text-end">{formatearPrecio(totalGuantes)}</td>
+                      <td className="text-end">{formatearPrecio(totalKits)}</td>
+                      <td className="text-end">{formatearPrecio(totalesUsuario.otros)}</td>
+                      <td className="text-end pe-3 fw-bold text-dark">{formatearPrecio(totalGeneral)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* TABLA: RESUMEN POR ASESOR COMERCIAL (Si es SuperAdmin o Admin) */}
+        {(user.rol === 'superAdmin' || user.rol === 'admin') && (
+          <div className="card border border-light-subtle shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
+            <div className="card-header bg-white border-0 pt-3 px-3 pb-2">
+              <h6 className="mb-0 fw-bold text-dark">
+                <i className="fas fa-users me-2 text-primary"></i>Rendimiento y Cartera por Asesor Comercial
+              </h6>
+              <small className="text-muted">Desglose acumulado por cada distribuidor</small>
+            </div>
+
+            <div className="table-responsive">
+              <table className="table table-hover table-sm align-middle mb-0" style={{ fontSize: '13px' }}>
+                <thead className="table-light">
+                  <tr>
+                    <th className="ps-3">Asesor</th>
+                    <th className="text-center">Pedidos</th>
+                    <th className="text-center">Items</th>
+                    <th className="text-end">Guantes</th>
+                    <th className="text-end">Kits</th>
+                    <th className="text-end">Otros</th>
+                    <th className="text-end">Total Venta</th>
+                    <th className="text-center pe-3">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.values(pedidos.reduce((acc, pedido) => {
+                    const userId = pedido.user._id;
+                    if (!acc[userId]) {
+                      acc[userId] = {
+                        user: pedido.user,
+                        count: 0,
+                        totalItems: 0,
+                        totalVenta: 0,
+                        nodes: [],
+                      };
+                    }
+                    acc[userId].count += 1;
+                    const totales = calcularTotalesPedidoCxC(pedido);
+                    acc[userId].totalItems += totales.totalItems;
+                    acc[userId].totalVenta += totales.total;
+                    acc[userId].nodes.push(pedido);
+                    return acc;
+                  }, {})).map((userSummary, index) => {
+                    const categorias = calcularTotalesAgrupados(userSummary.nodes);
+                    const totalGuantes = categorias.guantes.reduce((a, b) => a + b, 0);
+                    const totalKits = categorias.kits.reduce((a, b) => a + b, 0);
+
+                    return (
+                      <tr key={index}>
+                        <td className="ps-3">
+                          <div className="d-flex align-items-center gap-2">
+                            <div
+                              className="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white small"
+                              style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)' }}
+                            >
+                              {(userSummary.user.nombre || userSummary.user.email || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="fw-semibold text-dark">{aTitulo(userSummary.user.nombre || userSummary.user.email)}</div>
+                              <small className="text-muted" style={{ fontSize: '0.75rem' }}>{userSummary.user.email}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="text-center"><span className="badge bg-light text-dark border">{userSummary.count}</span></td>
+                        <td className="text-center">{userSummary.totalItems}</td>
+                        <td className="text-end">{formatearPrecio(totalGuantes)}</td>
+                        <td className="text-end text-danger">{formatearPrecio(totalKits)}</td>
+                        <td className="text-end text-secondary">{formatearPrecio(categorias.otros)}</td>
+                        <td className="text-end fw-bold text-dark">{formatearPrecio(userSummary.totalVenta)}</td>
+                        <td className="text-center pe-3">
+                          <button
+                            className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1"
+                            style={{ fontSize: '0.78rem' }}
+                            onClick={() => handleViewDetail(userSummary.user._id)}
+                          >
+                            <i className="fas fa-eye me-1"></i>Ver Detalle
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className='container mt-4 text-center'>
-        <div className="card shadow border-1">
-          <table className="table table-sm table-hover border" style={{ fontSize: '12px' }}>
-            <thead>
-              <tr>
-                <th colSpan="5">Resumen general ventas {new Date().getFullYear()}</th>
-              </tr>
-              <tr>
-                <th>Estado</th>
-                <th className="text-end">Guantes</th>
-                <th className="text-end">Kits</th>
-                <th className="text-end">Otros</th>
-                <th className="text-end">Total ($)</th>
-              </tr>
-            </thead>
-            <tbody className="table-group-divider">
-              {['entregado', 'pendiente', 'pagado', 'enviado', 'preparado', 'devuelto', 'anulado'].map((estadoIteracion) => {
-                const pedidosUsuario = pedidos.filter(p => p.user._id === user.uid && p.estado === estadoIteracion);
-                const totalesUsuario = calcularTotalesAgrupados(pedidosUsuario);
-                const totalGuantes = totalesUsuario.guantes.reduce((a, b) => a + b, 0);
-                const totalKits = totalesUsuario.kits.reduce((a, b) => a + b, 0);
-                const totalGeneral = totalGuantes + totalKits + totalesUsuario.otros;
-
-                return (
-                  <tr key={estadoIteracion}>
-                    <td className="text-capitalize text-center">{estadoIteracion}</td>
-                    <td className="text-end">{formatearPrecio(totalGuantes)}</td>
-                    <td className="text-end">{formatearPrecio(totalKits)}</td>
-                    <td className="text-end">{formatearPrecio(totalesUsuario.otros)}</td>
-                    <td className="text-end fw-bold">{formatearPrecio(totalGeneral)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="card mt-4">
-          <table className="table table-hover table-sm mt-4"
-            style={{ fontSize: '12px' }}
-          >
-            <thead className="bg-light">
-              <tr>
-                <th>Usuario</th>
-                <th className="text-center">Pedidos</th>
-                <th className="text-center">Items</th>
-                <th className="text-end">Guantes</th>
-                <th className="text-end">Kits</th>
-                <th className="text-end">Otros</th>
-                <th className="text-end">Total Venta</th>
-                <th className="text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.values(pedidos.reduce((acc, pedido) => {
-                const userId = pedido.user._id;
-                if (!acc[userId]) {
-                  acc[userId] = {
-                    user: pedido.user,
-                    count: 0,
-                    totalItems: 0,
-                    totalVenta: 0,
-                    nodes: [],
-                    // Consider adding a property here if table size was dynamically controlled by this data,
-                    // e.g., tableSize: 'sm' or isSmallTable: true,
-                    // but for static Bootstrap classes, modifications are made directly on the <table> elements.
-                  };
-                }
-                acc[userId].count += 1;
-                const totales = calcularTotalesPedidoCxC(pedido);
-                acc[userId].totalItems += totales.totalItems;
-                acc[userId].totalVenta += totales.total;
-                acc[userId].nodes.push(pedido);
-                return acc;
-              }, {})).map((userSummary, index) => {
-                const categorias = calcularTotalesAgrupados(userSummary.nodes);
-                const totalGuantes = categorias.guantes.reduce((a, b) => a + b, 0);
-                const totalKits = categorias.kits.reduce((a, b) => a + b, 0);
-
-                return (
-                  <tr key={index}>
-                    <td>
-                      <div className="fw-semibold">{userSummary.user.nombre || userSummary.user.email}</div>
-                      <small className="text-muted">{userSummary.user.email}</small>
-                    </td>
-                    <td className="text-center align-middle">{userSummary.count}</td>
-                    <td className="text-center align-middle">{userSummary.totalItems}</td>
-                    <td className="text-end align-middle">{formatearPrecio(totalGuantes)}</td>
-                    <td className="text-end align-middle text-danger">{formatearPrecio(totalKits)}</td>
-                    <td className="text-end align-middle text-secondary">{formatearPrecio(categorias.otros)}</td>
-                    <td className="text-end align-middle fw-bold text-success">{formatearPrecio(userSummary.totalVenta)}</td>
-                    <td className="text-center align-middle">
-                      <button
-                        className="btn btn-sm btn-info text-white"
-                        onClick={() => handleViewDetail(userSummary.user._id)}
-                      >
-                        Ver Detalle
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
       <ModalDetallePedido
         show={showModal}
         setShow={setShowModal}
@@ -733,6 +884,6 @@ export const CuentasXCobrar = () => {
         formatearPrecio={formatearPrecio}
         buscarNombre={buscarNombre}
       />
-    </LayoutApp >
+    </LayoutApp>
   );
-}
+};

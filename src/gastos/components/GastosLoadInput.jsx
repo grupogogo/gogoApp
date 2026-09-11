@@ -46,33 +46,65 @@ export const GastosLoadInput = () => {
     };
 
     return (
-        <div className="input-group">
-            <input
-                type="text"
-                className="form-control"
-                placeholder="Razón social o nombre"
-                value={searchTerm}
-                onChange={handleInputChange}
-            />
+        <div className="position-relative">
+            <div className="input-group">
+                <span className="input-group-text bg-white border-end-0 text-muted">
+                    <i className="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input
+                    type="text"
+                    className="form-control border-start-0 ps-0"
+                    placeholder="Escribe para buscar y autocompletar un gasto frecuente..."
+                    value={searchTerm}
+                    onChange={handleInputChange}
+                />
+                {searchTerm && (
+                    <button
+                        type="button"
+                        className="btn btn-link text-muted position-absolute end-0 top-50 translate-middle-y me-2 text-decoration-none"
+                        style={{ zIndex: 10 }}
+                        onClick={() => setSearchTerm('')}
+                    >
+                        <i className="fa-solid fa-xmark"></i>
+                    </button>
+                )}
+            </div>
             {suggestions.length > 0 && (
                 <ul
-                    className="list-group position-absolute w-100 shadow-lg"
-                    style={{ top: "100%", left: 0, zIndex: 1000, cursor: 'pointer' }}
+                    className="list-group position-absolute w-100 shadow-lg mt-1"
+                    style={{ top: "100%", left: 0, zIndex: 1070, maxHeight: "220px", overflowY: "auto" }}
                 >
-                    {suggestions.map((gasto) => (
+                    {suggestions.map((gasto, idx) => (
                         <li
-                            key={gasto.gastos_id}
-                            className="list-group-item list-group-item-action"
+                            key={gasto._id || gasto.id || gasto.gastos_id || idx}
+                            className="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-bottom"
+                            style={{ cursor: 'pointer' }}
                             onClick={() => handleSuggestionClick(gasto)}
                         >
-                            {gasto.gasto}
+                            <div>
+                                <i className="fa-solid fa-file-invoice text-primary me-2"></i>
+                                <span className="fw-semibold text-dark">{gasto.gasto}</span>
+                                {gasto.proveedor && (
+                                    <small className="text-muted ms-2">
+                                        <i className="fa-solid fa-building text-secondary me-1"></i>
+                                        {gasto.proveedor}
+                                    </small>
+                                )}
+                            </div>
+                            <div className="d-flex align-items-center gap-2">
+                                {gasto.codigo && (
+                                    <span className="badge bg-light text-secondary border">
+                                        {gasto.codigo}
+                                    </span>
+                                )}
+                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                    ${gasto.precio?.toLocaleString('es-CO') || gasto.precio}
+                                </span>
+                            </div>
                         </li>
                     ))}
                 </ul>
             )}
-            <span className="input-group-text">
-                <i className="fa-solid fa-magnifying-glass"></i>
-            </span>
         </div>
     )
 }

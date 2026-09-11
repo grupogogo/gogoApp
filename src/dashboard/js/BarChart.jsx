@@ -53,8 +53,6 @@ export const BarChart = ({ totales }) => {
             data: {
                 labels: categorias,
                 datasets: [{
-                    label: '',
-                    backgroundColor: "#4e73df",
                     hoverBackgroundColor: [
                         'rgba(255, 99, 132, 1)',
                         'rgba(255, 159, 64, 1)',
