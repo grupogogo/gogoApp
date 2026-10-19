@@ -13,15 +13,20 @@ import Swal from 'sweetalert2'
 import { useSelector } from 'react-redux'
 
 const formInicial = {
-    cantidad: 0,
-    precio: 0,
-    gasto: '',
     proveedor: '',
     detalle: '',
-    codigo: '',
     categoria: 'K',
-    subCategoria: 'G',
 }
+
+const crearItemVacio = () => ({
+    id: Date.now() + Math.random(),
+    gasto: '',
+    subCategoria: 'G',
+    codigo: '',
+    cantidad: 1,
+    precio: 0
+});
+
 export const Gastos = () => {
     const { formatearPrecio, limpiarFecha, convertirFechaIngles } = useFuntions()
     const [fechaActual, setFechaActual] = useState(new Date());
@@ -33,39 +38,202 @@ export const Gastos = () => {
     const { startAddNewGasto, startUpdateGasto, startLoadingGastos, limpiarGastoActivo } = useGastosStore();
     const gastoActivo = useSelector(state => state.gastos.gastoActivo);
     const formattedDate = format(fechaActual, "MMMM d, yyyy HH:mm", { locale: es });
-    const { onInputNumbersChange, onInputChange, cantidad, precio, gasto, proveedor, categoria, subCategoria, detalle, codigo, setFormState, onResetForm } = useForm(formInicial);
+    const { onInputChange, proveedor, categoria, detalle, setFormState, onResetForm } = useForm(formInicial);
     const gastos = useSelector(state => state.gastos.gastos);
     const [gastoUsuarios, setGastoUsuarios] = useState(0);
     const { user } = useAuthStore();
 
+    // Estado para productos/ítems dinámicos de la factura de gasto
+    const [itemsGasto, setItemsGasto] = useState([crearItemVacio()]);
+
+    const [comprobanteData, setComprobanteData] = useState({
+        data: null,
+        nombre: '',
+        tipo: ''
+    });
+
     const isLeonardo = user?.uid === '6789ce1b48932f890985d1f7';
 
-    const cargarDatosGasto = (gastoObj) => {
+    // Funciones para manipular productos dinámicos
+    const handleAddItem = () => {
+        setItemsGasto(prev => [...prev, crearItemVacio()]);
+    };
+
+    const handleRemoveItem = (index) => {
+        if (itemsGasto.length <= 1) return;
+        setItemsGasto(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleItemChange = (index, field, value) => {
+        setItemsGasto(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+    };
+
+    const handleItemNumberChange = (index, field, rawValue) => {
+        const clean = String(rawValue).replace(/[^0-9]/g, '');
+        setItemsGasto(prev => prev.map((item, i) => i === index ? { ...item, [field]: clean === '' ? '' : Number(clean) } : item));
+    };
+
+    const handleItemCantidadStep = (index, step) => {
+        setItemsGasto(prev => prev.map((item, i) => {
+            if (i !== index) return item;
+            const cur = Number(item.cantidad) || 0;
+            return { ...item, cantidad: Math.max(1, cur + step) };
+        }));
+    };
+
+    const renderSubcategoriaOptions = () => {
+        if (selCategoria === 0) {
+            return (
+                <>
+                    <option value="G">GENERAL</option>
+                    <option value="KCG">KCG</option>
+                    <option value="KCP">KCP</option>
+                    <option value="KB">KB</option>
+                    <option value="KCE">KCE</option>
+                    <option value="CC">CC</option>
+                    <option value="CB">CB</option>
+                    <option value="CINTA-CO">CINTA CO</option>
+                </>
+            );
+        }
+        if (selCategoria === 1) {
+            return (
+                <>
+                    <option value="G">GENERAL</option>
+                    <option value="GB">G. BLANCOS</option>
+                    <option value="GN">G. NEGROS</option>
+                    <option value="GM">G. MITÓN</option>
+                </>
+            );
+        }
+        return <option value="G">GENERAL</option>;
+    };
+
+    const cargarDatosGasto = (gastoObj, esAutocompletar = false) => {
         if (!gastoObj) return;
         const cat = isLeonardo ? 'K' : (gastoObj.categoria || 'K');
-        setFormState({
-            proveedor: gastoObj.proveedor || '',
-            codigo: gastoObj.codigo || '',
-            gasto: gastoObj.gasto || '',
-            categoria: cat,
-            subCategoria: gastoObj.subCategoria || 'G',
-            precio: gastoObj.precio || 0,
-            cantidad: gastoObj.cantidad || 0,
-            detalle: gastoObj.detalle || '',
-        });
-        setCheck(gastoObj.tipoGasto === 'Servicio');
 
-        if (cat === 'K') setSelCategoria(0);
-        else if (cat === 'G') setSelCategoria(1);
-        else setSelCategoria(2);
+        if (!esAutocompletar) {
+            setFormState({
+                proveedor: gastoObj.proveedor || '',
+                categoria: cat,
+                detalle: gastoObj.detalle || '',
+            });
+            setCheck(gastoObj.tipoGasto === 'Servicio');
+
+            if (gastoObj.comprobante) {
+                setComprobanteData({
+                    data: gastoObj.comprobante,
+                    nombre: gastoObj.comprobanteNombre || 'Comprobante',
+                    tipo: gastoObj.comprobanteTipo || ''
+                });
+            } else {
+                setComprobanteData({ data: null, nombre: '', tipo: '' });
+            }
+
+            if (cat === 'K') setSelCategoria(0);
+            else if (cat === 'G') setSelCategoria(1);
+            else setSelCategoria(2);
+
+            // Cargar ítems
+            if (Array.isArray(gastoObj.items) && gastoObj.items.length > 0) {
+                setItemsGasto(gastoObj.items.map((it, idx) => ({
+                    id: Date.now() + idx + Math.random(),
+                    gasto: it.gasto || '',
+                    codigo: it.codigo || '',
+                    subCategoria: it.subCategoria || 'G',
+                    cantidad: it.cantidad !== undefined ? it.cantidad : 1,
+                    precio: it.precio !== undefined ? it.precio : 0
+                })));
+            } else {
+                setItemsGasto([{
+                    id: Date.now() + Math.random(),
+                    gasto: gastoObj.gasto || '',
+                    codigo: gastoObj.codigo || '',
+                    subCategoria: gastoObj.subCategoria || 'G',
+                    cantidad: gastoObj.cantidad !== undefined ? gastoObj.cantidad : 1,
+                    precio: gastoObj.precio !== undefined ? gastoObj.precio : 0
+                }]);
+            }
+        } else {
+            // Plantilla o autocompletar rápido
+            if (gastoObj.proveedor && !proveedor) {
+                setFormState(prev => ({ ...prev, proveedor: gastoObj.proveedor }));
+            }
+            if (gastoObj.tipoGasto) {
+                setCheck(gastoObj.tipoGasto === 'Servicio');
+            }
+
+            if (Array.isArray(gastoObj.items) && gastoObj.items.length > 0) {
+                const nuevosItems = gastoObj.items.map((it, idx) => ({
+                    id: Date.now() + idx + Math.random(),
+                    gasto: it.gasto || '',
+                    codigo: it.codigo || '',
+                    subCategoria: it.subCategoria || 'G',
+                    cantidad: it.cantidad !== undefined ? it.cantidad : 1,
+                    precio: it.precio !== undefined ? it.precio : 0
+                }));
+
+                setItemsGasto(prev => {
+                    if (prev.length === 1 && !prev[0].gasto?.trim() && !prev[0].codigo?.trim() && (Number(prev[0].precio) || 0) === 0) {
+                        return nuevosItems;
+                    }
+                    return [...prev, ...nuevosItems];
+                });
+            } else if (gastoObj.gasto) {
+                const nuevoItem = {
+                    id: Date.now() + Math.random(),
+                    gasto: gastoObj.gasto || '',
+                    codigo: gastoObj.codigo || '',
+                    subCategoria: gastoObj.subCategoria || 'G',
+                    cantidad: gastoObj.cantidad !== undefined ? gastoObj.cantidad : 1,
+                    precio: gastoObj.precio !== undefined ? gastoObj.precio : 0
+                };
+
+                setItemsGasto(prev => {
+                    if (prev.length === 1 && !prev[0].gasto?.trim() && !prev[0].codigo?.trim() && (Number(prev[0].precio) || 0) === 0) {
+                        return [nuevoItem];
+                    }
+                    return [...prev, nuevoItem];
+                });
+            }
+        }
+    };
+
+    const handleComprobanteChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const MAX_SIZE = 15 * 1024 * 1024; // 15MB
+        if (file.size > MAX_SIZE) {
+            Swal.fire('Archivo muy grande', 'El archivo supera los 15MB. Por favor selecciona uno más liviano.', 'warning');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            setComprobanteData({
+                data: event.target.result,
+                nombre: file.name,
+                tipo: file.type || 'application/octet-stream'
+            });
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+    };
+
+    const handleQuitarComprobante = () => {
+        setComprobanteData({ data: null, nombre: '', tipo: '' });
     };
 
     const handleClose = () => {
         setShow(false);
         setModoEdicion(false);
         setGastoAEditar(null);
+        setComprobanteData({ data: null, nombre: '', tipo: '' });
         limpiarGastoActivo();
         onResetForm();
+        setItemsGasto([crearItemVacio()]);
         setFechaActual(new Date());
     };
 
@@ -84,26 +252,29 @@ export const Gastos = () => {
             } else {
                 setFechaActual(new Date());
             }
-            cargarDatosGasto(item);
+            cargarDatosGasto(item, false);
         } else if (item && item.gasto) {
             // PLANTILLA: copia datos pero con fecha actual
             setModoEdicion(false);
             setGastoAEditar(null);
             setFechaActual(new Date());
-            cargarDatosGasto(item);
+            cargarDatosGasto(item, false);
         } else if (gastoActivo) {
             setModoEdicion(false);
             setGastoAEditar(null);
             setFechaActual(new Date());
-            cargarDatosGasto(gastoActivo);
+            cargarDatosGasto(gastoActivo, false);
         } else {
             // NUEVO GASTO
             setModoEdicion(false);
             setGastoAEditar(null);
+            setComprobanteData({ data: null, nombre: '', tipo: '' });
             setFechaActual(new Date());
             setFormState(formInicial);
+            setItemsGasto([crearItemVacio()]);
             setCheck(false);
             setSelCategoria(0);
+            limpiarGastoActivo();
         }
         setShow(true);
     };
@@ -112,17 +283,72 @@ export const Gastos = () => {
         setCheck(!check);
     };
 
-    const guardarGasto = async () => {
-        const numCantidad = Number(cantidad) || 0;
-        const numPrecio = Number(precio) || 0;
+    // Cálculos de totales en vivo
+    const liveTotal = itemsGasto.reduce((sum, it) => sum + ((Number(it.cantidad) || 0) * (Number(it.precio) || 0)), 0);
+    const liveTotalUnidades = itemsGasto.reduce((sum, it) => sum + (Number(it.cantidad) || 0), 0);
 
-        if (!proveedor?.trim() || !gasto?.trim() || !codigo?.trim() || numCantidad <= 0 || numPrecio <= 0) {
+    const guardarGasto = async () => {
+        if (!proveedor?.trim()) {
             Swal.fire({
-                title: "Datos incompletos",
-                text: 'Por favor completa los campos obligatorios (Proveedor, Código, Producto/Servicio, Cantidad > 0 y Precio > 0)',
+                title: "Proveedor requerido",
+                text: 'Por favor ingresa el nombre del proveedor o empresa.',
                 icon: "warning"
             });
             return;
+        }
+
+        if (!itemsGasto || itemsGasto.length === 0) {
+            Swal.fire({
+                title: "Sin productos",
+                text: 'Debes agregar al menos un producto o servicio al gasto.',
+                icon: "warning"
+            });
+            return;
+        }
+
+        // Validar cada ítem
+        for (let i = 0; i < itemsGasto.length; i++) {
+            const it = itemsGasto[i];
+            const numCant = Number(it.cantidad) || 0;
+            const numPrec = Number(it.precio) || 0;
+
+            if (!it.gasto?.trim() || !it.codigo?.trim() || numCant <= 0 || numPrec <= 0) {
+                Swal.fire({
+                    title: `Ítem #${i + 1} incompleto`,
+                    text: `Por favor completa los campos del Ítem #${i + 1} (Código, ${check ? 'Concepto' : 'Nombre del Producto'}, Cantidad > 0 y Precio > 0).`,
+                    icon: "warning"
+                });
+                return;
+            }
+        }
+
+        const formattedItems = itemsGasto.map(it => ({
+            gasto: it.gasto.trim(),
+            codigo: it.codigo.trim(),
+            subCategoria: it.subCategoria || 'G',
+            cantidad: Number(it.cantidad) || 1,
+            precio: Number(it.precio) || 0
+        }));
+
+        let gastoPrincipal = '';
+        let codigoPrincipal = '';
+        let subCatPrincipal = 'G';
+        let cantidadPrincipal = 1;
+        let precioPrincipal = 0;
+
+        if (formattedItems.length === 1) {
+            gastoPrincipal = formattedItems[0].gasto;
+            codigoPrincipal = formattedItems[0].codigo;
+            subCatPrincipal = formattedItems[0].subCategoria;
+            cantidadPrincipal = formattedItems[0].cantidad;
+            precioPrincipal = formattedItems[0].precio;
+        } else {
+            gastoPrincipal = formattedItems.map(it => it.gasto).join(', ');
+            codigoPrincipal = formattedItems.map(it => it.codigo).filter(Boolean).join(' / ');
+            const primeraSub = formattedItems[0].subCategoria;
+            subCatPrincipal = formattedItems.every(it => it.subCategoria === primeraSub) ? primeraSub : 'VARIOS';
+            cantidadPrincipal = 1;
+            precioPrincipal = liveTotal;
         }
 
         const gastoTotal = {
@@ -130,12 +356,16 @@ export const Gastos = () => {
             fecha: formattedDate,
             proveedor: proveedor.trim(),
             categoria: isLeonardo ? 'K' : categoria,
-            subCategoria,
-            gasto: gasto.trim(),
-            codigo: codigo.trim(),
-            cantidad: numCantidad,
-            precio: numPrecio,
-            detalle: detalle?.trim() || ''
+            subCategoria: subCatPrincipal,
+            gasto: gastoPrincipal,
+            codigo: codigoPrincipal,
+            cantidad: cantidadPrincipal,
+            precio: precioPrincipal,
+            detalle: detalle?.trim() || '',
+            comprobante: comprobanteData.data || null,
+            comprobanteNombre: comprobanteData.nombre || '',
+            comprobanteTipo: comprobanteData.tipo || '',
+            items: formattedItems
         };
 
         if (modoEdicion && gastoAEditar) {
@@ -226,7 +456,6 @@ export const Gastos = () => {
         setFormState((prev) => ({
             ...prev,
             [name]: value,
-            subCategoria: "G"
         }));
 
         switch (selCategoria) {
@@ -255,15 +484,13 @@ export const Gastos = () => {
 
     useEffect(() => {
         if (gastoActivo && !modoEdicion) {
-            cargarDatosGasto(gastoActivo);
+            cargarDatosGasto(gastoActivo, true);
         }
     }, [gastoActivo, isLeonardo, modoEdicion]);
 
-    const liveTotal = (Number(cantidad) || 0) * (Number(precio) || 0);
-
     return (
         <LayoutApp>
-            <div className='m-3'>
+            <div className='m-1 m-sm-3'>
                 <Row>
                     <Modal
                         size="lg"
@@ -271,7 +498,7 @@ export const Gastos = () => {
                         show={show}
                         onHide={handleClose}
                     >
-                        <Modal.Header closeButton className="border-bottom pb-3 px-4 pt-3 bg-light">
+                        <Modal.Header closeButton className="border-bottom pb-3 px-3 px-sm-4 pt-3 bg-light">
                             <div className="d-flex align-items-center gap-3">
                                 <div className={`rounded-3 p-2 d-flex align-items-center justify-content-center shadow-xs ${modoEdicion ? 'bg-warning bg-opacity-10 text-warning' : 'bg-primary bg-opacity-10 text-primary'}`} style={{ width: 44, height: 44 }}>
                                     <i className={`${modoEdicion ? 'fa-solid fa-pen-to-square' : 'fa-solid fa-file-invoice-dollar'} fs-5`}></i>
@@ -280,7 +507,7 @@ export const Gastos = () => {
                                     <Modal.Title className="fs-5 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
                                         <span>{modoEdicion ? 'Editar Gasto' : 'Registrar Nuevo Gasto'}</span>
                                         {modoEdicion && (
-                                            <span className="badge bg-warning text-dark border border-warning-subtle py-1 px-2 fw-semibold" style={{ fontSize: '0.72rem' }}>
+                                             <span className="badge bg-warning text-dark border border-warning-subtle py-1 px-2 fw-semibold" style={{ fontSize: '0.72rem' }}>
                                                 <i className="fa-solid fa-pen me-1"></i> Modo Edición
                                             </span>
                                         )}
@@ -292,7 +519,7 @@ export const Gastos = () => {
                             </div>
                         </Modal.Header>
 
-                        <Modal.Body className="p-4">
+                        <Modal.Body className="p-3 p-sm-4">
                             {/* Selector de Tipo y Fecha */}
                             <Row className="g-3 align-items-end mb-3">
                                 <Col xs={12} sm={6}>
@@ -398,153 +625,203 @@ export const Gastos = () => {
                                 </Col>
                             </Row>
 
-                            {/* Concepto / Nombre y Subcategoría */}
-                            <Row className="g-3 mb-3">
-                                <Col xs={12} md={7}>
-                                    <Form.Group>
-                                        <Form.Label className="small fw-semibold text-muted mb-1">
-                                            <i className="fa-solid fa-tag text-secondary me-1"></i> {check ? 'Concepto del Servicio' : 'Nombre del Producto'} <span className="text-danger">*</span>
-                                        </Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            placeholder={check ? "Ej: Mantenimiento correctivo..." : "Ej: Cajas de cartón corrugado..."}
-                                            name="gasto"
-                                            value={gasto}
-                                            onChange={onInputChange}
-                                            className="shadow-none"
-                                        />
-                                    </Form.Group>
-                                </Col>
-                                <Col xs={12} md={5}>
-                                    <Form.Group>
-                                        <Form.Label className="small fw-semibold text-muted mb-1">
-                                            <i className="fa-solid fa-tags text-secondary me-1"></i> Subcategoría
-                                        </Form.Label>
-                                        <Form.Select
-                                            name="subCategoria"
-                                            value={subCategoria}
-                                            onChange={onInputChange}
-                                            className="shadow-none"
-                                        >
-                                            {selCategoria === 0 && (
-                                                <>
-                                                    <option value="G">GENERAL</option>
-                                                    <option value="KCG">KCG</option>
-                                                    <option value="KCP">KCP</option>
-                                                    <option value="KB">KB</option>
-                                                    <option value="KCE">KCE</option>
-                                                    <option value="CC">CC</option>
-                                                    <option value="CB">CB</option>
-                                                    <option value="CINTA-CO">CINTA CO</option>
-                                                </>
-                                            )}
-                                            {selCategoria === 1 && (
-                                                <>
-                                                    <option value="G">GENERAL</option>
-                                                    <option value="GB">G. BLANCOS</option>
-                                                    <option value="GN">G. NEGROS</option>
-                                                    <option value="GM">G. MITÓN</option>
-                                                </>
-                                            )}
-                                            {selCategoria === 2 && (
-                                                <option value="G">GENERAL</option>
-                                            )}
-                                        </Form.Select>
-                                    </Form.Group>
-                                </Col>
-                            </Row>
+                            {/* SECCIÓN DINÁMICA DE PRODUCTOS / ÍTEMS */}
+                            <div className="mb-3">
+                                <div className="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <span className="small fw-bold text-dark text-uppercase" style={{ letterSpacing: '0.5px' }}>
+                                            <i className="fa-solid fa-boxes-stacked text-primary me-1.5"></i>
+                                            {check ? 'Servicios / Ítems de la Factura' : 'Productos / Ítems de la Factura'}
+                                        </span>
+                                        <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2.5 py-0.5 fw-semibold" style={{ fontSize: '0.74rem' }}>
+                                            {itemsGasto.length} {itemsGasto.length === 1 ? 'ítem' : 'ítems'}
+                                        </span>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline-primary"
+                                        size="sm"
+                                        className="rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1.5 shadow-xs"
+                                        style={{ fontSize: '0.8rem' }}
+                                        onClick={handleAddItem}
+                                    >
+                                        <i className="fa-solid fa-plus"></i>
+                                        <span>Agregar Ítem</span>
+                                    </Button>
+                                </div>
 
-                            {/* Código, Cantidad y Precio */}
-                            <Row className="g-3 mb-3">
-                                <Col xs={12} md={4}>
-                                    <Form.Group>
-                                        <Form.Label className="small fw-semibold text-muted mb-1">
-                                            <i className="fa-solid fa-barcode text-secondary me-1"></i> Código / Ref <span className="text-danger">*</span>
-                                        </Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            placeholder="Ej: KCG-01"
-                                            name="codigo"
-                                            value={codigo}
-                                            onChange={onInputChange}
-                                            className="shadow-none"
-                                        />
-                                    </Form.Group>
-                                </Col>
-                                <Col xs={12} sm={6} md={4}>
-                                    <Form.Group>
-                                        <Form.Label className="small fw-semibold text-muted mb-1">
-                                            <i className="fa-solid fa-hashtag text-secondary me-1"></i> Cantidad <span className="text-danger">*</span>
-                                        </Form.Label>
-                                        <div className="input-group">
-                                            <button
-                                                type="button"
-                                                className="btn btn-outline-secondary"
-                                                onClick={() => {
-                                                    const cur = Number(cantidad) || 0;
-                                                    if (cur > 1) {
-                                                        setFormState(prev => ({ ...prev, cantidad: cur - 1 }));
-                                                    }
-                                                }}
+                                {/* Lista de Tarjetas de Ítems */}
+                                <div className="d-flex flex-column gap-3">
+                                    {itemsGasto.map((item, index) => {
+                                        const subtotalItem = (Number(item.cantidad) || 0) * (Number(item.precio) || 0);
+
+                                        return (
+                                            <div
+                                                key={item.id}
+                                                className="p-3 rounded-3 border bg-light bg-opacity-50 position-relative shadow-xs"
+                                                style={{ borderLeft: '4px solid #0d6efd' }}
                                             >
-                                                <i className="fa-solid fa-minus"></i>
-                                            </button>
-                                            <Form.Control
-                                                type="text"
-                                                className="text-center fw-bold shadow-none"
-                                                name="cantidad"
-                                                value={cantidad !== undefined ? cantidad : ''}
-                                                onChange={onInputNumbersChange}
-                                                onFocus={(e) => e.target.select()}
-                                            />
-                                            <button
-                                                type="button"
-                                                className="btn btn-outline-secondary"
-                                                onClick={() => {
-                                                    const cur = Number(cantidad) || 0;
-                                                    setFormState(prev => ({ ...prev, cantidad: cur + 1 }));
-                                                }}
-                                            >
-                                                <i className="fa-solid fa-plus"></i>
-                                            </button>
-                                        </div>
-                                    </Form.Group>
-                                </Col>
-                                <Col xs={12} sm={6} md={4}>
-                                    <Form.Group>
-                                        <Form.Label className="small fw-semibold text-muted mb-1">
-                                            <i className="fa-solid fa-dollar-sign text-secondary me-1"></i> Precio Unitario <span className="text-danger">*</span>
-                                        </Form.Label>
-                                        <div className="input-group">
-                                            <span className="input-group-text bg-light text-muted fw-bold">$</span>
-                                            <Form.Control
-                                                type="text"
-                                                className="text-end fw-semibold shadow-none"
-                                                placeholder="0"
-                                                name="precio"
-                                                value={precio !== undefined ? precio : ''}
-                                                onChange={onInputNumbersChange}
-                                                onFocus={(e) => e.target.select()}
-                                            />
-                                        </div>
-                                    </Form.Group>
-                                </Col>
-                            </Row>
+                                                {/* Encabezado del Ítem */}
+                                                <div className="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom border-light-subtle">
+                                                    <div className="d-flex align-items-center gap-2">
+                                                        <span className="badge bg-primary text-white rounded-pill px-2.5 py-1 fw-bold" style={{ fontSize: '0.74rem' }}>
+                                                            Ítem #{index + 1}
+                                                        </span>
+                                                        <span className="small fw-medium text-secondary">
+                                                            {check ? 'Detalle del Servicio' : 'Detalle del Producto'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="d-flex align-items-center gap-2">
+                                                        <span className="badge bg-white text-primary border border-primary-subtle px-2.5 py-1 fw-bold shadow-2xs" style={{ fontSize: '0.8rem' }}>
+                                                            Subtotal: ${formatearPrecio(subtotalItem)}
+                                                        </span>
+                                                        {itemsGasto.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-outline-danger btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center"
+                                                                style={{ width: '28px', height: '28px', fontSize: '0.78rem' }}
+                                                                onClick={() => handleRemoveItem(index)}
+                                                                title="Quitar este ítem"
+                                                            >
+                                                                <i className="fa-solid fa-trash-can"></i>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Fila 1: Nombre y Subcategoría */}
+                                                <Row className="g-2 mb-2">
+                                                    <Col xs={12} md={7}>
+                                                        <Form.Group>
+                                                            <Form.Label className="small fw-semibold text-muted mb-1" style={{ fontSize: '0.78rem' }}>
+                                                                <i className="fa-solid fa-tag text-secondary me-1"></i> {check ? 'Concepto del Servicio' : 'Nombre del Producto'} <span className="text-danger">*</span>
+                                                            </Form.Label>
+                                                            <Form.Control
+                                                                type="text"
+                                                                size="sm"
+                                                                placeholder={check ? "Ej: Mantenimiento correctivo..." : "Ej: Cajas de cartón corrugado..."}
+                                                                value={item.gasto}
+                                                                onChange={(e) => handleItemChange(index, 'gasto', e.target.value)}
+                                                                className="shadow-none bg-white"
+                                                            />
+                                                        </Form.Group>
+                                                    </Col>
+                                                    <Col xs={12} md={5}>
+                                                        <Form.Group>
+                                                            <Form.Label className="small fw-semibold text-muted mb-1" style={{ fontSize: '0.78rem' }}>
+                                                                <i className="fa-solid fa-tags text-secondary me-1"></i> Subcategoría
+                                                            </Form.Label>
+                                                            <Form.Select
+                                                                size="sm"
+                                                                value={item.subCategoria}
+                                                                onChange={(e) => handleItemChange(index, 'subCategoria', e.target.value)}
+                                                                className="shadow-none bg-white"
+                                                            >
+                                                                {renderSubcategoriaOptions()}
+                                                            </Form.Select>
+                                                        </Form.Group>
+                                                    </Col>
+                                                </Row>
+
+                                                {/* Fila 2: Código, Cantidad y Precio */}
+                                                <Row className="g-2 align-items-end">
+                                                    <Col xs={12} md={4}>
+                                                        <Form.Group>
+                                                            <Form.Label className="small fw-semibold text-muted mb-1" style={{ fontSize: '0.78rem' }}>
+                                                                <i className="fa-solid fa-barcode text-secondary me-1"></i> Código / Ref <span className="text-danger">*</span>
+                                                            </Form.Label>
+                                                            <Form.Control
+                                                                type="text"
+                                                                size="sm"
+                                                                placeholder="Ej: KCG-01"
+                                                                value={item.codigo}
+                                                                onChange={(e) => handleItemChange(index, 'codigo', e.target.value)}
+                                                                className="shadow-none bg-white"
+                                                            />
+                                                        </Form.Group>
+                                                    </Col>
+                                                    <Col xs={12} sm={6} md={4}>
+                                                        <Form.Group>
+                                                            <Form.Label className="small fw-semibold text-muted mb-1" style={{ fontSize: '0.78rem' }}>
+                                                                <i className="fa-solid fa-hashtag text-secondary me-1"></i> Cantidad <span className="text-danger">*</span>
+                                                            </Form.Label>
+                                                            <div className="input-group input-group-sm">
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-outline-secondary bg-white"
+                                                                    onClick={() => handleItemCantidadStep(index, -1)}
+                                                                >
+                                                                    <i className="fa-solid fa-minus"></i>
+                                                                </button>
+                                                                <Form.Control
+                                                                    type="text"
+                                                                    className="text-center fw-bold shadow-none bg-white"
+                                                                    value={item.cantidad !== undefined ? item.cantidad : ''}
+                                                                    onChange={(e) => handleItemNumberChange(index, 'cantidad', e.target.value)}
+                                                                    onFocus={(e) => e.target.select()}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-outline-secondary bg-white"
+                                                                    onClick={() => handleItemCantidadStep(index, 1)}
+                                                                >
+                                                                    <i className="fa-solid fa-plus"></i>
+                                                                </button>
+                                                            </div>
+                                                        </Form.Group>
+                                                    </Col>
+                                                    <Col xs={12} sm={6} md={4}>
+                                                        <Form.Group>
+                                                            <Form.Label className="small fw-semibold text-muted mb-1" style={{ fontSize: '0.78rem' }}>
+                                                                <i className="fa-solid fa-dollar-sign text-secondary me-1"></i> Precio Unitario <span className="text-danger">*</span>
+                                                            </Form.Label>
+                                                            <div className="input-group input-group-sm">
+                                                                <span className="input-group-text bg-white text-muted fw-bold">$</span>
+                                                                <Form.Control
+                                                                    type="text"
+                                                                    className="text-end fw-semibold shadow-none bg-white"
+                                                                    placeholder="0"
+                                                                    value={item.precio !== undefined ? item.precio : ''}
+                                                                    onChange={(e) => handleItemNumberChange(index, 'precio', e.target.value)}
+                                                                    onFocus={(e) => e.target.select()}
+                                                                />
+                                                            </div>
+                                                        </Form.Group>
+                                                    </Col>
+                                                </Row>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Botón para agregar otro ítem */}
+                                <div className="mt-2.5">
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-primary w-100 py-2 border-2 rounded-3 fw-semibold d-flex align-items-center justify-content-center gap-2 shadow-2xs"
+                                        style={{ borderStyle: 'dashed' }}
+                                        onClick={handleAddItem}
+                                    >
+                                        <i className="fa-solid fa-plus-circle fs-6"></i>
+                                        <span>+ Agregar otro producto / ítem a esta factura</span>
+                                    </button>
+                                </div>
+                            </div>
 
                             {/* Banner Resumen Total en Vivo */}
-                            <div className="card border-0 bg-primary bg-opacity-10 rounded-3 p-3 mb-3">
+                            <div className="card border-0 bg-primary bg-opacity-10 rounded-3 p-3 mb-3 shadow-xs">
                                 <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
                                     <div>
-                                        <div className="text-uppercase fw-bold text-primary small d-flex align-items-center gap-1">
-                                            <i className="fa-solid fa-calculator"></i>
-                                            <span>Total del Gasto</span>
+                                        <div className="text-uppercase fw-bold text-primary small d-flex align-items-center gap-1.5">
+                                            <i className="fa-solid fa-file-invoice-dollar fs-6"></i>
+                                            <span>Total Factura del Gasto</span>
                                         </div>
-                                        <div className="text-muted small">
-                                            {(Number(cantidad) || 0)} unidades &times; ${formatearPrecio(Number(precio) || 0)}
+                                        <div className="text-muted small mt-0.5">
+                                            <strong>{itemsGasto.length}</strong> {itemsGasto.length === 1 ? 'producto/ítem' : 'productos/ítems'} • <strong>{liveTotalUnidades}</strong> {liveTotalUnidades === 1 ? 'unidad' : 'unidades en total'}
                                         </div>
                                     </div>
                                     <div className="text-sm-end">
-                                        <span className="display-6 fs-3 fw-bold text-primary">
+                                        <span className="display-6 fs-3 fw-bolder text-primary">
                                             ${formatearPrecio(liveTotal)}
                                         </span>
                                     </div>
@@ -552,7 +829,7 @@ export const Gastos = () => {
                             </div>
 
                             {/* Observaciones / Detalle */}
-                            <Form.Group>
+                            <Form.Group className="mb-3">
                                 <Form.Label className="small fw-semibold text-muted mb-1">
                                     <i className="fa-regular fa-comment-dots text-secondary me-1"></i> Observaciones / Detalles
                                 </Form.Label>
@@ -565,6 +842,82 @@ export const Gastos = () => {
                                     onChange={onInputChange}
                                     className="shadow-none"
                                 />
+                            </Form.Group>
+
+                            {/* Campo para Subir Comprobante de Pago */}
+                            <Form.Group>
+                                <Form.Label className="small fw-semibold text-muted mb-1 d-flex align-items-center justify-content-between">
+                                    <span>
+                                        <i className="fa-solid fa-paperclip text-secondary me-1"></i> Comprobante de Pago / Factura
+                                    </span>
+                                    <span className="text-muted" style={{ fontSize: '0.72rem' }}>Opcional (Foto, Recibo o PDF)</span>
+                                </Form.Label>
+                                
+                                {!comprobanteData.data ? (
+                                    <div className="border border-2 border-dashed rounded-3 p-3 text-center bg-light bg-opacity-50">
+                                        <input
+                                            type="file"
+                                            id="input-comprobante-gasto"
+                                            className="d-none"
+                                            accept="image/*,application/pdf"
+                                            onChange={handleComprobanteChange}
+                                        />
+                                        <label htmlFor="input-comprobante-gasto" className="mb-0 w-100" style={{ cursor: 'pointer' }}>
+                                            <i className="fa-solid fa-cloud-arrow-up text-primary fs-3 mb-1"></i>
+                                            <div className="fw-semibold text-dark small">Haz clic aquí para adjuntar el comprobante</div>
+                                            <div className="text-muted" style={{ fontSize: '0.74rem' }}>
+                                                Formatos soportados: JPG, PNG, WEBP o PDF (máx. 15MB)
+                                            </div>
+                                        </label>
+                                    </div>
+                                ) : (
+                                    <div className="border rounded-3 p-2.5 bg-light d-flex align-items-center justify-content-between gap-2 shadow-xs">
+                                        <div className="d-flex align-items-center gap-2.5 overflow-hidden">
+                                            {comprobanteData.tipo?.startsWith('image/') || comprobanteData.data?.startsWith('data:image/') ? (
+                                                <img
+                                                    src={comprobanteData.data}
+                                                    alt={comprobanteData.nombre}
+                                                    className="rounded border"
+                                                    style={{ width: '48px', height: '48px', objectFit: 'cover' }}
+                                                />
+                                            ) : (
+                                                <div className="bg-white border rounded d-flex align-items-center justify-content-center text-danger" style={{ width: '48px', height: '48px' }}>
+                                                    <i className="fa-solid fa-file-pdf fs-4"></i>
+                                                </div>
+                                            )}
+                                            <div className="overflow-hidden">
+                                                <div className="fw-bold text-dark small text-truncate" style={{ maxWidth: '260px' }} title={comprobanteData.nombre}>
+                                                    {comprobanteData.nombre || 'Comprobante adjunto'}
+                                                </div>
+                                                <span className="badge bg-success-subtle text-success border border-success-subtle py-0.5 px-2" style={{ fontSize: '0.68rem' }}>
+                                                    <i className="fa-solid fa-check me-1"></i> Comprobante cargado
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="d-flex align-items-center gap-1">
+                                            <label htmlFor="input-comprobante-gasto-cambiar" className="btn btn-sm btn-outline-secondary py-1 px-2 mb-0" title="Cambiar archivo" style={{ cursor: 'pointer', fontSize: '0.78rem' }}>
+                                                <i className="fa-solid fa-arrows-rotate me-1"></i> Cambiar
+                                                <input
+                                                    type="file"
+                                                    id="input-comprobante-gasto-cambiar"
+                                                    className="d-none"
+                                                    accept="image/*,application/pdf"
+                                                    onChange={handleComprobanteChange}
+                                                />
+                                            </label>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-outline-danger py-1 px-2"
+                                                onClick={handleQuitarComprobante}
+                                                title="Quitar comprobante"
+                                                style={{ fontSize: '0.78rem' }}
+                                            >
+                                                <i className="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </Form.Group>
                         </Modal.Body>
 

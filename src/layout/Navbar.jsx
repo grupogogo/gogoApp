@@ -22,7 +22,7 @@ const Navbar = () => {
 
     return (
         <nav
-            className="navbar navbar-expand shadow-sm py-2 px-3 d-flex justify-content-between align-items-center"
+            className="navbar navbar-expand app-navbar shadow-sm py-2 px-3 d-flex justify-content-between align-items-center"
             style={{
                 marginLeft: user?.rol !== 'planta' ? "80px" : "0px",
                 height: "64px",
@@ -34,90 +34,209 @@ const Navbar = () => {
                 transition: 'margin-left 0.3s ease'
             }}
         >
-            {/* Menú Móvil */}
-            <div className="d-md-none position-relative">
+            {/* Botón Menú Móvil */}
+            <div className="d-md-none">
                 <button
-                    className="btn btn-link text-white p-1"
+                    className="btn btn-sm btn-outline-light border-0 d-flex align-items-center justify-content-center"
                     onClick={toggleMobileMenu}
-                    aria-label="Toggle navigation"
+                    aria-label="Abrir navegación móvil"
+                    style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.08)' }}
                 >
-                    <i className="fa fa-bars fa-lg" />
+                    <i className="fa-solid fa-bars fs-5" />
                 </button>
-                <ul
-                    className={`dropdown-menu position-absolute ${isOpen ? "show" : "d-none"} p-2 shadow-lg`}
-                    style={{
-                        left: 0,
-                        top: "48px",
-                        minWidth: "220px",
-                        zIndex: 1050,
-                        background: "#0f172a",
-                        border: "1px solid rgba(255, 255, 255, 0.12)",
-                        borderRadius: "12px"
-                    }}
-                >
-                    <li>
-                        <NavLink className="dropdown-item text-white py-2 px-3 rounded-2 d-flex align-items-center gap-2" to="/dashboard" onClick={() => setIsOpen(false)}>
-                            <i className="fas fa-tachometer-alt text-primary" style={{ width: "18px" }} /> Dashboard
-                        </NavLink>
-                    </li>
-                    {user?.rol !== 'vendedor' && (
-                        <li>
-                            <NavLink className="dropdown-item text-white py-2 px-3 rounded-2 d-flex align-items-center gap-2" to="/gastos" onClick={() => setIsOpen(false)}>
-                                <i className="fas fa-sack-dollar text-warning" style={{ width: "18px" }} /> Gastos
-                            </NavLink>
-                        </li>
-                    )}
-                    {user?.rol !== 'planta' && (
-                        <li>
-                            <NavLink className="dropdown-item text-white py-2 px-3 rounded-2 d-flex align-items-center gap-2" to="/pedidos" onClick={() => setIsOpen(false)}>
-                                <i className="fas fa-clipboard-list text-info" style={{ width: "18px" }} /> Crear pedido
-                            </NavLink>
-                        </li>
-                    )}
-                    <li>
-                        <NavLink className="dropdown-item text-white py-2 px-3 rounded-2 d-flex align-items-center gap-2" to="/listapedidos" onClick={() => setIsOpen(false)}>
-                            <i className="fas fa-boxes-stacked text-success" style={{ width: "18px" }} /> Listar pedidos
-                        </NavLink>
-                    </li>
-                    <li>
-                        <NavLink className="dropdown-item text-white py-2 px-3 rounded-2 d-flex align-items-center gap-2" to="/CuentasXCobrar" onClick={() => setIsOpen(false)}>
-                            <i className="fas fa-file-invoice-dollar text-warning" style={{ width: "18px" }} /> Cuentas por cobrar
-                        </NavLink>
-                    </li>
-                    {user?.rol !== 'planta' && (
-                        <li>
-                            <NavLink className="dropdown-item text-white py-2 px-3 rounded-2 d-flex align-items-center gap-2" to="/tareas" onClick={() => setIsOpen(false)}>
-                                <i className="fas fa-list-check text-info" style={{ width: "18px" }} /> Tareas / To-Do
-                            </NavLink>
-                        </li>
-                    )}
-                    {user?.rol !== 'vendedor' && (
-                        <>
-                            <li>
-                                <NavLink className="dropdown-item text-white py-2 px-3 rounded-2 d-flex align-items-center gap-2" to="/pedidos/listOldOrders" onClick={() => setIsOpen(false)}>
-                                    <i className="fas fa-clock-rotate-left text-secondary" style={{ width: "18px" }} /> Consolidado anual
+
+                {/* Drawer Móvil con Backdrop */}
+                {isOpen && (
+                    <div
+                        className="mobile-drawer-backdrop"
+                        onClick={() => setIsOpen(false)}
+                    />
+                )}
+                <div className={`mobile-drawer-panel ${isOpen ? "open" : ""}`}>
+                    {/* Cabecera del Drawer */}
+                    <div className="d-flex align-items-center justify-content-between p-3 border-bottom border-secondary border-opacity-25">
+                        <div className="d-flex align-items-center gap-2">
+                            <img
+                                src="/images/logos/LOGO GOGO BLANCO.webp"
+                                alt="Logo"
+                                style={{ width: "32px", height: "auto" }}
+                            />
+                            <div>
+                                <span className="fw-bold d-block text-white" style={{ fontSize: "0.95rem" }}>GRUPO GOGO</span>
+                                <small className="text-info d-block fw-semibold" style={{ fontSize: "0.68rem" }}>SISTEMA COMERCIAL</small>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-link text-white-50 p-2"
+                            onClick={() => setIsOpen(false)}
+                            aria-label="Cerrar menú"
+                        >
+                            <i className="fa-solid fa-xmark fs-5"></i>
+                        </button>
+                    </div>
+
+                    {/* Perfil del Usuario en Drawer */}
+                    <div className="p-3 bg-black bg-opacity-20 border-bottom border-secondary border-opacity-25 d-flex align-items-center gap-3">
+                        <div
+                            className="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm flex-shrink-0"
+                            style={{
+                                width: "40px",
+                                height: "40px",
+                                background: "linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)",
+                                color: "#ffffff",
+                                fontSize: "1.1rem"
+                            }}
+                        >
+                            {user?.name ? user.name.charAt(0).toUpperCase() : 'G'}
+                        </div>
+                        <div className="overflow-hidden">
+                            <span className="fw-bold text-white d-block text-truncate" style={{ fontSize: "0.9rem" }}>
+                                {aTitulo(user?.name || 'Usuario')}
+                            </span>
+                            <span className="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-25 px-2 py-0 fw-normal" style={{ fontSize: "0.68rem" }}>
+                                {rolFormateado}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Lista de Navegación Móvil */}
+                    <div className="flex-grow-1 p-2 overflow-y-auto">
+                        <ul className="nav flex-column gap-1">
+                            <li className="nav-item">
+                                <NavLink
+                                    className={({ isActive }) => `nav-link text-white rounded-3 py-2.5 px-3 d-flex align-items-center gap-3 ${isActive ? 'bg-primary shadow-sm' : 'hover-bg'}`}
+                                    to="/dashboard"
+                                    onClick={() => setIsOpen(false)}
+                                >
+                                    <i className="fas fa-tachometer-alt" style={{ width: "20px" }} />
+                                    <span>Dashboard</span>
                                 </NavLink>
                             </li>
-                            <li>
-                                <NavLink className="dropdown-item text-white py-2 px-3 rounded-2 d-flex align-items-center gap-2" to="/pedidos/cruceCuentas" onClick={() => setIsOpen(false)}>
-                                    <i className="fas fa-scale-balanced text-primary" style={{ width: "18px" }} /> Cruce de Cuentas
+                            {user?.rol !== 'vendedor' && (
+                                <li className="nav-item">
+                                    <NavLink
+                                        className={({ isActive }) => `nav-link text-white rounded-3 py-2.5 px-3 d-flex align-items-center gap-3 ${isActive ? 'bg-primary shadow-sm' : ''}`}
+                                        to="/gastos"
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        <i className="fas fa-sack-dollar text-warning" style={{ width: "20px" }} />
+                                        <span>Gastos</span>
+                                    </NavLink>
+                                </li>
+                            )}
+                            {user?.rol !== 'planta' && (
+                                <li className="nav-item">
+                                    <NavLink
+                                        className={({ isActive }) => `nav-link text-white rounded-3 py-2.5 px-3 d-flex align-items-center gap-3 ${isActive ? 'bg-primary shadow-sm' : ''}`}
+                                        to="/pedidos"
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        <i className="fas fa-clipboard-list text-info" style={{ width: "20px" }} />
+                                        <span>Crear Pedido</span>
+                                    </NavLink>
+                                </li>
+                            )}
+                            <li className="nav-item">
+                                <NavLink
+                                    className={({ isActive }) => `nav-link text-white rounded-3 py-2.5 px-3 d-flex align-items-center gap-3 ${isActive ? 'bg-primary shadow-sm' : ''}`}
+                                    to="/listapedidos"
+                                    onClick={() => setIsOpen(false)}
+                                >
+                                    <i className="fas fa-boxes-stacked text-success" style={{ width: "20px" }} />
+                                    <span>Listar Pedidos</span>
                                 </NavLink>
                             </li>
-                        </>
-                    )}
-                    <li>
-                        <NavLink className="dropdown-item text-white py-2 px-3 rounded-2 d-flex align-items-center gap-2" to="/clientes" onClick={() => setIsOpen(false)}>
-                            <i className="fas fa-users text-primary" style={{ width: "18px" }} /> Clientes
-                        </NavLink>
-                    </li>
-                    {user?.rol !== 'vendedor' && (
-                        <li>
-                            <NavLink className="dropdown-item text-white py-2 px-3 rounded-2 d-flex align-items-center gap-2" to="/precios" onClick={() => setIsOpen(false)}>
-                                <i className="fas fa-tags text-info" style={{ width: "18px" }} /> Gestión Precios
-                            </NavLink>
-                        </li>
-                    )}
-                </ul>
+                            <li className="nav-item">
+                                <NavLink
+                                    className={({ isActive }) => `nav-link text-white rounded-3 py-2.5 px-3 d-flex align-items-center gap-3 ${isActive ? 'bg-primary shadow-sm' : ''}`}
+                                    to="/CuentasXCobrar"
+                                    onClick={() => setIsOpen(false)}
+                                >
+                                    <i className="fas fa-file-invoice-dollar text-warning" style={{ width: "20px" }} />
+                                    <span>Cuentas por Cobrar</span>
+                                </NavLink>
+                            </li>
+                            {user?.rol !== 'planta' && (
+                                <li className="nav-item">
+                                    <NavLink
+                                        className={({ isActive }) => `nav-link text-white rounded-3 py-2.5 px-3 d-flex align-items-center gap-3 ${isActive ? 'bg-primary shadow-sm' : ''}`}
+                                        to="/tareas"
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        <i className="fas fa-list-check text-info" style={{ width: "20px" }} />
+                                        <span>Tareas / To-Do</span>
+                                    </NavLink>
+                                </li>
+                            )}
+                            {user?.rol !== 'vendedor' && (
+                                <>
+                                    <li className="nav-item">
+                                        <NavLink
+                                            className={({ isActive }) => `nav-link text-white rounded-3 py-2.5 px-3 d-flex align-items-center gap-3 ${isActive ? 'bg-primary shadow-sm' : ''}`}
+                                            to="/pedidos/listOldOrders"
+                                            onClick={() => setIsOpen(false)}
+                                        >
+                                            <i className="fas fa-clock-rotate-left text-secondary" style={{ width: "20px" }} />
+                                            <span>Consolidado Anual</span>
+                                        </NavLink>
+                                    </li>
+                                    <li className="nav-item">
+                                        <NavLink
+                                            className={({ isActive }) => `nav-link text-white rounded-3 py-2.5 px-3 d-flex align-items-center gap-3 ${isActive ? 'bg-primary shadow-sm' : ''}`}
+                                            to="/pedidos/cruceCuentas"
+                                            onClick={() => setIsOpen(false)}
+                                        >
+                                            <i className="fas fa-scale-balanced text-primary" style={{ width: "20px" }} />
+                                            <span>Cruce de Cuentas</span>
+                                        </NavLink>
+                                    </li>
+                                </>
+                            )}
+                            <li className="nav-item">
+                                <NavLink
+                                    className={({ isActive }) => `nav-link text-white rounded-3 py-2.5 px-3 d-flex align-items-center gap-3 ${isActive ? 'bg-primary shadow-sm' : ''}`}
+                                    to="/clientes"
+                                    onClick={() => setIsOpen(false)}
+                                >
+                                    <i className="fas fa-users text-primary" style={{ width: "20px" }} />
+                                    <span>Clientes</span>
+                                </NavLink>
+                            </li>
+                            {user?.rol !== 'vendedor' && (
+                                <li className="nav-item">
+                                    <NavLink
+                                        className={({ isActive }) => `nav-link text-white rounded-3 py-2.5 px-3 d-flex align-items-center gap-3 ${isActive ? 'bg-primary shadow-sm' : ''}`}
+                                        to="/precios"
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        <i className="fas fa-tags text-info" style={{ width: "20px" }} />
+                                        <span>Gestión Precios</span>
+                                    </NavLink>
+                                </li>
+                            )}
+                        </ul>
+                    </div>
+
+                    {/* Footer Drawer con Acciones */}
+                    <div className="p-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between gap-2">
+                        <button
+                            onClick={toggleTheme}
+                            className="btn btn-sm btn-outline-light border-opacity-25 rounded-pill px-3 d-flex align-items-center gap-2"
+                        >
+                            <i className={`fas ${theme === 'light' ? 'fa-moon' : 'fa-sun'} text-warning`}></i>
+                            <span style={{ fontSize: '0.8rem' }}>{theme === 'light' ? 'Modo Noche' : 'Modo Día'}</span>
+                        </button>
+                        <button
+                            onClick={startLogout}
+                            className="btn btn-sm btn-danger rounded-pill px-3 d-flex align-items-center gap-2"
+                            style={{ fontSize: '0.8rem' }}
+                        >
+                            <i className="fas fa-sign-out-alt"></i>
+                            <span>Salir</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Usuario / Saludo a la izquierda */}

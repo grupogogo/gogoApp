@@ -25,7 +25,8 @@ export const CalendarPage = () => {
     return { style }
   }
 
-  const [lastView, setLastView] = useState(localStorage.getItem('lastView') || 'week') //Si no hay nada en lastview por defecto es week
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const [lastView, setLastView] = useState(localStorage.getItem('lastView') || (isMobile ? 'agenda' : 'week'));
 
   const onDoubleClick = (event) => {
     openDateModal();
@@ -39,25 +40,24 @@ export const CalendarPage = () => {
     setLastView(event);
   }
   return (
-
-
     <LayoutApp>
-
-      <Calendar
-        culture='es'
-        localizer={localizer}
-        events={events}
-        defaultView={lastView}
-        startAccessor="start"
-        endAccessor="end"
-        style={{ height: 'calc(100vh - 80px)'/* , width: 'calc(100vh - 250px)'  */ }}
-        messages={getMessagesES()}
-        eventPropGetter={eventStyleGetter}
-        components={{ event: CalendarEvent }}
-        onDoubleClickEvent={onDoubleClick}
-        onSelectEvent={onSelect}
-        onView={onViewChanged}
-      />
+      <div className="card border-0 shadow-sm rounded-4 p-2 p-md-3 bg-white overflow-hidden">
+        <Calendar
+          culture='es'
+          localizer={localizer}
+          events={events}
+          defaultView={lastView}
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: isMobile ? 'calc(100dvh - 160px)' : 'calc(100vh - 120px)', minHeight: '480px' }}
+          messages={getMessagesES()}
+          eventPropGetter={eventStyleGetter}
+          components={{ event: CalendarEvent }}
+          onDoubleClickEvent={onDoubleClick}
+          onSelectEvent={onSelect}
+          onView={onViewChanged}
+        />
+      </div>
       <CalendarModal />
       <FabAddNew />
       <FabDelete />

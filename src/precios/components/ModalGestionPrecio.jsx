@@ -15,6 +15,7 @@ const estadoInicialForm = {
     },
     precioCirios: {
         cc: 9000,
+        ccon: 9000,
         cb: 9000
     },
     precioGuantes: {
@@ -44,6 +45,7 @@ export const ModalGestionPrecio = ({ isOpen, onClose }) => {
                 },
                 precioCirios: {
                     cc: precioActivoModal.precioCirios?.cc ?? 0,
+                    ccon: precioActivoModal.precioCirios?.ccon ?? (precioActivoModal.precioCirios?.cc ?? 0),
                     cb: precioActivoModal.precioCirios?.cb ?? 0,
                 },
                 precioGuantes: {
@@ -285,10 +287,10 @@ export const ModalGestionPrecio = ({ isOpen, onClose }) => {
                                         <i className="fa-solid fa-fire-flame-curved text-warning"></i>
                                         Precios de Fábrica — Cirios
                                     </h6>
-                                    <span className="badge bg-warning-subtle text-dark rounded-pill small">2 Productos</span>
+                                    <span className="badge bg-warning-subtle text-dark rounded-pill small">3 Productos</span>
                                 </div>
                                 <div className="row g-3">
-                                    <div className="col-6 col-md-6">
+                                    <div className="col-12 col-md-4">
                                         <label className="form-label small fw-semibold text-secondary">Cirio de Comunión (CC)</label>
                                         <div className="input-group input-group-sm">
                                             <span className="input-group-text bg-light border-end-0 rounded-start-pill">$</span>
@@ -302,7 +304,21 @@ export const ModalGestionPrecio = ({ isOpen, onClose }) => {
                                             />
                                         </div>
                                     </div>
-                                    <div className="col-6 col-md-6">
+                                    <div className="col-12 col-md-4">
+                                        <label className="form-label small fw-semibold text-secondary">Cirio de Confirmación (CCON)</label>
+                                        <div className="input-group input-group-sm">
+                                            <span className="input-group-text bg-light border-end-0 rounded-start-pill">$</span>
+                                            <input
+                                                type="number"
+                                                name="ccon"
+                                                className="form-control rounded-end-pill fw-bold"
+                                                value={form.precioCirios.ccon}
+                                                onChange={handleCiriosChange}
+                                                min="0"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="col-12 col-md-4">
                                         <label className="form-label small fw-semibold text-secondary">Cirio de Bautizo (CB)</label>
                                         <div className="input-group input-group-sm">
                                             <span className="input-group-text bg-light border-end-0 rounded-start-pill">$</span>

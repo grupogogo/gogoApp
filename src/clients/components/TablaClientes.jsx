@@ -260,21 +260,21 @@ export const TablaClientes = ({ handleShow }) => {
 
                 {/* FILTROS RÁPIDOS Y BUSCADOR */}
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
-                    <div className="d-flex align-items-center gap-1 flex-wrap">
+                    <div className="scroll-horizontal-touch d-flex align-items-center gap-1 w-100 w-md-auto">
                         <button
-                            className={`btn btn-sm rounded-pill px-3 ${filtroTipo === 'todos' ? 'btn-primary shadow-xs' : 'btn-light border'}`}
+                            className={`btn btn-sm rounded-pill px-3 text-nowrap ${filtroTipo === 'todos' ? 'btn-primary shadow-xs' : 'btn-light border'}`}
                             onClick={() => { setFiltroTipo('todos'); pagination.fns.onSetPage(0); }}
                         >
                             Todos <span className="badge bg-white text-dark ms-1">{totalClientesCount}</span>
                         </button>
                         <button
-                            className={`btn btn-sm rounded-pill px-3 ${filtroTipo === 'distribuidor' ? 'btn-info text-white shadow-xs' : 'btn-light border'}`}
+                            className={`btn btn-sm rounded-pill px-3 text-nowrap ${filtroTipo === 'distribuidor' ? 'btn-info text-white shadow-xs' : 'btn-light border'}`}
                             onClick={() => { setFiltroTipo('distribuidor'); pagination.fns.onSetPage(0); }}
                         >
                             <i className="fas fa-store me-1"></i>Distribuidores <span className="badge bg-info-subtle text-dark ms-1">{totalDistribuidoresCount}</span>
                         </button>
                         <button
-                            className={`btn btn-sm rounded-pill px-3 ${filtroTipo === 'unitario' ? 'btn-secondary text-white shadow-xs' : 'btn-light border'}`}
+                            className={`btn btn-sm rounded-pill px-3 text-nowrap ${filtroTipo === 'unitario' ? 'btn-secondary text-white shadow-xs' : 'btn-light border'}`}
                             onClick={() => { setFiltroTipo('unitario'); pagination.fns.onSetPage(0); }}
                         >
                             <i className="fas fa-user me-1"></i>Unitarios <span className="badge bg-secondary-subtle text-dark ms-1">{totalUnitariosCount}</span>

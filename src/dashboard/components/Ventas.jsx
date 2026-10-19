@@ -220,10 +220,10 @@ export const Ventas = ({ datosUsuario }) => {
 
   return (
     <>
-      <div className="row align-items-center mb-3">
-        <div className="col-12 col-md-6 d-flex align-items-center gap-2">
+      <div className="row align-items-center mb-3 g-2">
+        <div className="col-12 col-sm-6 d-flex align-items-center">
           <div className="input-group form-select-sm d-flex align-items-center">
-            <span className='me-2 fw-semibold text-secondary'>Año a filtrar:</span>
+            <span className='me-2 fw-semibold text-secondary small'>Año a filtrar:</span>
             <select
               className="form-select form-select-sm shadow-xs rounded-2"
               title="Filtro por año"
@@ -246,18 +246,18 @@ export const Ventas = ({ datosUsuario }) => {
             </select>
           </div>
         </div>
-        <div className="col-12 col-md-6 d-flex justify-content-md-end mt-2 mt-md-0">
-          <div className="btn-group btn-group-sm shadow-xs rounded-3 p-1 bg-white border" role="group">
+        <div className="col-12 col-sm-6 d-flex justify-content-sm-end">
+          <div className="btn-group btn-group-sm shadow-xs rounded-3 p-1 bg-white border w-100 w-sm-auto" role="group">
             <button
               type="button"
-              className={`btn btn-sm rounded-2 fw-semibold ${vistaKpi ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary'}`}
+              className={`btn btn-sm rounded-2 fw-semibold flex-fill flex-sm-grow-0 ${vistaKpi ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary'}`}
               onClick={() => setVistaKpi(true)}
             >
               <i className="fas fa-th-large me-1"></i> Tarjetas KPI
             </button>
             <button
               type="button"
-              className={`btn btn-sm rounded-2 fw-semibold ${!vistaKpi ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary'}`}
+              className={`btn btn-sm rounded-2 fw-semibold flex-fill flex-sm-grow-0 ${!vistaKpi ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary'}`}
               onClick={() => setVistaKpi(false)}
             >
               <i className="fas fa-chart-pie me-1"></i> Gráficos
@@ -514,6 +514,7 @@ export const Ventas = ({ datosUsuario }) => {
             'KCE',
             'KB',
             'CC',
+            'CCON',
             'CB',
             'GUANTES-BLANCOS',
             'GUANTES-NEGROS',
@@ -557,7 +558,7 @@ export const Ventas = ({ datosUsuario }) => {
 
                     <div className="mt-3 p-2 bg-light rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-1 text-secondary" style={{ fontSize: '0.78rem' }}>
                       <span>Valor: <strong className="text-dark">{formatearPrecio(totalValor)}</strong></span>
-                      {(categoria === 'KCG' || categoria === 'KCP' || categoria === 'KCE' || categoria === 'KB' || categoria === 'CC' || categoria === 'CB') && (
+                      {(categoria === 'KCG' || categoria === 'KCP' || categoria === 'KCE' || categoria === 'KB' || categoria === 'CC' || categoria === 'CCON' || categoria === 'CB') && (
                         <span>Niño: <strong className="text-primary">{totales?.totalNino || 0}</strong> • Niña: <strong className="text-danger">{totales?.totalNina || 0}</strong></span>
                       )}
                     </div>

@@ -60,6 +60,14 @@ export const ImagesCiriosComunion = ({ pedido, setPedido, categoria, setCantidad
         } else {
           return false;
         }
+      case 'ccon':
+        if ((clienteActivo.precios?.precioCirios?.ccon !== null && clienteActivo.precios?.precioCirios?.ccon !== 0) ||
+            (clienteActivo.precios?.precioCirios?.cc !== null && clienteActivo.precios?.precioCirios?.cc !== 0) ||
+            (clienteActivo.precios?.precioCirios?.cb !== null && clienteActivo.precios?.precioCirios?.cb !== 0)) {
+          return true;
+        } else {
+          return false;
+        }
       case 'cb':
         if (clienteActivo.precios.precioCirios.cb !== null && clienteActivo.precios.precioCirios.cb !== 0) {
           return true

@@ -76,7 +76,7 @@ export const ListaPedidos = () => {
                                 const qty = parseInt(prod.cantidad) || 0;
                                 if (cat === 'GUANTES' || (prod.producto && prod.producto.toLowerCase().includes('guante'))) {
                                     totalGuantes += qty;
-                                } else if (cat.startsWith('K') || cat === 'CC' || cat === 'CB') {
+                                } else if (cat.startsWith('K') || cat === 'CC' || cat === 'CB' || cat === 'CCON') {
                                     totalKits += qty;
                                 }
                             });
@@ -116,89 +116,89 @@ export const ListaPedidos = () => {
                         </div>
                     </div>
 
-                    <div className="row g-3 mb-4">
+                    <div className="row g-2 g-md-3 mb-3 mb-md-4">
                         {/* 1. TOTAL FACTURACIÓN Y PEDIDOS */}
-                        <div className="col-12 col-sm-6 col-xl-3">
-                        <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
-                            <div className="d-flex justify-content-between align-items-start mb-2">
-                                <span className="p-2 bg-primary-subtle text-primary rounded-3">
-                                    <i className="fas fa-clipboard-list fa-lg"></i>
+                        <div className="col-6 col-md-6 col-xl-3">
+                        <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-2.5 p-sm-3 bg-white">
+                            <div className="d-flex justify-content-between align-items-start mb-1 mb-sm-2">
+                                <span className="p-1.5 p-sm-2 bg-primary-subtle text-primary rounded-3">
+                                    <i className="fas fa-clipboard-list"></i>
                                 </span>
-                                <span className="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 small">
-                                    {totalPedidos} órdenes
+                                <span className="badge bg-primary-subtle text-primary rounded-pill px-1.5 px-sm-2 py-0.5 small" style={{ fontSize: '0.68rem' }}>
+                                    {totalPedidos} ord.
                                 </span>
                             </div>
-                            <small className="text-muted fw-medium">Total Pedidos ({filtroAnio === 'todos' ? 'Todos' : filtroAnio})</small>
-                            <h4 className="fw-bolder text-dark mb-1 mt-1">
+                            <small className="text-muted fw-medium d-block text-truncate" style={{ fontSize: '0.72rem' }}>Total Pedidos ({filtroAnio === 'todos' ? 'Todos' : filtroAnio})</small>
+                            <h5 className="fw-bolder text-dark mb-1 mt-1 fs-6 fs-sm-5">
                                 {formatearPrecio(montoTotal)}
-                            </h4>
-                            <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                <i className="fas fa-box me-1 text-info"></i>{totalKits} kits • <i className="fas fa-hand-sparkles me-1 text-warning"></i>{totalGuantes} doc. guantes
+                            </h5>
+                            <small className="text-muted d-block text-truncate" style={{ fontSize: '0.7rem' }}>
+                                <i className="fas fa-box me-1 text-info"></i>{totalKits}k • <i className="fas fa-hand-sparkles me-1 text-warning"></i>{totalGuantes}g
                             </small>
                         </div>
                     </div>
 
                     {/* 2. EN PROCESO (PENDIENTES + PREPARADOS) */}
-                    <div className="col-12 col-sm-6 col-xl-3">
-                        <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
-                            <div className="d-flex justify-content-between align-items-start mb-2">
-                                <span className="p-2 bg-warning-subtle text-warning rounded-3">
-                                    <i className="fas fa-clock fa-lg"></i>
+                    <div className="col-6 col-md-6 col-xl-3">
+                        <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-2.5 p-sm-3 bg-white">
+                            <div className="d-flex justify-content-between align-items-start mb-1 mb-sm-2">
+                                <span className="p-1.5 p-sm-2 bg-warning-subtle text-warning rounded-3">
+                                    <i className="fas fa-clock"></i>
                                 </span>
-                                <span className="badge bg-warning-subtle text-warning-emphasis rounded-pill px-2 py-1 small">
-                                    Por Despachar
+                                <span className="badge bg-warning-subtle text-warning-emphasis rounded-pill px-1.5 px-sm-2 py-0.5 small" style={{ fontSize: '0.68rem' }}>
+                                    Despacho
                                 </span>
                             </div>
-                            <small className="text-muted fw-medium">En Preparación / Pendientes</small>
-                            <h4 className="fw-bolder text-dark mb-1 mt-1">
+                            <small className="text-muted fw-medium d-block text-truncate" style={{ fontSize: '0.72rem' }}>En Preparación</small>
+                            <h5 className="fw-bolder text-dark mb-1 mt-1 fs-6 fs-sm-5">
                                 {pendientes + preparados} pedidos
-                            </h4>
-                            <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                <span className="badge bg-danger-subtle text-danger me-1">{pendientes} pendientes</span>
-                                <span className="badge rounded-pill px-2 py-0" style={{ backgroundColor: '#f3e8ff', color: '#7e22ce' }}>{preparados} preparados</span>
+                            </h5>
+                            <small className="text-muted d-flex gap-1 flex-wrap" style={{ fontSize: '0.68rem' }}>
+                                <span className="badge bg-danger-subtle text-danger">{pendientes} pend.</span>
+                                <span className="badge rounded-pill" style={{ backgroundColor: '#f3e8ff', color: '#7e22ce' }}>{preparados} prep.</span>
                             </small>
                         </div>
                     </div>
 
                     {/* 3. EN RUTA / ENVIADOS */}
-                    <div className="col-12 col-sm-6 col-xl-3">
-                        <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
-                            <div className="d-flex justify-content-between align-items-start mb-2">
-                                <span className="p-2 bg-info-subtle text-info rounded-3">
-                                    <i className="fas fa-truck-fast fa-lg"></i>
+                    <div className="col-6 col-md-6 col-xl-3">
+                        <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-2.5 p-sm-3 bg-white">
+                            <div className="d-flex justify-content-between align-items-start mb-1 mb-sm-2">
+                                <span className="p-1.5 p-sm-2 bg-info-subtle text-info rounded-3">
+                                    <i className="fas fa-truck-fast"></i>
                                 </span>
-                                <span className="badge bg-info-subtle text-info rounded-pill px-2 py-1 small">
+                                <span className="badge bg-info-subtle text-info rounded-pill px-1.5 px-sm-2 py-0.5 small" style={{ fontSize: '0.68rem' }}>
                                     En Ruta
                                 </span>
                             </div>
-                            <small className="text-muted fw-medium">Despachados con Guía</small>
-                            <h4 className="fw-bolder text-dark mb-1 mt-1">
+                            <small className="text-muted fw-medium d-block text-truncate" style={{ fontSize: '0.72rem' }}>Despachados / Guía</small>
+                            <h5 className="fw-bolder text-dark mb-1 mt-1 fs-6 fs-sm-5">
                                 {enviados} pedidos
-                            </h4>
-                            <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                Monitoreo y seguimiento en tránsito
+                            </h5>
+                            <small className="text-muted d-block text-truncate" style={{ fontSize: '0.7rem' }}>
+                                Seguimiento en tránsito
                             </small>
                         </div>
                     </div>
 
                     {/* 4. COMPLETADOS (ENTREGADOS + PAGADOS) */}
-                    <div className="col-12 col-sm-6 col-xl-3">
-                        <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
-                            <div className="d-flex justify-content-between align-items-start mb-2">
-                                <span className="p-2 bg-success-subtle text-success rounded-3">
-                                    <i className="fas fa-circle-check fa-lg"></i>
+                    <div className="col-6 col-md-6 col-xl-3">
+                        <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-2.5 p-sm-3 bg-white">
+                            <div className="d-flex justify-content-between align-items-start mb-1 mb-sm-2">
+                                <span className="p-1.5 p-sm-2 bg-success-subtle text-success rounded-3">
+                                    <i className="fas fa-circle-check"></i>
                                 </span>
-                                <span className="badge bg-success-subtle text-success rounded-pill px-2 py-1 small">
-                                    {totalPedidos > 0 ? Math.round((completados / totalPedidos) * 100) : 0}% efectividad
+                                <span className="badge bg-success-subtle text-success rounded-pill px-1.5 px-sm-2 py-0.5 small" style={{ fontSize: '0.68rem' }}>
+                                    {totalPedidos > 0 ? Math.round((completados / totalPedidos) * 100) : 0}% efec.
                                 </span>
                             </div>
-                            <small className="text-muted fw-medium">Entregados & Pagados</small>
-                            <h4 className="fw-bolder text-dark mb-1 mt-1">
+                            <small className="text-muted fw-medium d-block text-truncate" style={{ fontSize: '0.72rem' }}>Entregados & Pagados</small>
+                            <h5 className="fw-bolder text-dark mb-1 mt-1 fs-6 fs-sm-5">
                                 {completados} pedidos
-                            </h4>
-                            <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                <span className="badge bg-success-subtle text-success me-1">{entregados} entregados</span>
-                                <span className="badge bg-primary-subtle text-primary">{pagados} pagados</span>
+                            </h5>
+                            <small className="text-muted d-flex gap-1 flex-wrap" style={{ fontSize: '0.68rem' }}>
+                                <span className="badge bg-success-subtle text-success">{entregados} entr.</span>
+                                <span className="badge bg-primary-subtle text-primary">{pagados} pag.</span>
                             </small>
                         </div>
                     </div>

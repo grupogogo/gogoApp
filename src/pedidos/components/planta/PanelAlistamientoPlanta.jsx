@@ -38,6 +38,7 @@ export const PanelAlistamientoPlanta = ({ pedidos = [] }) => {
     'KCE': 'Kit Económico',
     'KB': 'Kit Bautizo',
     'CC': 'Cirio Comunión',
+    'CCON': 'Cirio Confirmación',
     'CB': 'Cirio Bautizo',
     'GUANTES': 'Guantes',
     'GUA': 'Guantes',
@@ -934,17 +935,26 @@ export const PanelAlistamientoPlanta = ({ pedidos = [] }) => {
                                   <div>
                                     {/* 1. Header con Motivo y Badge Niño/Niña Grande */}
                                     <div className="d-flex align-items-center justify-content-between gap-1 mb-2">
-                                      <span
-                                        className="badge rounded-pill px-2.5 py-1 fw-bold text-white shadow-xs"
-                                        style={{
-                                          backgroundColor: '#1e40af',
-                                          border: '1px solid #1d4ed8',
-                                          fontSize: '0.78rem',
-                                          letterSpacing: '0.4px'
-                                        }}
-                                      >
-                                        <i className="fa-solid fa-tag me-1"></i>Motivo #{mod.motivoNum}
-                                      </span>
+                                      {(() => {
+                                        const usaLetras = ['KCG', 'KCP', 'KCE', 'CC', 'KB', 'CB', 'CCON'].includes(String(mod.categoria || '').toUpperCase());
+                                        const num = parseInt(mod.motivoNum, 10);
+                                        const label = (usaLetras && !isNaN(num) && num >= 1 && num <= 26)
+                                          ? `Modelo ${String.fromCharCode(64 + num)}`
+                                          : `Motivo #${mod.motivoNum}`;
+                                        return (
+                                          <span
+                                            className="badge rounded-pill px-2.5 py-1 fw-bold text-white shadow-xs"
+                                            style={{
+                                              backgroundColor: '#1e40af',
+                                              border: '1px solid #1d4ed8',
+                                              fontSize: '0.82rem',
+                                              letterSpacing: '0.4px'
+                                            }}
+                                          >
+                                            <i className="fa-solid fa-tag me-1"></i>{label}
+                                          </span>
+                                        );
+                                      })()}
                                       <span
                                         className="badge rounded-pill px-2.5 py-1 fw-bold text-white shadow-xs"
                                         style={{

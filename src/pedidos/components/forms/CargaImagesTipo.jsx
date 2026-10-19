@@ -9,6 +9,7 @@ export const CargaImagesTipo = ({ onInputChangeCont, pedido, imagen, talla = 't-
     const gen = (genero === '0') ? '-O' : '-A';
 
     const itemsImagn = (categoria, genero) => {
+        if (categoria === 'ccon') return 3;
         if (categoria === 'kb' || categoria === 'cb') return 6;
         if (categoria === 'kce') return 6;
         if (categoria === 'cc' || categoria === 'kcg' || categoria === 'kcp') return (genero === '0') ? 5 : 7;
@@ -17,6 +18,14 @@ export const CargaImagesTipo = ({ onInputChangeCont, pedido, imagen, talla = 't-
 
     const { obtenerImagen, aTitulo } = useFuntions();
     const count = itemsImagn(categoria, genero);
+    const usaLetras = ['kcg', 'kcp', 'cc', 'kce', 'kb', 'cb', 'ccon'].includes(String(categoria || '').toLowerCase());
+
+    const obtenerEtiquetaModelo = (idx) => {
+        if (usaLetras) {
+            return String.fromCharCode(65 + idx); // 0 -> A, 1 -> B, 2 -> C, ...
+        }
+        return `#${idx + 1}`;
+    };
 
     // Dimensiones según el tamaño seleccionado
     const configTamano = {
@@ -132,9 +141,9 @@ export const CargaImagesTipo = ({ onInputChangeCont, pedido, imagen, talla = 't-
 
             {/* GRILLA DE MODELOS */}
             <div
-                className="d-grid gap-3"
+                className="d-grid gap-2 gap-sm-3"
                 style={{
-                    gridTemplateColumns: `repeat(auto-fit, minmax(${configTamano.minWidth}, 1fr))`,
+                    gridTemplateColumns: `repeat(auto-fill, minmax(clamp(130px, calc(50% - 8px), ${configTamano.minWidth}), 1fr))`,
                 }}
             >
                 {[...Array(count)].map((_, index) => {
@@ -167,14 +176,27 @@ export const CargaImagesTipo = ({ onInputChangeCont, pedido, imagen, talla = 't-
                                 onClick={() => setModalData({ index, imgSrc, inputName, itemVal })}
                                 title="Haz clic para ampliar este modelo"
                             >
-                                {/* BADGE DE NUMERACIÓN */}
+                                {/* BADGE DE IDENTIFICACIÓN DE MODELO */}
                                 <span
-                                    className={`position-absolute top-0 start-0 m-2 badge rounded-pill px-2 py-1 small fw-bold ${
-                                        isSelected ? 'bg-primary text-white shadow-xs' : 'bg-white text-secondary border shadow-xs'
+                                    className={`position-absolute top-0 start-0 m-2 badge shadow-sm fw-bolder ${
+                                        isSelected 
+                                            ? 'bg-primary text-white border border-primary' 
+                                            : 'bg-white text-dark border border-secondary-subtle'
                                     }`}
-                                    style={{ fontSize: '0.75rem', zIndex: 2 }}
+                                    style={{ 
+                                        fontSize: usaLetras ? '1rem' : '0.82rem', 
+                                        fontWeight: 800,
+                                        minWidth: '30px',
+                                        height: '30px',
+                                        borderRadius: '8px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        zIndex: 2,
+                                        lineHeight: 1
+                                    }}
                                 >
-                                    #{index + 1}
+                                    {obtenerEtiquetaModelo(index)}
                                 </span>
 
                                 {/* BOTÓN ICONO DE ZOOM */}
@@ -190,7 +212,7 @@ export const CargaImagesTipo = ({ onInputChangeCont, pedido, imagen, talla = 't-
                                 <img
                                     className="rounded-2 img-fluid"
                                     src={imgSrc}
-                                    alt={`Modelo ${index + 1}`}
+                                    alt={`Modelo ${obtenerEtiquetaModelo(index)}`}
                                     style={{
                                         maxWidth: "100%",
                                         maxHeight: "100%",
@@ -264,8 +286,8 @@ export const CargaImagesTipo = ({ onInputChangeCont, pedido, imagen, talla = 't-
                             {/* CABECERA MODAL */}
                             <div className="modal-header border-bottom py-2 px-3 bg-light d-flex align-items-center justify-content-between">
                                 <div className="d-flex align-items-center gap-2">
-                                    <span className="badge bg-primary text-white rounded-pill px-3 py-1 fw-bold fs-7">
-                                        Modelo #{modalData.index + 1}
+                                    <span className="badge bg-primary text-white rounded-pill px-3 py-1 fw-bold fs-6">
+                                        Modelo {obtenerEtiquetaModelo(modalData.index)}
                                     </span>
                                     <span className="fw-semibold text-dark small">
                                         {aTitulo ? aTitulo(categoria) : categoria.toUpperCase()} • {genero === '0' ? 'Niño' : 'Niña'}
@@ -304,7 +326,7 @@ export const CargaImagesTipo = ({ onInputChangeCont, pedido, imagen, talla = 't-
                                 >
                                     <img
                                         src={modalData.imgSrc}
-                                        alt={`Modelo ${modalData.index + 1}`}
+                                        alt={`Modelo ${obtenerEtiquetaModelo(modalData.index)}`}
                                         className="img-fluid rounded-3"
                                         style={{
                                             maxHeight: '52vh',

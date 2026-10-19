@@ -11,22 +11,49 @@ export const GastosLoadInput = () => {
 
     useEffect(() => {
         if (searchTerm) {
-            const filteredGastos = gastos
-                .filter(gasto =>
-                    gasto.user === user.uid &&
-                    gasto.gasto.toLowerCase().includes(searchTerm.toLowerCase())
-                );
+            const term = searchTerm.toLowerCase();
+            const suggestionsList = [];
 
-            // Crear un conjunto para eliminar duplicados por nombre de gasto (ignorando mayúsculas/minúsculas)
+            gastos.forEach(gasto => {
+                const gastoUserId = (gasto.user?._id || gasto.user?.uid || gasto.user)?.toString();
+                if (gastoUserId !== user.uid) return;
+
+                // Si el gasto tiene items desglosados, incluir cada item individual
+                if (Array.isArray(gasto.items) && gasto.items.length > 0) {
+                    gasto.items.forEach(it => {
+                        if (it.gasto && it.gasto.toLowerCase().includes(term)) {
+                            suggestionsList.push({
+                                gasto: it.gasto,
+                                codigo: it.codigo,
+                                subCategoria: it.subCategoria,
+                                precio: it.precio,
+                                cantidad: it.cantidad || 1,
+                                proveedor: gasto.proveedor,
+                                categoria: gasto.categoria,
+                                tipoGasto: gasto.tipoGasto
+                            });
+                        }
+                    });
+                }
+
+                // Gasto a nivel raíz
+                if (gasto.gasto && gasto.gasto.toLowerCase().includes(term)) {
+                    suggestionsList.push({
+                        ...gasto,
+                        gasto: gasto.gasto,
+                        proveedor: gasto.proveedor,
+                    });
+                }
+            });
+
+            // Evitar duplicados por nombre de gasto
             const uniqueGastos = Array.from(
                 new Map(
-                    filteredGastos.map(gasto => [gasto.gasto.toLowerCase(), gasto]) // Usa un Map para evitar duplicados
+                    suggestionsList.map(g => [g.gasto.toLowerCase(), g])
                 ).values()
             );
 
-            // Ordenar alfabéticamente ignorando mayúsculas/minúsculas
             uniqueGastos.sort((a, b) => a.gasto.toLowerCase().localeCompare(b.gasto.toLowerCase()));
-
             setSuggestions(uniqueGastos);
         } else {
             setSuggestions([]);

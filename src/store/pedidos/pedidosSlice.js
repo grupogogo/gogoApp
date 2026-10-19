@@ -29,8 +29,10 @@ export const pedidosSlice = createSlice({
         },
         onUpdatePedido: (state, { payload }) => {
             state.pedidos = state.pedidos.map(ped => {
-                if (ped.pedido_id === payload.pedido_id) {
-                    return payload;
+                const pedId = ped.pedido_id || ped._id;
+                const payId = payload.pedido_id || payload._id;
+                if (pedId && payId && pedId === payId) {
+                    return { ...ped, ...payload, pedido_id: pedId };
                 }
                 return ped;
             });

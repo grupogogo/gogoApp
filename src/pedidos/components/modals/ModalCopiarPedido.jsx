@@ -23,6 +23,7 @@ export const ModalCopiarPedido = ({ show, handleClose, pedido, clienteCompleto, 
     if (code === 'KCE') return Number(pKits.kce) || Number(item.precioUnitario || item.precio) || 0;
     if (code === 'KB') return Number(pKits.kb) || Number(item.precioUnitario || item.precio) || 0;
     if (code === 'CC') return Number(pCirios.cc) || Number(item.precioUnitario || item.precio) || 0;
+    if (code === 'CCON') return Number(pCirios.ccon) || Number(pCirios.cc) || Number(pCirios.cb) || Number(item.precioUnitario || item.precio) || 0;
     if (code === 'CB') return Number(pCirios.cb) || Number(item.precioUnitario || item.precio) || 0;
 
     if (code === 'GUANTES' || code === 'GUA') {
@@ -60,6 +61,7 @@ export const ModalCopiarPedido = ({ show, handleClose, pedido, clienteCompleto, 
       'KCE': 'Kit Comunión Económico',
       'KB': 'Kit Bautizo',
       'CC': 'Cirio Comunión',
+      'CCON': 'Cirio Confirmación',
       'CB': 'Cirio Bautizo',
       'GUANTES': 'Guantes',
       'OTR': 'Otros Productos'

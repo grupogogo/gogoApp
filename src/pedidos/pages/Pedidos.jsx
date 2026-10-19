@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { LayoutApp } from "../../layout/LayoutApp"
-import { KitComuPeque, KitBautizo, CirioBautizo, CirioComunion, Guantes, KitComungrande, OtrosProductos, CardEstadisticasCliente } from "../";
+import { KitComuPeque, KitBautizo, CirioBautizo, CirioComunion, CirioConfirmacion, Guantes, KitComungrande, OtrosProductos, CardEstadisticasCliente } from "../";
 import { useClientesStore, useForm, useFuntions, usePedidosStore } from "../../hooks";
 import { ReusableModal } from "../../modals/ReusableModal";
 import Swal from "sweetalert2";
@@ -95,9 +95,23 @@ export const Pedidos = () => {
     handleShow();
     limpiarClienteActivo();
     setResetearPedido(prev => prev + 1);
-    setPedidoGeneral([]);
+    setPedidoGeneral({});
     setDetallesPorCategoria([]);
+    setTotal(0);
   }
+
+  const handleCambiarCliente = () => {
+    limpiarClienteActivo();
+    setResetearPedido(prev => prev + 1);
+    setPedidoGeneral({});
+    setDetallesPorCategoria([]);
+    setTotal(0);
+    setFormState(prev => ({
+      ...prev,
+      detalle: '',
+      costoEnvio: 0
+    }));
+  };
   const formattedDate = format(fechaActual, "MMMM d, yyyy HH:mm", { locale: es });
 
   const actualizarPedidoPorCategoria = (categoria, pedido, detalle = '') => {
@@ -116,7 +130,7 @@ export const Pedidos = () => {
     });
   };
 
-  const guardarPedidoGeneral = () => {
+  const guardarPedidoGeneral = async () => {
     if (!clienteActivo.cliente_id) {
       Swal.fire({
         title: "Selecciona un cliente",
@@ -150,25 +164,39 @@ export const Pedidos = () => {
     };
     setPedidoGeneral(nuevoPedido);
 
-    const resultado = comenzarGuardarPedido(nuevoPedido);
+    const resultado = await comenzarGuardarPedido(nuevoPedido);
     if (resultado) {
       Swal.fire({
         position: "center",
         icon: "success",
-        title: "¡Pedido creado exitosamente!",
-        text: `Se ha registrado el pedido para ${clienteActivo.nombre}`,
+        title: "¡Pedido Creado con Éxito!",
+        html: `
+          <div style="text-align: center; font-size: 13.5px; color: #475569;">
+            <p style="margin: 0 0 8px 0;">Se registró el pedido correctamente para <strong style="color: #0284c7;">${clienteActivo.nombre}</strong></p>
+            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 16px; margin: 8px auto 0 auto; display: inline-block; text-align: left;">
+              <div style="font-size: 12px; color: #64748b;">Ciudad: <strong style="color: #0f172a;">${clienteActivo.ciudad || 'No especificada'}</strong></div>
+              <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Despacho: <strong style="color: #0f172a;">${tipoDespacho}</strong></div>
+              <div style="font-size: 13px; font-weight: 800; color: #16a34a; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1;">
+                Total: ${formatearPrecio(total + (Number(costoEnvio) || 0))}
+              </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 11.5px; color: #94a3b8;">
+              Redirigiendo a la lista de pedidos...
+            </div>
+          </div>
+        `,
         showConfirmButton: false,
-        timer: 1600
+        timer: 2000
       });
       setResetearPedido(prev => prev + 1);
       setPedidoGeneral([]);
       setDetallesPorCategoria([]);
       setTimeout(() => {
         if (selAnioPedido === new Date().getFullYear()) {
-          navegar('/listaPedidos')
+          navegar('/listaPedidos');
           setClienteActivo([]);
         }
-      }, 1600);
+      }, 2000);
     }
   }
 
@@ -269,12 +297,12 @@ export const Pedidos = () => {
             <Row className="g-4">
               {/* Columna Izquierda: Información de entrega y pago */}
               <Col xs={12} lg={6} className="border-end-lg">
-                <div className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                <div className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom flex-wrap gap-2">
                   <div className="d-flex align-items-center gap-2">
                     <i className="fa-solid fa-sliders text-primary"></i>
                     <h6 className="fw-bold text-dark mb-0">Detalles de Entrega y Pago</h6>
                   </div>
-                  <div style={{ maxWidth: '180px' }}>
+                  <div className="w-100 w-sm-auto" style={{ maxWidth: '200px' }}>
                     <div className="input-group input-group-sm">
                       <DatePicker
                         className="form-control form-control-sm text-center fw-medium shadow-none"
@@ -373,8 +401,8 @@ export const Pedidos = () => {
                         type="button"
                         className="btn btn-sm btn-outline-danger rounded-pill px-2 py-0 d-flex align-items-center gap-1"
                         style={{ fontSize: '0.72rem' }}
-                        onClick={limpiarClienteActivo}
-                        title="Quitar cliente seleccionado"
+                        onClick={handleCambiarCliente}
+                        title="Quitar cliente seleccionado y reiniciar cantidades de productos"
                       >
                         <i className="fa-solid fa-xmark"></i>
                         <span>Cambiar cliente</span>
@@ -503,9 +531,32 @@ export const Pedidos = () => {
                 <KitBautizo agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} initialItems={pedidoCopiado?.listadoPedido?.['KB']} />
                 <CirioBautizo agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} initialItems={pedidoCopiado?.listadoPedido?.['CB']} />
                 <CirioComunion agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} initialItems={pedidoCopiado?.listadoPedido?.['CC']} />
+                <CirioConfirmacion agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} initialItems={pedidoCopiado?.listadoPedido?.['CCON']} />
                 <Guantes agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} initialItems={pedidoCopiado?.listadoPedido?.['GUANTES']} />
                 <OtrosProductos agregarPedidoGeneral={actualizarPedidoPorCategoria} resetearPedido={resetearPedido} initialItems={pedidoCopiado?.listadoPedido?.['OTR']} />
               </div>
+            </div>
+          )}
+
+          {/* Barra Flotante Inferior de Envío para Móviles */}
+          {clienteActivo?.cliente_id && total > 0 && (
+            <div
+              className="d-lg-none position-fixed bottom-0 start-0 end-0 border-top shadow-lg p-2.5 px-3 d-flex align-items-center justify-content-between"
+              style={{ zIndex: 1040, backgroundColor: 'rgba(255, 255, 255, 0.96)', backdropFilter: 'blur(8px)' }}
+            >
+              <div>
+                <small className="text-muted d-block fw-semibold" style={{ fontSize: '0.7rem' }}>Total Factura</small>
+                <span className="fw-bolder text-primary fs-5">${formatearPrecio(total)}</span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-success rounded-pill px-3 py-1.5 fw-bold shadow-sm d-flex align-items-center gap-2"
+                onClick={guardarPedidoGeneral}
+                style={{ fontSize: '0.86rem' }}
+              >
+                <i className="fa-solid fa-paper-plane"></i>
+                <span>Enviar Pedido</span>
+              </button>
             </div>
           )}
         </div>

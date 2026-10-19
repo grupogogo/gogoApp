@@ -130,6 +130,9 @@ export const EstadisticasPedidos = () => {
                     case "CC":
                         precioUnitario = clienteActivo.precios.precioCirios.cc;
                         break;
+                    case "CCON":
+                        precioUnitario = clienteActivo.precios.precioCirios.ccon || clienteActivo.precios.precioCirios.cc || clienteActivo.precios.precioCirios.cb;
+                        break;
                     case "CB":
                         precioUnitario = clienteActivo.precios.precioCirios.cb;
                         break;

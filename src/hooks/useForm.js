@@ -39,7 +39,7 @@ export const useForm = (initialForm = {}, formValidations = {}) => {
                     }
                 }
             }));
-        } else if (name === 'cc' || name === 'cb') {
+        } else if (name === 'cc' || name === 'cb' || name === 'ccon') {
             setFormState((prev) => ({
                 ...prev,
                 precios: {

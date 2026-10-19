@@ -15,14 +15,14 @@ export const LayoutApp = ({ children }) => {
       <div className="flex-grow-1 d-flex flex-column">
         <Navbar />
         <main
-          className="flex-grow-1 p-3 main-content"
+          className="flex-grow-1 p-2 p-md-3 main-content"
           style={{
             marginLeft: user.rol === 'planta' ? "0px" : "80px",
             transition: "margin-left 0.3s ease",
             overflowX: "hidden" // <- Esto evita que el contenido se desborde en X
           }}
         >
-          <div className="container-fluid">
+          <div className="container-fluid px-1 px-sm-2 px-md-3">
           {children}
           </div>
         </main>

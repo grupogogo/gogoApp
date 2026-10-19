@@ -74,6 +74,7 @@ export const useFuntions = () => {
         precioCirios: {
             cc = 0,
             cb = 0,
+            ccon = 0,
         } = {},
         precioGuantes: {
             gb = 0,
@@ -323,6 +324,7 @@ export const useFuntions = () => {
             'KCE': 'Kit Comunión Económico',
             'KB': 'Kit de Bautizo',
             'CC': 'Cirio de Comunión',
+            'CCON': 'Cirio de Confirmación',
             'CB': 'Cirio de Bautizo',
             'GUANTES-BLANCOS': 'Guantes Blancos',
             'GUANTES-NEGROS': 'Guantes Negros',
@@ -364,6 +366,9 @@ export const useFuntions = () => {
         if (categoria === 'kce' || categoria === 'KCE') {
             return 'economico-unisex';
         }
+        if (categoria === 'ccon' || categoria === 'CCON') {
+            return 'confirmacion';
+        }
         if (categoria === 'kcg' || categoria === 'kcp' || categoria === 'cc' || categoria === 'KCG' || categoria === 'KCP' || categoria === 'CC') {
             return 'comunion-nin' + (genero === '0' ? 'o' : 'a')
         } else {
@@ -387,6 +392,8 @@ export const useFuntions = () => {
                 return cb;
             case 'cc':
                 return cc;
+            case 'ccon':
+                return ccon || cc || cb;
             case 'kb':
                 return kb;
             case 'kcp':
@@ -431,8 +438,9 @@ export const useFuntions = () => {
             (categoria === 'KIT COMUNIÓN PEQUEÑO') ? preciosAnio.precioKits.kcp :
                 (categoria === 'KIT DE BAUTIZO') ? preciosAnio.precioKits.kb :
                     (categoria === 'KIT COMUNIÓN ECONOMICO (Nuevo producto)') ? preciosAnio.precioKits.kce :
-                        (categoria === 'CIRIO DE COMUNIÓN') ? preciosAnio.precioCirios.cc :
-                            (categoria === 'CIRIO DE BAUTIZO') ? preciosAnio.precioCirios.cb :
+                        (categoria === 'CIRIO DE COMUNIÓN' || categoria === 'CIRIO COMUNIÓN') ? preciosAnio.precioCirios.cc :
+                            (categoria === 'CIRIO DE CONFIRMACIÓN' || categoria === 'CIRIO DE CONFIRMACION' || categoria === 'CIRIO CONFIRMACIÓN' || categoria === 'CIRIO CONFIRMACION') ? (preciosAnio.precioCirios.ccon || preciosAnio.precioCirios.cc || preciosAnio.precioCirios.cb) :
+                                (categoria === 'CIRIO DE BAUTIZO') ? preciosAnio.precioCirios.cb :
                                 (categoria === 'GUANTES BLANCOS') ? preciosAnio.precioGuantes.gb :
                                     (categoria === 'GUANTES NEGROS') ? preciosAnio.precioGuantes.gn :
                                         (categoria === 'GUANTES MITON') ? preciosAnio.precioGuantes.gm : 0;
@@ -446,7 +454,8 @@ export const useFuntions = () => {
                 (categoria === 'KCE') ? 'KIT COMUNIÓN ECONOMICO (Nuevo producto)' :
                     (categoria === 'KB') ? 'KIT DE BAUTIZO' :
                         (categoria === 'CC') ? 'CIRIO DE COMUNIÓN' :
-                            (categoria === 'CB') ? 'CIRIO DE BAUTIZO' :
+                            (categoria === 'CCON') ? 'CIRIO DE CONFIRMACION' :
+                                (categoria === 'CB') ? 'CIRIO DE BAUTIZO' :
                                 (categoria === 'BLANCOS' || categoria === 'GUANTES-BLANCOS' || categoria === 'GB') ? 'GUANTES BLANCOS' :
                                     (categoria === 'NEGROS' || categoria === 'GN' || categoria === 'GUANTES-NEGROS') ? 'GUANTES NEGROS' :
                                         (categoria === 'MITON' || categoria === 'GM' || categoria === 'GUANTES-MITON') ? 'GUANTES MITON' :
@@ -754,7 +763,7 @@ export const useFuntions = () => {
 
             (order.itemPedido || []).forEach(item => {
                 Object.entries(item.itemPedido || {}).forEach(([categoriaItem, category]) => {
-                    if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'KCE'].includes(categoriaItem)) {
+                    if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'CCON', 'KCE'].includes(categoriaItem)) {
                         (category.pedido || []).forEach(product => {
                             const price = Number(product.precioUnitario || product.precio || 0);
                             const quantity = parseInt(product.cantidad, 10) || 0;
@@ -798,7 +807,7 @@ export const useFuntions = () => {
 
             (order.itemPedido || []).forEach(item => {
                 Object.entries(item.itemPedido || {}).forEach(([categoriaItem, category]) => {
-                    if (['KCG', 'KCP', 'KB', 'CC', 'CB'/* , 'KCE' */].includes(categoriaItem)) {
+                    if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'CCON'/* , 'KCE' */].includes(categoriaItem)) {
                         (category.pedido || []).forEach(product => {
                             const price2 = buscarPrecioxCategoriaAnio(buscarNombre(categoriaItem), year);
                             const quantity = parseInt(product.cantidad, 10) || 0;
@@ -1036,7 +1045,7 @@ export const useFuntions = () => {
                     if (!Array.isArray(category?.pedido)) return;
 
                     // ===== CATEGORÍAS PRINCIPALES =====
-                    if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'OTR', 'KCE'].includes(categoriaItem)) {
+                    if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'CCON', 'OTR', 'KCE'].includes(categoriaItem)) {
                         if (categoriaItem !== categoria) return;
 
                         category.pedido.forEach(product => {
@@ -1290,7 +1299,7 @@ export const useFuntions = () => {
         if (!pedido?.itemPedido) return;
 
         let totalItems = 0;
-        let totalKits = [0, 0, 0, 0, 0, 0];
+        let totalKits = [0, 0, 0, 0, 0, 0, 0];
         let totalGuantes = [0, 0, 0];
         let totalOtros = 0;
 
@@ -1319,6 +1328,8 @@ export const useFuntions = () => {
                         totalKits[2] += totalPorProducto;
                     } else if (categoriaKey === 'CC') {
                         totalKits[3] += totalPorProducto;
+                    } else if (categoriaKey === 'CCON') {
+                        totalKits[6] += totalPorProducto;
                     } else if (categoriaKey === 'CB') {
                         totalKits[4] += totalPorProducto;
                     } else if (categoriaKey === 'KCE') {

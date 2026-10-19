@@ -36,7 +36,7 @@ export const CardComparativaUsuarios = ({
       Object.entries(rawItems || {}).forEach(([catKey, catVal]) => {
         const prodList = catVal?.pedido || [];
         const catUpper = (catKey || '').toUpperCase();
-        const isKits = ['KCG', 'KCP', 'KB', 'CC', 'CB', 'KCE', 'K'].includes(catUpper);
+        const isKits = ['KCG', 'KCP', 'KB', 'CC', 'CB', 'CCON', 'KCE', 'K'].includes(catUpper);
         const isGuantesCat = catUpper === 'GUANTES' || catUpper.includes('GUANTE');
 
         prodList.forEach(prod => {

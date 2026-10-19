@@ -23,7 +23,7 @@ export const ModalImprimirPedido = ({ setShow, show, pedido }) => {
         items.forEach(({ itemPedido }) => {
             Object.entries(itemPedido).forEach(([categoria, { pedido }]) => {
                 // Si la categoría es GUANTES, necesitamos agrupar por subcategorías (BLANCOS, NEGROS, MITON)            
-                if (['KCG', 'KCP', 'KB', 'CC', 'CB'].includes(categoria)) {
+                if (['KCG', 'KCP', 'KB', 'CC', 'CB', 'CCON', 'KCE'].includes(categoria)) {
                     // Inicializamos las variables para contar niños y niñas
                     let cantidadNinos = 0;
                     let cantidadNinas = 0;
@@ -282,7 +282,7 @@ export const ModalImprimirPedido = ({ setShow, show, pedido }) => {
                                                 <td className='text-left'>
                                                     {(['OTR', 'GM', 'GN', 'GB'].includes(item?.categoria)) ? (
                                                         (item?.producto).toUpperCase()
-                                                    ) : (['KCG', 'KCP', 'KB', 'CB', 'CC'].includes(item?.categoria)) ? (
+                                                    ) : (['KCG', 'KCP', 'KB', 'CB', 'CC', 'CCON', 'KCE'].includes(item?.categoria)) ? (
                                                         buscarNombre(item?.categoria) + '(' + (item?.producto) + ')'
                                                     ) : (
                                                         buscarNombre(item?.categoria)

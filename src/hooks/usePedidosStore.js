@@ -46,11 +46,18 @@ export const usePedidosStore = () => {
         }
     };
     const startEditarPedido = async (pedido) => {
-        dispatch(onUpdatePedido(pedido));
         try {
-            const { data } = await gogoApi.put(`/pedidos/${pedido.pedido_id}`, pedido);
+            const pedidoId = pedido.pedido_id || pedido._id;
+            const { data } = await gogoApi.put(`/pedidos/${pedidoId}`, pedido);
+            if (data.ok) {
+                dispatch(onUpdatePedido(data.pedido || pedido));
+                return { ok: true, pedido: data.pedido || pedido };
+            } else {
+                throw new Error(data.msg || 'Error al actualizar el estado del pedido');
+            }
         } catch (error) {
-
+            console.error('Error al actualizar estado del pedido:', error);
+            throw error;
         }
     }
     const startDeletePedido = async (pedido) => {

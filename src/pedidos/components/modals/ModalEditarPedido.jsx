@@ -146,16 +146,50 @@ export const ModalEditarPedido = ({ show, handleClose, pedido }) => {
             return;
         }
 
+        const idMostrar = String(pedido.pedido_id || pedido._id || '').slice(-8).toUpperCase();
+        const clienteNom = aTitulo(pedido.cliente?.nombre || 'Cliente');
+        const clienteCiu = aTitulo(pedido.cliente?.ciudad || '');
+
         const confirm = await Swal.fire({
-            title: '¿Guardar modificaciones?',
-            html: `Se actualizarán los ítems y datos del pedido <strong>#${(pedido.pedido_id || pedido._id).slice(-6).toUpperCase()}</strong>.<br/><br/>` +
-                  `Productos: <strong>${totalProductos}</strong> | Total: <strong>${formatearPrecio(granTotal)}</strong>`,
-            icon: 'question',
+            title: '¿Guardar modificaciones del pedido?',
+            html: `
+                <div style="text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
+                            <span style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700;">Remisión / Pedido</span>
+                            <span style="font-family: monospace; font-weight: 800; font-size: 12px; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 6px;">#${idMostrar}</span>
+                        </div>
+                        <div style="font-size: 14px; font-weight: 800; color: #0f172a;">
+                            ${clienteNom}
+                            ${clienteCiu ? `<span style="font-size: 12px; font-weight: 500; color: #64748b;"> • ${clienteCiu}</span>` : ''}
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f5f9; font-size: 12px;">
+                            <div>
+                                <span style="color: #64748b; font-size: 11px;">Total Unidades:</span>
+                                <div style="font-weight: 700; color: #0f172a;">${totalProductos} productos</div>
+                            </div>
+                            <div>
+                                <span style="color: #64748b; font-size: 11px;">Nuevo Gran Total:</span>
+                                <div style="font-weight: 800; color: #16a34a; font-size: 13px;">${formatearPrecio(granTotal)}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 10px 12px; border-radius: 8px;">
+                        <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #15803d; margin-bottom: 2px;">
+                            📋 Impacto del Proceso
+                        </div>
+                        <div style="font-size: 12px; color: #166534; line-height: 1.4;">
+                            Se actualizarán los productos, motivos, tallas y subtotales en la base de datos para este pedido.
+                        </div>
+                    </div>
+                </div>
+            `,
             showCancelButton: true,
             confirmButtonColor: '#2563eb',
             cancelButtonColor: '#64748b',
-            confirmButtonText: 'Sí, guardar cambios',
-            cancelButtonText: 'Revisar'
+            confirmButtonText: '<i class="fa-solid fa-floppy-disk me-1"></i> Sí, guardar cambios',
+            cancelButtonText: 'Seguir revisando'
         });
 
         if (!confirm.isConfirmed) return;
@@ -169,8 +203,17 @@ export const ModalEditarPedido = ({ show, handleClose, pedido }) => {
             Swal.fire({
                 icon: 'success',
                 title: '¡Pedido Actualizado!',
-                text: res.msg || 'Los cambios se guardaron correctamente en la base de datos.',
-                timer: 2000,
+                html: `
+                    <div style="text-align: center; font-size: 13px; color: #475569;">
+                        <p style="margin: 0 0 8px 0;">Los cambios del pedido <strong style="color: #2563eb;">#${idMostrar}</strong> de <strong>${clienteNom}</strong> fueron guardados correctamente.</p>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; display: inline-block; margin-top: 4px;">
+                            <strong>${totalProductos}</strong> unidades • Total: <strong style="color: #16a34a;">${formatearPrecio(granTotal)}</strong>
+                        </div>
+                    </div>
+                `,
+                timer: 2600,
+                confirmButtonColor: '#2563eb',
+                confirmButtonText: 'Listo',
                 showConfirmButton: false
             });
             handleClose();
@@ -178,7 +221,15 @@ export const ModalEditarPedido = ({ show, handleClose, pedido }) => {
             Swal.fire({
                 icon: 'error',
                 title: 'Error al actualizar',
-                text: res.msg || 'No se pudieron guardar los cambios.'
+                html: `
+                    <div style="text-align: left; font-size: 13px; color: #475569;">
+                        <p>No fue posible guardar las modificaciones del pedido <strong>#${idMostrar}</strong>.</p>
+                        <div style="background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; font-size: 12px; border: 1px solid #fca5a5;">
+                            ${res.msg || 'Error de conexión con el servidor.'}
+                        </div>
+                    </div>
+                `,
+                confirmButtonColor: '#dc2626'
             });
         }
     };

@@ -271,76 +271,76 @@ export const CuentasXCobrar = () => {
     <LayoutApp>
       <div className="container-fluid px-2 px-md-3 py-2">
         {/* TARJETAS KPI DE CARTERA */}
-        <div className="row g-3 mb-4">
+        <div className="row g-2 g-md-3 mb-3 mb-md-4">
           {/* 1. TOTAL CARTERA */}
-          <div className="col-12 col-sm-6 col-xl-3">
-            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
-              <div className="d-flex justify-content-between align-items-start mb-2">
-                <span className="p-2 bg-primary-subtle text-primary rounded-3">
-                  <i className="fas fa-hand-holding-usd fa-lg"></i>
+          <div className="col-6 col-md-6 col-xl-3">
+            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-2.5 p-sm-3 bg-white">
+              <div className="d-flex justify-content-between align-items-start mb-1 mb-sm-2">
+                <span className="p-1.5 p-sm-2 bg-primary-subtle text-primary rounded-3">
+                  <i className="fas fa-hand-holding-usd"></i>
                 </span>
-                <span className="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 small">
-                  {filteredData.nodes.length} remisiones
+                <span className="badge bg-primary-subtle text-primary rounded-pill px-1.5 px-sm-2 py-0.5 small" style={{ fontSize: '0.68rem' }}>
+                  {filteredData.nodes.length} rem.
                 </span>
               </div>
-              <small className="text-muted fw-medium">Total Cartera ({aTitulo(estado)})</small>
-              <h4 className="fw-bolder text-dark mb-0 mt-1">
+              <small className="text-muted fw-medium d-block text-truncate" style={{ fontSize: '0.72rem' }}>Total Cartera ({aTitulo(estado)})</small>
+              <h5 className="fw-bolder text-dark mb-0 mt-1 fs-6 fs-sm-5">
                 {formatearPrecio(totalCartera)}
-              </h4>
+              </h5>
             </div>
           </div>
 
           {/* 2. KITS EN CARTERA */}
-          <div className="col-12 col-sm-6 col-xl-3">
-            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
-              <div className="d-flex justify-content-between align-items-start mb-2">
-                <span className="p-2 bg-info-subtle text-info rounded-3">
-                  <i className="fas fa-box-open fa-lg"></i>
+          <div className="col-6 col-md-6 col-xl-3">
+            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-2.5 p-sm-3 bg-white">
+              <div className="d-flex justify-content-between align-items-start mb-1 mb-sm-2">
+                <span className="p-1.5 p-sm-2 bg-info-subtle text-info rounded-3">
+                  <i className="fas fa-box-open"></i>
                 </span>
-                <span className="badge bg-info-subtle text-info rounded-pill px-2 py-1 small">
+                <span className="badge bg-info-subtle text-info rounded-pill px-1.5 px-sm-2 py-0.5 small" style={{ fontSize: '0.68rem' }}>
                   Kits
                 </span>
               </div>
-              <small className="text-muted fw-medium">Kits en Cartera</small>
-              <h4 className="fw-bolder text-dark mb-0 mt-1">
+              <small className="text-muted fw-medium d-block text-truncate" style={{ fontSize: '0.72rem' }}>Kits en Cartera</small>
+              <h5 className="fw-bolder text-dark mb-0 mt-1 fs-6 fs-sm-5">
                 {formatearPrecio(totalKitsCartera)}
-              </h4>
+              </h5>
             </div>
           </div>
 
           {/* 3. GUANTES EN CARTERA */}
-          <div className="col-12 col-sm-6 col-xl-3">
-            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
-              <div className="d-flex justify-content-between align-items-start mb-2">
-                <span className="p-2 bg-warning-subtle text-warning rounded-3">
-                  <i className="fas fa-hand-sparkles fa-lg"></i>
+          <div className="col-6 col-md-6 col-xl-3">
+            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-2.5 p-sm-3 bg-white">
+              <div className="d-flex justify-content-between align-items-start mb-1 mb-sm-2">
+                <span className="p-1.5 p-sm-2 bg-warning-subtle text-warning rounded-3">
+                  <i className="fas fa-hand-sparkles"></i>
                 </span>
-                <span className="badge bg-warning-subtle text-warning rounded-pill px-2 py-1 small">
+                <span className="badge bg-warning-subtle text-warning rounded-pill px-1.5 px-sm-2 py-0.5 small" style={{ fontSize: '0.68rem' }}>
                   Guantes
                 </span>
               </div>
-              <small className="text-muted fw-medium">Guantes en Cartera</small>
-              <h4 className="fw-bolder text-dark mb-0 mt-1">
+              <small className="text-muted fw-medium d-block text-truncate" style={{ fontSize: '0.72rem' }}>Guantes en Cartera</small>
+              <h5 className="fw-bolder text-dark mb-0 mt-1 fs-6 fs-sm-5">
                 {formatearPrecio(totalGuantesCartera)}
-              </h4>
+              </h5>
             </div>
           </div>
 
           {/* 4. OTROS EN CARTERA */}
-          <div className="col-12 col-sm-6 col-xl-3">
-            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-3 bg-white">
-              <div className="d-flex justify-content-between align-items-start mb-2">
-                <span className="p-2 bg-secondary-subtle text-secondary rounded-3">
-                  <i className="fas fa-tags fa-lg"></i>
+          <div className="col-6 col-md-6 col-xl-3">
+            <div className="card border border-light-subtle shadow-sm rounded-4 h-100 p-2.5 p-sm-3 bg-white">
+              <div className="d-flex justify-content-between align-items-start mb-1 mb-sm-2">
+                <span className="p-1.5 p-sm-2 bg-secondary-subtle text-secondary rounded-3">
+                  <i className="fas fa-tags"></i>
                 </span>
-                <span className="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1 small">
+                <span className="badge bg-secondary-subtle text-secondary rounded-pill px-1.5 px-sm-2 py-0.5 small" style={{ fontSize: '0.68rem' }}>
                   Otros
                 </span>
               </div>
-              <small className="text-muted fw-medium">Otros Productos</small>
-              <h4 className="fw-bolder text-dark mb-0 mt-1">
+              <small className="text-muted fw-medium d-block text-truncate" style={{ fontSize: '0.72rem' }}>Otros Productos</small>
+              <h5 className="fw-bolder text-dark mb-0 mt-1 fs-6 fs-sm-5">
                 {formatearPrecio(totalOtrosCartera)}
-              </h4>
+              </h5>
             </div>
           </div>
         </div>

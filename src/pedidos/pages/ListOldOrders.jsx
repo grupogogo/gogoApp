@@ -681,9 +681,9 @@ export const ListOldOrders = () => {
                         </div>
 
                         {/* Pestañas de Navegación de Reportes */}
-                        <div className="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
+                        <div className="scroll-horizontal-touch gap-2 mt-3 pt-3 border-top pb-1">
                             <button
-                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'finanzas' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap ${activeTab === 'finanzas' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
                                     }`}
                                 onClick={() => setActiveTab('finanzas')}
                             >
@@ -692,7 +692,7 @@ export const ListOldOrders = () => {
                             </button>
 
                             <button
-                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'categorias' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap ${activeTab === 'categorias' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
                                     }`}
                                 onClick={() => setActiveTab('categorias')}
                             >
@@ -701,7 +701,7 @@ export const ListOldOrders = () => {
                             </button>
 
                             <button
-                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'clientes' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap ${activeTab === 'clientes' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
                                     }`}
                                 onClick={() => setActiveTab('clientes')}
                             >
@@ -711,7 +711,7 @@ export const ListOldOrders = () => {
                             </button>
 
                             <button
-                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'comparativa' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap ${activeTab === 'comparativa' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
                                     }`}
                                 onClick={() => setActiveTab('comparativa')}
                             >
@@ -720,7 +720,7 @@ export const ListOldOrders = () => {
                             </button>
 
                             <button
-                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'multianual' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap ${activeTab === 'multianual' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
                                     }`}
                                 onClick={() => setActiveTab('multianual')}
                             >
@@ -729,13 +729,13 @@ export const ListOldOrders = () => {
                             </button>
 
                             <button
-                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 ${activeTab === 'pedidos' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
+                                className={`btn btn-sm rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap ${activeTab === 'pedidos' ? 'btn-dark text-white shadow-sm' : 'btn-outline-secondary'
                                     }`}
                                 onClick={() => setActiveTab('pedidos')}
                             >
                                 <i className="fa-solid fa-table-list"></i>
-                                <span>Detalle de Pedidos</span>
-                                <span className="badge bg-primary rounded-pill">{stats.totalPedidos}</span>
+                                <span>Listado Detallado de Órdenes</span>
+                                <span className="badge bg-primary rounded-pill">{pedidosFiltrados.length}</span>
                             </button>
 
                             <button
@@ -2962,7 +2962,7 @@ export const ListOldOrders = () => {
                                                                             {order.items?.map((it, i) => {
                                                                                 const esGuante = it.categoriaId === 'GUANTES' || (it.producto && it.producto.toLowerCase().includes('guante'));
                                                                                 const esKit = ['KCG', 'KCP', 'KCE', 'KB'].includes(it.categoriaId);
-                                                                                const esCirio = ['CC', 'CB'].includes(it.categoriaId);
+                                                                                const esCirio = ['CC', 'CB', 'CCON'].includes(it.categoriaId);
                                                                                 const unidadTexto = esGuante ? 'docenas' : (esKit ? 'kits' : (esCirio ? 'cirios' : 'uds'));
 
                                                                                 return (

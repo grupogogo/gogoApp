@@ -22,7 +22,8 @@ const estadoInicial = {
             kce: 0
         }, precioCirios: {
             cc: 0,
-            cb: 0
+            cb: 0,
+            ccon: 0
         },
         precioGuantes: {
             gb: 0,

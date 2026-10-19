@@ -17,6 +17,7 @@ export const CATEGORIAS_DEFINICION = [
     { id: 'KCE', nombre: 'Kit Comunión Económico', grupo: 'Kits', unidad: 'Kits', color: '#93c5fd' },
     { id: 'KB', nombre: 'Kit de Bautizo', grupo: 'Kits', unidad: 'Kits', color: '#10b981' },
     { id: 'CC', nombre: 'Cirio de Comunión', grupo: 'Kits', unidad: 'Kits', color: '#f59e0b' },
+    { id: 'CCON', nombre: 'Cirio de Confirmación', grupo: 'Kits', unidad: 'Kits', color: '#f97316' },
     { id: 'CB', nombre: 'Cirio de Bautizo', grupo: 'Kits', unidad: 'Kits', color: '#fbbf24' },
     { id: 'G_BLANCOS', nombre: 'Guantes Blancos', grupo: 'Guantes', unidad: 'Docenas', color: '#8b5cf6' },
     { id: 'G_MITON', nombre: 'Guantes Mitón', grupo: 'Guantes', unidad: 'Docenas', color: '#a855f7' },
@@ -381,6 +382,11 @@ export const normalizarModernPedido = (pedido) => {
                     idMatriz = 'CC';
                     subcategoria = genero === '1' ? 'Niña' : 'Niño';
                     nombreItem = 'Cirio de Comunión';
+                } else if (categoriaKey === 'CCON') {
+                    categoriaId = 'CCON';
+                    idMatriz = 'CCON';
+                    subcategoria = genero === '1' ? 'Niña' : 'Niño';
+                    nombreItem = 'Cirio de Confirmación';
                 } else if (categoriaKey === 'CB') {
                     categoriaId = 'CB';
                     idMatriz = 'CB';
@@ -603,10 +609,10 @@ export const calcularEstadisticasAnio = (
             const gen = String(it.genero);
             // Regla de negocio: Cirios (CC, CB) hacen parte de Kits
             const esKit = esCategoriaKits(it.categoriaId, it.codigo) ||
-                ['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'K'].includes(String(it.categoriaId || '').toUpperCase()) ||
+                ['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'CCON', 'K'].includes(String(it.categoriaId || '').toUpperCase()) ||
                 String(it.producto || '').toLowerCase().includes('cirio') ||
                 String(it.producto || '').toLowerCase().includes('kit');
-            const esCirio = ['CC', 'CB'].includes(it.categoriaId) || String(it.producto || '').toLowerCase().includes('cirio');
+            const esCirio = ['CC', 'CB', 'CCON'].includes(it.categoriaId) || String(it.producto || '').toLowerCase().includes('cirio');
             const esGuante = esCategoriaGuantes(it.categoriaId, it.codigo, it.producto);
 
             if (m !== null && m >= 0 && m <= 11) {
@@ -794,6 +800,7 @@ export const calcularEstadisticasAnio = (
         { id: 'KCE', nombre: 'Kit Comunión Económico', grupo: 'Kits', unidad: 'Kits', color: '#93c5fd' },
         { id: 'KB', nombre: 'Kit de Bautizo', grupo: 'Kits', unidad: 'Kits', color: '#10b981' },
         { id: 'CC', nombre: 'Cirio de Comunión', grupo: 'Kits', unidad: 'Kits', color: '#f59e0b' },
+        { id: 'CCON', nombre: 'Cirio de Confirmación', grupo: 'Kits', unidad: 'Kits', color: '#f97316' },
         { id: 'CB', nombre: 'Cirio de Bautizo', grupo: 'Kits', unidad: 'Kits', color: '#fbbf24' },
         { id: 'G_BLANCOS', nombre: 'Guantes Blancos', grupo: 'Guantes', unidad: 'Docenas', color: '#8b5cf6' },
         { id: 'G_MITON', nombre: 'Guantes Mitón', grupo: 'Guantes', unidad: 'Docenas', color: '#a855f7' },
@@ -936,7 +943,7 @@ export const calcularEstadisticasAnio = (
     // 2. Guantes (subcategorías)
     // 3. Otros (productos individuales agrupados)
     const categoriasMatrizOrdenadas = Object.values(categoriasMatriz).filter(cat => {
-        if (['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'G_BLANCOS', 'G_MITON', 'G_NEGROS'].includes(cat.id)) {
+        if (['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'CCON', 'G_BLANCOS', 'G_MITON', 'G_NEGROS'].includes(cat.id)) {
             return true;
         }
         return cat.unidades > 0 || cat.totalVenta > 0;
@@ -1121,8 +1128,8 @@ export const esOrdenDeOscar = (order) => {
 export const esCategoriaKits = (catId = '', codigo = '') => {
     const c = String(catId || '').toUpperCase().trim();
     const cod = String(codigo || '').toUpperCase().trim();
-    return ['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'K'].includes(c) ||
-        ['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CCNA', 'CCNO', 'CBNA', 'CBNO'].includes(cod);
+    return ['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'CCON', 'K'].includes(c) ||
+        ['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'CCON', 'KGCA', 'KGCO', 'KPCA', 'KPCO', 'KBNA', 'KBNO', 'CCNA', 'CCNO', 'CBNA', 'CBNO', 'CCONA', 'CCONO'].includes(cod);
 };
 
 export const esCategoriaGuantes = (catId = '', codigo = '', prodName = '') => {
@@ -1155,7 +1162,7 @@ export const esItemKit = (it = {}) => {
         return false;
     }
     return esCategoriaKits(it.categoriaId, it.codigo) ||
-        ['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'K'].includes(c) ||
+        ['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'CCON', 'K'].includes(c) ||
         String(it.producto || '').toLowerCase().includes('cirio') ||
         String(it.producto || '').toLowerCase().includes('kit');
 };
@@ -1853,6 +1860,7 @@ export const SUB_CATEGORIAS_KITS_CONFIG = [
     { id: 'KCE', nombre: 'Kit Comunión Económico', shortName: 'Kit Económico', color: '#a855f7' },
     { id: 'CB', nombre: 'Cirio de Bautizo', shortName: 'Cirio Bautizo', color: '#ec4899' },
     { id: 'CC', nombre: 'Cirio de Comunión', shortName: 'Cirio Comunión', color: '#14b8a6' },
+    { id: 'CCON', nombre: 'Cirio de Confirmación', shortName: 'Cirio Confirmación', color: '#f97316' },
 ];
 
 /**
@@ -1865,6 +1873,7 @@ export const PRECIOS_FABRICA_KITS_DEFAULT = {
     KB: 14500,
     KCE: 7400,
     CC: 9000,
+    CCON: 9000,
     CB: 9000
 };
 
@@ -1958,6 +1967,7 @@ export const obtenerPrecioFabricaItem = (tipoKit, tarifaVigente) => {
     if (tipoKit === 'KB') return Number(pk.kb || 0);
     if (tipoKit === 'KCE') return Number(pk.kce || 0);
     if (tipoKit === 'CC') return Number(pc.cc || 0);
+    if (tipoKit === 'CCON') return Number(pc.ccon || pc.cc || pc.cb || 0);
     if (tipoKit === 'CB') return Number(pc.cb || 0);
 
     return 0;
@@ -2016,8 +2026,14 @@ export const clasificarItemKit = (item = {}) => {
         return 'KB';
     }
 
-    // 5. Cirio de Comunión
-    if (c === 'CC' || cod.startsWith('CC') || cod === 'CCNA' || cod === 'CCNO' || cod === 'CCA' || cod === 'CCO' ||
+    // 5. Cirio de Confirmación (evaluar antes de CC para evitar falso positivo con startsWith('CC'))
+    if (c === 'CCON' || cod.startsWith('CCON') || cod === 'CCONA' || cod === 'CCONO' ||
+        (prod.includes('cirio') && (prod.includes('confirmaci') || prod.includes('confirmación') || prod.includes('confirmacion')))) {
+        return 'CCON';
+    }
+
+    // 5.1 Cirio de Comunión
+    if (c === 'CC' || (cod.startsWith('CC') && !cod.startsWith('CCON')) || cod === 'CCNA' || cod === 'CCNO' || cod === 'CCA' || cod === 'CCO' ||
         (prod.includes('cirio') && (prod.includes('comuni') || prod.includes('comunión') || prod.includes('comunion')))) {
         return 'CC';
     }

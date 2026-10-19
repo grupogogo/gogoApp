@@ -54,6 +54,7 @@ export const usePreciosStore = () => {
                 },
                 precioCirios: {
                     cc: Number(formData.precioCirios?.cc || 0),
+                    ccon: Number(formData.precioCirios?.ccon || formData.precioCirios?.cc || formData.precioCirios?.cb || 0),
                     cb: Number(formData.precioCirios?.cb || 0),
                 },
                 precioGuantes: {
@@ -192,6 +193,7 @@ export const usePreciosStore = () => {
         if (cat === 'kb') return tarifaAplicable.precioKits?.kb || 0;
         if (cat === 'kce') return tarifaAplicable.precioKits?.kce || 0;
         if (cat === 'cc') return tarifaAplicable.precioCirios?.cc || 0;
+        if (cat === 'ccon') return tarifaAplicable.precioCirios?.ccon || tarifaAplicable.precioCirios?.cc || tarifaAplicable.precioCirios?.cb || 0;
         if (cat === 'cb') return tarifaAplicable.precioCirios?.cb || 0;
         if (cat === 'gb') return tarifaAplicable.precioGuantes?.gb || 0;
         if (cat === 'gn') return tarifaAplicable.precioGuantes?.gn || 0;

@@ -14,7 +14,9 @@ import {
     ButtonGroup,
     OverlayTrigger,
     Tooltip,
-    Collapse
+    Collapse,
+    Modal,
+    Spinner
 } from 'react-bootstrap';
 import { usePedidosStore, useGastosStore, usePreciosStore, useAuthStore, useFuntions, useAnticiposStore } from '../../hooks';
 import { LayoutApp } from '../../layout/LayoutApp';
@@ -50,6 +52,7 @@ const NOMBRES_CANONICOS_KITS = {
     KCE: 'Kit Comunión Económico',
     KB: 'Kit de Bautizo',
     CC: 'Cirio de Comunión',
+    CCON: 'Cirio de Confirmación',
     CB: 'Cirio de Bautizo'
 };
 
@@ -63,6 +66,7 @@ export const CruceCuentas = () => {
         isLoadingAnticipos,
         startLoadingAnticipos,
         startCrearAnticipo,
+        startActualizarAnticipo,
         startEliminarAnticipo
     } = useAnticiposStore();
 
@@ -84,7 +88,7 @@ export const CruceCuentas = () => {
     const [fechaHasta, setFechaHasta] = useState('');
     const [filtroEstado, setFiltroEstado] = useState('TODOS'); // 'TODOS' | 'VALIDOS' | 'pagado' | 'entregado' | 'despacho' | 'preparado' | 'pendiente'
     const [busqueda, setBusqueda] = useState('');
-    const [filtroCategoriaOtros, setFiltroCategoriaOtros] = useState('KITS'); // 'KITS' habilitado por defecto | 'GUANTES' | 'TODOS'
+    const [filtroCategoriaOtros, setFiltroCategoriaOtros] = useState('TODOS'); // 'TODOS' habilitado por defecto | 'KITS' | 'GUANTES'
 
     // Precios de Fábrica y Categorías para "Otros" persistentes
     const [preciosOtros, setPreciosOtros] = useState(() => {
@@ -105,10 +109,20 @@ export const CruceCuentas = () => {
         cantidad: 1,
         valor: '',
         total: '',
-        tipo: 'OSCAR_A_LEO' // 'OSCAR_A_LEO' | 'LEO_A_OSCAR'
+        tipo: 'OSCAR_A_LEO', // 'OSCAR_A_LEO' | 'LEO_A_OSCAR'
+        fecha: new Date().toLocaleDateString('en-CA'),
+        soportes: []
     });
     const [isGuardandoAnticipo, setIsGuardandoAnticipo] = useState(false);
     const [openAnticipos, setOpenAnticipos] = useState(true);
+
+    // Estados para el visor y gestor de soportes / comprobantes
+    const [modalSoportesData, setModalSoportesData] = useState({
+        show: false,
+        anticipo: null,
+        subiendo: false
+    });
+    const [visorImagenUrl, setVisorImagenUrl] = useState(null);
 
     // Estados para hacer que cada ítem sea desplegable / colapsable
     const [openItemsLeo, setOpenItemsLeo] = useState({
@@ -201,6 +215,162 @@ export const CruceCuentas = () => {
         }));
     };
 
+    // Helpers para manejo de archivos (Soportes / Comprobantes) y Fechas de Anticipos
+    const formatearTamanoArchivo = (bytes) => {
+        if (!bytes || bytes <= 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    };
+
+    const obtenerFechaInput = (fecha) => {
+        if (!fecha) return new Date().toLocaleDateString('en-CA');
+        try {
+            const d = new Date(fecha);
+            if (isNaN(d.getTime())) return new Date().toLocaleDateString('en-CA');
+            return d.toLocaleDateString('en-CA');
+        } catch {
+            return new Date().toLocaleDateString('en-CA');
+        }
+    };
+
+    const handleCambiarFechaAnticipo = async (ant, nuevaFecha) => {
+        if (!nuevaFecha) return;
+        const id = ant._id || ant.id;
+        await startActualizarAnticipo(id, { fecha: nuevaFecha });
+    };
+
+    const handleCargarArchivosSoporte = (archivos, callback) => {
+        const fileList = Array.from(archivos || []);
+        if (fileList.length === 0) return;
+
+        const MAX_SIZE = 12 * 1024 * 1024; // 12MB máximo por archivo
+        const validos = fileList.filter(f => {
+            if (f.size > MAX_SIZE) {
+                Swal.fire('Archivo muy grande', `El archivo "${f.name}" supera el límite de 12MB.`, 'warning');
+                return false;
+            }
+            return true;
+        });
+
+        if (validos.length === 0) return;
+
+        const promises = validos.map(file => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    resolve({
+                        nombre: file.name,
+                        tipo: file.type || 'application/octet-stream',
+                        size: file.size,
+                        data: e.target.result,
+                        fechaSubida: new Date()
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        Promise.all(promises).then(nuevos => {
+            callback(nuevos);
+        });
+    };
+
+    const handleSeleccionarSoportesNuevo = (e) => {
+        handleCargarArchivosSoporte(e.target.files, (nuevos) => {
+            setNuevoAnticipo(prev => ({
+                ...prev,
+                soportes: [...(prev.soportes || []), ...nuevos]
+            }));
+        });
+        e.target.value = '';
+    };
+
+    const handleQuitarSoporteNuevo = (idx) => {
+        setNuevoAnticipo(prev => ({
+            ...prev,
+            soportes: (prev.soportes || []).filter((_, i) => i !== idx)
+        }));
+    };
+
+    const handleAbrirModalSoportes = (ant) => {
+        setModalSoportesData({
+            show: true,
+            anticipo: ant,
+            subiendo: false
+        });
+    };
+
+    const handleCerrarModalSoportes = () => {
+        setModalSoportesData({
+            show: false,
+            anticipo: null,
+            subiendo: false
+        });
+    };
+
+    const handleSubirSoportesAExistente = (e) => {
+        const anticipoActual = modalSoportesData.anticipo;
+        if (!anticipoActual) return;
+        handleCargarArchivosSoporte(e.target.files, async (nuevos) => {
+            setModalSoportesData(p => ({ ...p, subiendo: true }));
+            const soportesActualizados = [...(anticipoActual.soportes || []), ...nuevos];
+            const act = await startActualizarAnticipo(anticipoActual._id || anticipoActual.id, {
+                soportes: soportesActualizados
+            }, false);
+            if (act) {
+                setModalSoportesData({
+                    show: true,
+                    anticipo: act,
+                    subiendo: false
+                });
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `${nuevos.length === 1 ? 'Comprobante añadido' : 'Comprobantes añadidos'}`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                setModalSoportesData(p => ({ ...p, subiendo: false }));
+            }
+        });
+        e.target.value = '';
+    };
+
+    const handleEliminarSoporteDeAnticipo = async (soporteIdx) => {
+        const anticipoActual = modalSoportesData.anticipo;
+        if (!anticipoActual) return;
+
+        const confirm = await Swal.fire({
+            title: '¿Eliminar comprobante?',
+            text: '¿Deseas quitar este archivo de soporte del anticipo?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        const soportesRestantes = (anticipoActual.soportes || []).filter((_, i) => i !== soporteIdx);
+        const act = await startActualizarAnticipo(anticipoActual._id || anticipoActual.id, {
+            soportes: soportesRestantes
+        }, false);
+
+        if (act) {
+            setModalSoportesData({
+                show: true,
+                anticipo: act,
+                subiendo: false
+            });
+        }
+    };
+
     // Cargar anticipos al cambiar el año seleccionado
     useEffect(() => {
         startLoadingAnticipos(anioSeleccionado);
@@ -228,14 +398,20 @@ export const CruceCuentas = () => {
         }
 
         setIsGuardandoAnticipo(true);
-        const anio = (anioSeleccionado && anioSeleccionado !== 'TODOS') ? Number(anioSeleccionado) : new Date().getFullYear();
+        const fechaParaGuardar = nuevoAnticipo.fecha || new Date().toLocaleDateString('en-CA');
+        const anio = (anioSeleccionado && anioSeleccionado !== 'TODOS') 
+            ? Number(anioSeleccionado) 
+            : new Date(`${fechaParaGuardar}T12:00:00`).getFullYear();
+
         const res = await startCrearAnticipo({
             detalle: nuevoAnticipo.detalle.trim(),
             cantidad: cantNum,
             valor: valorNum,
             total: totalNum,
             tipo: nuevoAnticipo.tipo,
-            anio
+            anio,
+            fecha: fechaParaGuardar,
+            soportes: nuevoAnticipo.soportes || []
         });
 
         if (res) {
@@ -244,7 +420,9 @@ export const CruceCuentas = () => {
                 cantidad: 1,
                 valor: '',
                 total: '',
-                tipo: prev.tipo
+                tipo: prev.tipo,
+                fecha: new Date().toLocaleDateString('en-CA'),
+                soportes: []
             }));
         }
         setIsGuardandoAnticipo(false);
@@ -536,6 +714,10 @@ export const CruceCuentas = () => {
         let totalFabricaGuantesLeo = 0;
         let totalUnidadesOtrosLeo = 0;
         let totalFabricaOtrosLeo = 0;
+        let totalUnidadesOtrosLeoKits = 0;
+        let totalFabricaOtrosLeoKits = 0;
+        let totalUnidadesOtrosLeoGuantes = 0;
+        let totalFabricaOtrosLeoGuantes = 0;
 
         // Karol (Cliente de Leonardo)
         const karolKitsMap = {};
@@ -547,6 +729,10 @@ export const CruceCuentas = () => {
         let totalFabricaCiriosKarol = 0;
         let totalUnidadesOtrosKarol = 0;
         let totalFabricaOtrosKarol = 0;
+        let totalUnidadesOtrosKarolKits = 0;
+        let totalFabricaOtrosKarolKits = 0;
+        let totalUnidadesOtrosKarolGuantes = 0;
+        let totalFabricaOtrosKarolGuantes = 0;
 
         // Oscar
         const oscarKitsMap = {};
@@ -558,6 +744,10 @@ export const CruceCuentas = () => {
         let totalFabricaCiriosOscar = 0;
         let totalUnidadesOtrosOscar = 0;
         let totalFabricaOtrosOscar = 0;
+        let totalUnidadesOtrosOscarKits = 0;
+        let totalFabricaOtrosOscarKits = 0;
+        let totalUnidadesOtrosOscarGuantes = 0;
+        let totalFabricaOtrosOscarGuantes = 0;
 
         // Iterar pedidos y desglosar ítems
         pedidosFiltrados.forEach(order => {
@@ -595,9 +785,9 @@ export const CruceCuentas = () => {
 
                 // Cirios
                 const esCirio = !esExplicitOtro && !esGuante && (
-                    clasifKit === 'CC' || clasifKit === 'CB' ||
-                    ['CC', 'CB', 'CCNA', 'CCA', 'CBNA', 'CBA'].includes(cId) ||
-                    ['CC', 'CB', 'CCNA', 'CCA', 'CBNA', 'CBA'].includes(codStr) ||
+                    clasifKit === 'CC' || clasifKit === 'CB' || clasifKit === 'CCON' ||
+                    ['CC', 'CB', 'CCON', 'CCNA', 'CCA', 'CBNA', 'CBA', 'CCONA', 'CCONO'].includes(cId) ||
+                    ['CC', 'CB', 'CCON', 'CCNA', 'CCA', 'CBNA', 'CBA', 'CCONA', 'CCONO'].includes(codStr) ||
                     String(it.producto || it.nombreItem || '').toLowerCase().includes('cirio')
                 );
 
@@ -622,7 +812,9 @@ export const CruceCuentas = () => {
                 }
 
                 const codCirio = esCirio
-                    ? ((clasifKit === 'CB' || String(it.producto || it.nombreItem || '').toLowerCase().includes('bautiz') || cId.includes('CB') || codStr.includes('CB')) ? 'CB' : 'CC')
+                    ? (clasifKit === 'CCON' || String(it.producto || it.nombreItem || '').toLowerCase().includes('confirm') || cId.includes('CCON') || codStr.includes('CCON')
+                        ? 'CCON'
+                        : ((clasifKit === 'CB' || String(it.producto || it.nombreItem || '').toLowerCase().includes('bautiz') || cId.includes('CB') || codStr.includes('CB')) ? 'CB' : 'CC'))
                     : null;
 
                 // Cualquier producto que no sea Kit, Cirio o Guante pasa automáticamente a OTROS
@@ -656,7 +848,7 @@ export const CruceCuentas = () => {
                         const pFabrica = obtenerPrecioFabricaItem(codCirio, tarifaVigente) || PRECIOS_FABRICA_KITS_DEFAULT[codCirio] || 0;
                         const sub = cant * pFabrica;
                         const key = codCirio;
-                        const nombreCirio = NOMBRES_CANONICOS_KITS[codCirio] || it.producto || (codCirio === 'CC' ? 'Cirio de Comunión' : 'Cirio de Bautizo');
+                        const nombreCirio = NOMBRES_CANONICOS_KITS[codCirio] || it.producto || (codCirio === 'CC' ? 'Cirio de Comunión' : (codCirio === 'CCON' ? 'Cirio de Confirmación' : 'Cirio de Bautizo'));
                         if (!leoCiriosMap[key]) {
                             leoCiriosMap[key] = {
                                 codigo: key,
@@ -698,29 +890,32 @@ export const CruceCuentas = () => {
                         const cleanName = formatearTituloProducto(it.producto || it.nombreItem || 'Producto');
                         const key = `OTR_${cleanName.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 30)}`;
                         const categoriaNegocio = categoriasOtrosDb[key] || (esDeKit ? 'Kits' : 'Guantes');
-                        if (filtroCategoriaOtros === 'TODOS' || 
-                            (filtroCategoriaOtros === 'KITS' && categoriaNegocio === 'Kits') || 
-                            (filtroCategoriaOtros === 'GUANTES' && categoriaNegocio === 'Guantes')) {
-                            const pFabrica = Number(preciosOtros[key] || 0);
-                            const sub = cant * pFabrica;
-                            const subVenta = cant * Number(it.precio || 0);
-                            if (!leoOtrosMap[key]) {
-                                leoOtrosMap[key] = {
-                                    key,
-                                    nombre: cleanName,
-                                    categoriaNegocio,
-                                    cantidad: 0,
-                                    precioFabrica: pFabrica,
-                                    total: 0,
-                                    totalVenta: 0,
-                                    precioVentaPromedio: 0
-                                };
-                            }
-                            leoOtrosMap[key].cantidad += cant;
-                            leoOtrosMap[key].total += sub;
-                            leoOtrosMap[key].totalVenta += subVenta;
-                            totalUnidadesOtrosLeo += cant;
-                            totalFabricaOtrosLeo += sub;
+                        const pFabrica = Number(preciosOtros[key] || 0);
+                        const sub = cant * pFabrica;
+                        const subVenta = cant * Number(it.precio || 0);
+                        if (!leoOtrosMap[key]) {
+                            leoOtrosMap[key] = {
+                                key,
+                                nombre: cleanName,
+                                categoriaNegocio,
+                                cantidad: 0,
+                                precioFabrica: pFabrica,
+                                total: 0,
+                                totalVenta: 0,
+                                precioVentaPromedio: 0
+                            };
+                        }
+                        leoOtrosMap[key].cantidad += cant;
+                        leoOtrosMap[key].total += sub;
+                        leoOtrosMap[key].totalVenta += subVenta;
+                        totalUnidadesOtrosLeo += cant;
+                        totalFabricaOtrosLeo += sub;
+                        if (categoriaNegocio === 'Kits') {
+                            totalUnidadesOtrosLeoKits += cant;
+                            totalFabricaOtrosLeoKits += sub;
+                        } else {
+                            totalUnidadesOtrosLeoGuantes += cant;
+                            totalFabricaOtrosLeoGuantes += sub;
                         }
                     }
                 } else if (esKarol) {
@@ -750,7 +945,7 @@ export const CruceCuentas = () => {
                         const pFabrica = obtenerPrecioFabricaItem(codCirio, tarifaVigente) || PRECIOS_FABRICA_KITS_DEFAULT[codCirio] || 0;
                         const sub = cant * pFabrica;
                         const key = codCirio;
-                        const nombreCirio = NOMBRES_CANONICOS_KITS[codCirio] || it.producto || (codCirio === 'CC' ? 'Cirio de Comunión' : 'Cirio de Bautizo');
+                        const nombreCirio = NOMBRES_CANONICOS_KITS[codCirio] || it.producto || (codCirio === 'CC' ? 'Cirio de Comunión' : (codCirio === 'CCON' ? 'Cirio de Confirmación' : 'Cirio de Bautizo'));
                         if (!karolCiriosMap[key]) {
                             karolCiriosMap[key] = {
                                 codigo: key,
@@ -771,29 +966,32 @@ export const CruceCuentas = () => {
                         const cleanName = formatearTituloProducto(it.producto || it.nombreItem || 'Producto');
                         const key = `OTR_${cleanName.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 30)}`;
                         const categoriaNegocio = categoriasOtrosDb[key] || (esDeKit ? 'Kits' : 'Guantes');
-                        if (filtroCategoriaOtros === 'TODOS' || 
-                            (filtroCategoriaOtros === 'KITS' && categoriaNegocio === 'Kits') || 
-                            (filtroCategoriaOtros === 'GUANTES' && categoriaNegocio === 'Guantes')) {
-                            const pFabrica = Number(preciosOtros[key] || 0);
-                            const sub = cant * pFabrica;
-                            const subVenta = cant * Number(it.precio || 0);
-                            if (!karolOtrosMap[key]) {
-                                karolOtrosMap[key] = {
-                                    key,
-                                    nombre: cleanName,
-                                    categoriaNegocio,
-                                    cantidad: 0,
-                                    precioFabrica: pFabrica,
-                                    total: 0,
-                                    totalVenta: 0,
-                                    precioVentaPromedio: 0
-                                };
-                            }
-                            karolOtrosMap[key].cantidad += cant;
-                            karolOtrosMap[key].total += sub;
-                            karolOtrosMap[key].totalVenta += subVenta;
-                            totalUnidadesOtrosKarol += cant;
-                            totalFabricaOtrosKarol += sub;
+                        const pFabrica = Number(preciosOtros[key] || 0);
+                        const sub = cant * pFabrica;
+                        const subVenta = cant * Number(it.precio || 0);
+                        if (!karolOtrosMap[key]) {
+                            karolOtrosMap[key] = {
+                                key,
+                                nombre: cleanName,
+                                categoriaNegocio,
+                                cantidad: 0,
+                                precioFabrica: pFabrica,
+                                total: 0,
+                                totalVenta: 0,
+                                precioVentaPromedio: 0
+                            };
+                        }
+                        karolOtrosMap[key].cantidad += cant;
+                        karolOtrosMap[key].total += sub;
+                        karolOtrosMap[key].totalVenta += subVenta;
+                        totalUnidadesOtrosKarol += cant;
+                        totalFabricaOtrosKarol += sub;
+                        if (categoriaNegocio === 'Kits') {
+                            totalUnidadesOtrosKarolKits += cant;
+                            totalFabricaOtrosKarolKits += sub;
+                        } else {
+                            totalUnidadesOtrosKarolGuantes += cant;
+                            totalFabricaOtrosKarolGuantes += sub;
                         }
                     }
                 } else if (esOscar) {
@@ -823,7 +1021,7 @@ export const CruceCuentas = () => {
                         const pFabrica = obtenerPrecioFabricaItem(codCirio, tarifaVigente) || PRECIOS_FABRICA_KITS_DEFAULT[codCirio] || 0;
                         const sub = cant * pFabrica;
                         const key = codCirio;
-                        const nombreCirio = NOMBRES_CANONICOS_KITS[codCirio] || it.producto || (codCirio === 'CC' ? 'Cirio de Comunión' : 'Cirio de Bautizo');
+                        const nombreCirio = NOMBRES_CANONICOS_KITS[codCirio] || it.producto || (codCirio === 'CC' ? 'Cirio de Comunión' : (codCirio === 'CCON' ? 'Cirio de Confirmación' : 'Cirio de Bautizo'));
                         if (!oscarCiriosMap[key]) {
                             oscarCiriosMap[key] = {
                                 codigo: key,
@@ -844,29 +1042,32 @@ export const CruceCuentas = () => {
                         const cleanName = formatearTituloProducto(it.producto || it.nombreItem || 'Producto');
                         const key = `OTR_${cleanName.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 30)}`;
                         const categoriaNegocio = categoriasOtrosDb[key] || (esDeKit ? 'Kits' : 'Guantes');
-                        if (filtroCategoriaOtros === 'TODOS' || 
-                            (filtroCategoriaOtros === 'KITS' && categoriaNegocio === 'Kits') || 
-                            (filtroCategoriaOtros === 'GUANTES' && categoriaNegocio === 'Guantes')) {
-                            const pFabrica = Number(preciosOtros[key] || 0);
-                            const sub = cant * pFabrica;
-                            const subVenta = cant * Number(it.precio || 0);
-                            if (!oscarOtrosMap[key]) {
-                                oscarOtrosMap[key] = {
-                                    key,
-                                    nombre: cleanName,
-                                    categoriaNegocio,
-                                    cantidad: 0,
-                                    precioFabrica: pFabrica,
-                                    total: 0,
-                                    totalVenta: 0,
-                                    precioVentaPromedio: 0
-                                };
-                            }
-                            oscarOtrosMap[key].cantidad += cant;
-                            oscarOtrosMap[key].total += sub;
-                            oscarOtrosMap[key].totalVenta += subVenta;
-                            totalUnidadesOtrosOscar += cant;
-                            totalFabricaOtrosOscar += sub;
+                        const pFabrica = Number(preciosOtros[key] || 0);
+                        const sub = cant * pFabrica;
+                        const subVenta = cant * Number(it.precio || 0);
+                        if (!oscarOtrosMap[key]) {
+                            oscarOtrosMap[key] = {
+                                key,
+                                nombre: cleanName,
+                                categoriaNegocio,
+                                cantidad: 0,
+                                precioFabrica: pFabrica,
+                                total: 0,
+                                totalVenta: 0,
+                                precioVentaPromedio: 0
+                            };
+                        }
+                        oscarOtrosMap[key].cantidad += cant;
+                        oscarOtrosMap[key].total += sub;
+                        oscarOtrosMap[key].totalVenta += subVenta;
+                        totalUnidadesOtrosOscar += cant;
+                        totalFabricaOtrosOscar += sub;
+                        if (categoriaNegocio === 'Kits') {
+                            totalUnidadesOtrosOscarKits += cant;
+                            totalFabricaOtrosOscarKits += sub;
+                        } else {
+                            totalUnidadesOtrosOscarGuantes += cant;
+                            totalFabricaOtrosOscarGuantes += sub;
                         }
                     }
                 }
@@ -915,18 +1116,24 @@ export const CruceCuentas = () => {
         // =====================================================================
         // TOTALIZACIÓN POR SOCIO
         // =====================================================================
-        const ventaFabricaKitsLeonardoTotal = totalFabricaKitsLeo + totalFabricaCiriosLeo + totalFabricaOtrosLeo + totalFabricaKitsKarol + totalFabricaCiriosKarol + totalFabricaOtrosKarol;
-        const totalUnidadesKitsLeonardoTotal = totalUnidadesKitsLeo + totalUnidadesCiriosLeo + totalUnidadesOtrosLeo + totalUnidadesKitsKarol + totalUnidadesCiriosKarol + totalUnidadesOtrosKarol;
+        // En Kits (50/50): entran Kits, Cirios y artículos de Otros clasificados como 'Kits'.
+        // Para Leonardo: incluye sus kits, cirios y otros-kits propios, más los kits, cirios y otros-kits de Karol.
+        // Los artículos de Otros clasificados como 'Guantes' NO entran a la bolsa de Kits compartida.
+        const ventaFabricaKitsLeonardoTotal = totalFabricaKitsLeo + totalFabricaCiriosLeo + totalFabricaOtrosLeoKits + totalFabricaKitsKarol + totalFabricaCiriosKarol + totalFabricaOtrosKarolKits;
+        const totalUnidadesKitsLeonardoTotal = totalUnidadesKitsLeo + totalUnidadesCiriosLeo + totalUnidadesOtrosLeoKits + totalUnidadesKitsKarol + totalUnidadesCiriosKarol + totalUnidadesOtrosKarolKits;
 
         // Resultado Operativo de Kits de Leonardo
         const resultadoNetoKitsLeo = ventaFabricaKitsLeonardoTotal - totalGastosLeo;
 
-        // Total Guantes Leonardo a Precio de Fábrica (Anticipo / Deuda a Oscar)
-        const totalAnticipoGuantesLeo = totalFabricaGuantesLeo;
+        // Total Guantes y Otros (Guantes) de Leonardo a Precio de Fábrica (Deuda / Acreencia a Oscar):
+        // Oscar suministra a Leonardo los guantes y artículos de otros-guantes a precio de fábrica (cant * pFabrica).
+        // Por ende, estos valores le restan a Leonardo y le suman a Oscar.
+        const totalAnticipoGuantesLeo = totalFabricaGuantesLeo + totalFabricaOtrosLeoGuantes;
 
-        // Oscar acumula sus kits propios + sus cirios + sus otros
-        const ventaFabricaKitsOscarTotal = totalFabricaKitsOscar + totalFabricaCiriosOscar + totalFabricaOtrosOscar;
-        const totalUnidadesKitsOscarTotal = totalUnidadesKitsOscar + totalUnidadesCiriosOscar + totalUnidadesOtrosOscar;
+        // Oscar acumula en Kits (50/50): sus kits propios + sus cirios + sus otros clasificados como 'Kits'.
+        // Sus otros clasificados como 'Guantes' no entran al reparto 50/50 ni afectan el cruce con Leonardo.
+        const ventaFabricaKitsOscarTotal = totalFabricaKitsOscar + totalFabricaCiriosOscar + totalFabricaOtrosOscarKits;
+        const totalUnidadesKitsOscarTotal = totalUnidadesKitsOscar + totalUnidadesCiriosOscar + totalUnidadesOtrosOscarKits;
 
         // Resultado Operativo de Kits de Oscar
         const resultadoNetoKitsOscar = ventaFabricaKitsOscarTotal - totalGastosOscar;
@@ -994,6 +1201,10 @@ export const CruceCuentas = () => {
                 totalFabricaGuantesLeo,
                 totalUnidadesOtrosLeo,
                 totalFabricaOtrosLeo,
+                totalUnidadesOtrosLeoKits,
+                totalFabricaOtrosLeoKits,
+                totalUnidadesOtrosLeoGuantes,
+                totalFabricaOtrosLeoGuantes,
                 gastosKits: gastosLeoKits,
                 totalGastos: totalGastosLeo,
                 ventaFabricaKitsLeonardoTotal,
@@ -1013,6 +1224,10 @@ export const CruceCuentas = () => {
                 totalFabricaCiriosKarol,
                 totalUnidadesOtrosKarol,
                 totalFabricaOtrosKarol,
+                totalUnidadesOtrosKarolKits,
+                totalFabricaOtrosKarolKits,
+                totalUnidadesOtrosKarolGuantes,
+                totalFabricaOtrosKarolGuantes,
                 totalFabricaKarol: totalFabricaKitsKarol + totalFabricaCiriosKarol + totalFabricaOtrosKarol,
                 totalUnidadesKarol: totalUnidadesKitsKarol + totalUnidadesCiriosKarol + totalUnidadesOtrosKarol
             },
@@ -1026,6 +1241,10 @@ export const CruceCuentas = () => {
                 totalFabricaCiriosOscar,
                 totalUnidadesOtrosOscar,
                 totalFabricaOtrosOscar,
+                totalUnidadesOtrosOscarKits,
+                totalFabricaOtrosOscarKits,
+                totalUnidadesOtrosOscarGuantes,
+                totalFabricaOtrosOscarGuantes,
                 ventaFabricaKitsOscarTotal,
                 totalUnidadesKitsOscarTotal,
                 gastosKits: gastosOscarKits,
@@ -1041,6 +1260,8 @@ export const CruceCuentas = () => {
                 cuotaEquitativa50Kits,
                 diferenciaKitsLeo,
                 deudaGuantesLeoAOscar,
+                totalFabricaGuantesLeoEstandar: totalFabricaGuantesLeo,
+                totalFabricaOtrosLeoGuantes,
                 totalAnticiposOscarALeo,
                 totalAnticiposLeoAOscar,
                 netoAnticiposAOscar,
@@ -1058,6 +1279,18 @@ export const CruceCuentas = () => {
         if (!busqueda) return arr;
         const term = busqueda.toLowerCase().trim();
         return arr.filter(it => (it.nombre || '').toLowerCase().includes(term) || (it.codigo || '').toLowerCase().includes(term));
+    };
+
+    // Filtrar productos de Otros según categoría (Kits, Guantes o Todos) y búsqueda
+    const filtroOtros = (arr = []) => {
+        let items = arr;
+        if (filtroCategoriaOtros !== 'TODOS') {
+            const catTarget = filtroCategoriaOtros === 'KITS' ? 'Kits' : 'Guantes';
+            items = items.filter(it => it.categoriaNegocio === catTarget);
+        }
+        if (!busqueda) return items;
+        const term = busqueda.toLowerCase().trim();
+        return items.filter(it => (it.nombre || '').toLowerCase().includes(term) || (it.key || '').toLowerCase().includes(term));
     };
 
     // Filtrar anticipos si hay término de búsqueda
@@ -1188,7 +1421,7 @@ export const CruceCuentas = () => {
                             <Form.Group>
                                 <Form.Label className="small fw-bold text-secondary mb-1 d-flex align-items-center justify-content-between">
                                     <span><i className="fa-solid fa-filter me-1"></i> Filtro en Otros</span>
-                                    <small className="text-muted fw-normal">Por defecto: Kits</small>
+                                    <small className="text-muted fw-normal">Por defecto: Todos</small>
                                 </Form.Label>
                                 <ButtonGroup size="sm" className="w-100 shadow-sm rounded-pill overflow-hidden border">
                                     <Button
@@ -1217,7 +1450,7 @@ export const CruceCuentas = () => {
                         </Col>
 
                         {/* Botón de limpiar filtros */}
-                        {(fechaDesde || fechaHasta || mesSeleccionado !== 'TODOS' || filtroEstado !== 'TODOS' || busqueda || filtroCategoriaOtros !== 'KITS') && (
+                        {(fechaDesde || fechaHasta || mesSeleccionado !== 'TODOS' || filtroEstado !== 'TODOS' || busqueda || filtroCategoriaOtros !== 'TODOS') && (
                             <Col xs={12} sm={6} md={3} lg={2} className="d-flex align-items-end">
                                 <Button
                                     variant="outline-danger"
@@ -1229,7 +1462,7 @@ export const CruceCuentas = () => {
                                         setFechaHasta('');
                                         setFiltroEstado('TODOS');
                                         setBusqueda('');
-                                        setFiltroCategoriaOtros('KITS');
+                                        setFiltroCategoriaOtros('TODOS');
                                     }}
                                 >
                                     <i className="fa-solid fa-xmark me-1"></i> Limpiar Filtros
@@ -1330,15 +1563,15 @@ export const CruceCuentas = () => {
                                         </strong>
                                     </div>
 
-                                    {/* 2. Anticipo Guantes */}
+                                    {/* 2. Anticipo Guantes y Otros Guantes */}
                                     <div className="d-flex justify-content-between align-items-center pb-2 border-bottom" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
                                         <span>
-                                            2. Guantes Fábrica (Suministrados por Oscar):
+                                            2. Guantes y Otros Guantes Fábrica (Suministrados por Oscar):
                                             <OverlayTrigger
                                                 placement="top"
                                                 overlay={
                                                     <Tooltip id="tt-guantes">
-                                                        Como Oscar suministra los guantes a Leonardo a costo de fábrica, este valor se acredita a favor de Oscar en el cruce.
+                                                        Como Oscar suministra los guantes y artículos de otros con subcategoría guantes a Leonardo a costo de fábrica, este valor le resta a Leonardo y se acredita a favor de Oscar.
                                                     </Tooltip>
                                                 }
                                             >
@@ -1398,66 +1631,67 @@ export const CruceCuentas = () => {
             {/* ================================================================= */}
             {/* RESUMEN COMPARATIVO EN 4 KPIs */}
             {/* ================================================================= */}
-            <Row className="g-3 mb-4">
-                <Col xs={12} sm={6} lg={3}>
+            <Row className="g-2 g-sm-3 mb-4">
+                <Col xs={6} sm={6} lg={3}>
                     <Card className="border-0 rounded-4 shadow-sm bg-white h-100">
-                        <Card.Body className="p-3">
-                            <span className="small text-muted d-block mb-1">
+                        <Card.Body className="p-2 p-sm-3">
+                            <span className="small text-muted d-block mb-1 text-truncate">
                                 <i className="fa-solid fa-boxes-stacked text-primary me-1"></i> Ventas Fábrica Kits Total
                             </span>
-                            <h4 className="fw-bolder text-dark mb-0">
+                            <h4 className="fw-bolder text-dark mb-0 fs-5 fs-sm-4">
                                 {formatearPrecio(liquidacionData.consolidado.ventaFabricaTotalKitsConjunto)}
                             </h4>
-                            <small className="text-muted" style={{ fontSize: '0.74rem' }}>
+                            <small className="text-muted d-block text-truncate" style={{ fontSize: '0.72rem' }}>
                                 Leo ({formatearPrecio(liquidacionData.leo.ventaFabricaKitsLeonardoTotal)}) + Oscar ({formatearPrecio(liquidacionData.oscar.ventaFabricaKitsOscarTotal)})
                             </small>
                         </Card.Body>
                     </Card>
                 </Col>
 
-                <Col xs={12} sm={6} lg={3}>
+                <Col xs={6} sm={6} lg={3}>
                     <Card className="border-0 rounded-4 shadow-sm bg-white h-100">
-                        <Card.Body className="p-3">
-                            <span className="small text-muted d-block mb-1">
-                                <i className="fa-solid fa-receipt text-danger me-1"></i> Gastos Deducidos de Kits
+                        <Card.Body className="p-2 p-sm-3">
+                            <span className="small text-muted d-block mb-1 text-truncate">
+                                <i className="fa-solid fa-receipt text-danger me-1"></i> Gastos Deducidos Kits
                             </span>
-                            <h4 className="fw-bolder text-danger mb-0">
+                            <h4 className="fw-bolder text-danger mb-0 fs-5 fs-sm-4">
                                 {formatearPrecio(liquidacionData.consolidado.totalGastosKitsConjunto)}
                             </h4>
-                            <small className="text-muted" style={{ fontSize: '0.74rem' }}>
+                            <small className="text-muted d-block text-truncate" style={{ fontSize: '0.72rem' }}>
                                 Leo ({formatearPrecio(liquidacionData.leo.totalGastos)}) + Oscar ({formatearPrecio(liquidacionData.oscar.totalGastos)})
                             </small>
                         </Card.Body>
                     </Card>
                 </Col>
 
-                <Col xs={12} sm={6} lg={3}>
+                <Col xs={6} sm={6} lg={3}>
                     <Card className="border-0 rounded-4 shadow-sm bg-white h-100">
-                        <Card.Body className="p-3">
-                            <span className="small text-muted d-block mb-1">
-                                <i className="fa-solid fa-chart-line text-success me-1"></i> Utilidad Neta Kits Conjunta
+                        <Card.Body className="p-2 p-sm-3">
+                            <span className="small text-muted d-block mb-1 text-truncate">
+                                <i className="fa-solid fa-chart-line text-success me-1"></i> Utilidad Neta Conjunta
                             </span>
-                            <h4 className="fw-bolder text-success mb-0">
+                            <h4 className="fw-bolder text-success mb-0 fs-5 fs-sm-4">
                                 {formatearPrecio(liquidacionData.consolidado.utilidadConjuntaKits)}
                             </h4>
-                            <small className="text-success fw-bold" style={{ fontSize: '0.74rem' }}>
-                                Cuota 50%: {formatearPrecio(liquidacionData.consolidado.cuotaEquitativa50Kits)} cada uno
+                            <small className="text-success fw-bold d-block text-truncate" style={{ fontSize: '0.72rem' }}>
+                                Cuota 50%: {formatearPrecio(liquidacionData.consolidado.cuotaEquitativa50Kits)}
                             </small>
                         </Card.Body>
                     </Card>
                 </Col>
 
-                <Col xs={12} sm={6} lg={3}>
+                <Col xs={6} sm={6} lg={3}>
                     <Card className="border-0 rounded-4 shadow-sm bg-white h-100">
-                        <Card.Body className="p-3">
-                            <span className="small text-muted d-block mb-1">
-                                <i className="fa-solid fa-mitten text-warning me-1"></i> Guantes Fábrica (a favor de Oscar)
+                        <Card.Body className="p-2 p-sm-3">
+                            <span className="small text-muted d-block mb-1 text-truncate">
+                                <i className="fa-solid fa-mitten text-warning me-1"></i> Guantes Fábrica
                             </span>
-                            <h4 className="fw-bolder text-warning-emphasis mb-0">
+                            <h4 className="fw-bolder text-warning-emphasis mb-0 fs-5 fs-sm-4">
                                 {formatearPrecio(liquidacionData.consolidado.deudaGuantesLeoAOscar)}
                             </h4>
-                            <small className="text-muted" style={{ fontSize: '0.74rem' }}>
-                                {liquidacionData.leo.totalUnidadesGuantesLeo} docenas vendidas a precio fábrica
+                            <small className="text-muted d-block text-truncate" style={{ fontSize: '0.72rem' }}>
+                                {liquidacionData.leo.totalUnidadesGuantesLeo} doc. guantes
+                                {liquidacionData.leo.totalUnidadesOtrosLeoGuantes > 0 && ` + ${liquidacionData.leo.totalUnidadesOtrosLeoGuantes} otros`}
                             </small>
                         </Card.Body>
                     </Card>
@@ -1750,7 +1984,7 @@ export const CruceCuentas = () => {
                                                 </Button>
                                             </ButtonGroup>
                                             <Badge bg="light" className="text-dark border rounded-pill px-2.5 py-1">
-                                                {filtroBusqueda(liquidacionData.leo.otros).length} productos
+                                                {filtroOtros(liquidacionData.leo.otros).length} productos
                                             </Badge>
                                         </div>
                                     </div>
@@ -1770,12 +2004,12 @@ export const CruceCuentas = () => {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {filtroBusqueda(liquidacionData.leo.otros).length === 0 ? (
+                                                        {filtroOtros(liquidacionData.leo.otros).length === 0 ? (
                                                             <tr>
                                                                 <td colSpan={6} className="text-muted py-2">No hay productos en 'Otros' registrados</td>
                                                             </tr>
                                                         ) : (
-                                                            filtroBusqueda(liquidacionData.leo.otros).map((it, idx) => (
+                                                            filtroOtros(liquidacionData.leo.otros).map((it, idx) => (
                                                                 <tr key={idx}>
                                                                     <td className="text-start ps-3 fw-semibold text-dark">
                                                                         <button
@@ -1841,11 +2075,30 @@ export const CruceCuentas = () => {
                                                     </tbody>
                                                     <tfoot className="table-secondary fw-bold" style={{ fontSize: '0.94rem' }}>
                                                         <tr>
-                                                            <td className="text-start ps-3 fs-6">Subtotal Otros Leonardo</td>
-                                                            <td className="fs-6">{liquidacionData.leo.totalUnidadesOtrosLeo.toLocaleString()}</td>
+                                                            <td className="text-start ps-3 fs-6">
+                                                                Subtotal Otros Leonardo
+                                                                {filtroCategoriaOtros === 'KITS' && ' (Solo Kits)'}
+                                                                {filtroCategoriaOtros === 'GUANTES' && ' (Solo Guantes a favor de Oscar)'}
+                                                                {filtroCategoriaOtros === 'TODOS' && ' (Kits + Guantes)'}
+                                                            </td>
+                                                            <td className="fs-6">
+                                                                {filtroCategoriaOtros === 'KITS'
+                                                                    ? liquidacionData.leo.totalUnidadesOtrosLeoKits.toLocaleString()
+                                                                    : filtroCategoriaOtros === 'GUANTES'
+                                                                        ? liquidacionData.leo.totalUnidadesOtrosLeoGuantes.toLocaleString()
+                                                                        : liquidacionData.leo.totalUnidadesOtrosLeo.toLocaleString()
+                                                                }
+                                                            </td>
                                                             <td>-</td>
                                                             <td>-</td>
-                                                            <td className="text-end pe-3 text-success fs-6 fw-bolder">{formatearPrecio(liquidacionData.leo.totalFabricaOtrosLeo)}</td>
+                                                            <td className="text-end pe-3 text-success fs-6 fw-bolder">
+                                                                {filtroCategoriaOtros === 'KITS'
+                                                                    ? formatearPrecio(liquidacionData.leo.totalFabricaOtrosLeoKits)
+                                                                    : filtroCategoriaOtros === 'GUANTES'
+                                                                        ? formatearPrecio(liquidacionData.leo.totalFabricaOtrosLeoGuantes)
+                                                                        : formatearPrecio(liquidacionData.leo.totalFabricaOtrosLeo)
+                                                                }
+                                                            </td>
                                                             <td>-</td>
                                                         </tr>
                                                     </tfoot>
@@ -2002,7 +2255,7 @@ export const CruceCuentas = () => {
                                                                     </Button>
                                                                 </ButtonGroup>
                                                                 <Badge bg="light" className="text-dark border rounded-pill px-2 py-1" style={{ fontSize: '0.72rem' }}>
-                                                                    {filtroBusqueda(liquidacionData.karol.otros).length} productos
+                                                                    {filtroOtros(liquidacionData.karol.otros).length} productos
                                                                 </Badge>
                                                             </div>
                                                         </div>
@@ -2019,7 +2272,7 @@ export const CruceCuentas = () => {
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                    {filtroBusqueda(liquidacionData.karol.otros).map((it, idx) => (
+                                                                    {filtroOtros(liquidacionData.karol.otros).map((it, idx) => (
                                                                         <tr key={idx}>
                                                                             <td className="text-start ps-3 fw-semibold text-dark">
                                                                                 <button
@@ -2084,11 +2337,30 @@ export const CruceCuentas = () => {
                                                                 </tbody>
                                                                 <tfoot className="table-light fw-bold" style={{ fontSize: '0.94rem', borderTop: '2px solid #cbd5e1' }}>
                                                                     <tr>
-                                                                        <td className="text-start ps-3 fs-6">Subtotal Otros Karol</td>
-                                                                        <td className="fs-6">{liquidacionData.karol.totalUnidadesOtrosKarol.toLocaleString()}</td>
+                                                                        <td className="text-start ps-3 fs-6">
+                                                                            Subtotal Otros Karol
+                                                                            {filtroCategoriaOtros === 'KITS' && ' (Solo Kits)'}
+                                                                            {filtroCategoriaOtros === 'GUANTES' && ' (Solo Guantes)'}
+                                                                            {filtroCategoriaOtros === 'TODOS' && ' (Kits + Guantes)'}
+                                                                        </td>
+                                                                        <td className="fs-6">
+                                                                            {filtroCategoriaOtros === 'KITS'
+                                                                                ? liquidacionData.karol.totalUnidadesOtrosKarolKits.toLocaleString()
+                                                                                : filtroCategoriaOtros === 'GUANTES'
+                                                                                    ? liquidacionData.karol.totalUnidadesOtrosKarolGuantes.toLocaleString()
+                                                                                    : liquidacionData.karol.totalUnidadesOtrosKarol.toLocaleString()
+                                                                            }
+                                                                        </td>
                                                                         <td>-</td>
                                                                         <td>-</td>
-                                                                        <td className="text-end pe-3 text-info fs-6 fw-bolder">{formatearPrecio(liquidacionData.karol.totalFabricaOtrosKarol)}</td>
+                                                                        <td className="text-end pe-3 text-info fs-6 fw-bolder">
+                                                                            {filtroCategoriaOtros === 'KITS'
+                                                                                ? formatearPrecio(liquidacionData.karol.totalFabricaOtrosKarolKits)
+                                                                                : filtroCategoriaOtros === 'GUANTES'
+                                                                                    ? formatearPrecio(liquidacionData.karol.totalFabricaOtrosKarolGuantes)
+                                                                                    : formatearPrecio(liquidacionData.karol.totalFabricaOtrosKarol)
+                                                                            }
+                                                                        </td>
                                                                         <td>-</td>
                                                                     </tr>
                                                                 </tfoot>
@@ -2106,7 +2378,7 @@ export const CruceCuentas = () => {
                                     <h6 className="fw-bold text-dark mb-2">Liquidación Operativa de Leonardo</h6>
                                     <div className="d-flex flex-column gap-1.5 small">
                                         <div className="d-flex justify-content-between">
-                                            <span>Venta Total Kits a Fábrica (Propios + Karol + Otros):</span>
+                                            <span>Venta Total Kits a Fábrica (Propios + Karol + Otros Kits):</span>
                                             <strong className="text-primary">{formatearPrecio(liquidacionData.leo.ventaFabricaKitsLeonardoTotal)}</strong>
                                         </div>
                                         <div className="d-flex justify-content-between text-danger">
@@ -2121,9 +2393,15 @@ export const CruceCuentas = () => {
                                             </span>
                                         </div>
                                         <div className="d-flex justify-content-between pt-1 text-warning-emphasis">
-                                            <span>(+) Guantes Fábrica a favor de Oscar:</span>
+                                            <span>(+) Guantes + Otros Guantes Fábrica a favor de Oscar:</span>
                                             <strong>{formatearPrecio(liquidacionData.leo.totalAnticipoGuantesLeo)}</strong>
                                         </div>
+                                        {liquidacionData.leo.totalFabricaOtrosLeoGuantes > 0 && (
+                                            <div className="d-flex justify-content-between text-muted ps-2" style={{ fontSize: '0.78rem' }}>
+                                                <span>&bull; Incluye Otros (Guantes) a favor de Oscar:</span>
+                                                <span>+{formatearPrecio(liquidacionData.leo.totalFabricaOtrosLeoGuantes)}</span>
+                                            </div>
+                                        )}
                                         {liquidacionData.consolidado.totalAnticiposOscarALeo > 0 && (
                                             <div className="d-flex justify-content-between pt-1 text-danger">
                                                 <span>(-) Anticipos Recibidos de Oscar (a reintegrar a Oscar):</span>
@@ -2362,7 +2640,7 @@ export const CruceCuentas = () => {
                                                 </Button>
                                             </ButtonGroup>
                                             <Badge bg="light" className="text-dark border rounded-pill px-2.5 py-1">
-                                                {filtroBusqueda(liquidacionData.oscar.otros).length} productos
+                                                {filtroOtros(liquidacionData.oscar.otros).length} productos
                                             </Badge>
                                         </div>
                                     </div>
@@ -2382,12 +2660,12 @@ export const CruceCuentas = () => {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {filtroBusqueda(liquidacionData.oscar.otros).length === 0 ? (
+                                                        {filtroOtros(liquidacionData.oscar.otros).length === 0 ? (
                                                             <tr>
                                                                 <td colSpan={6} className="text-muted py-2">No hay productos en 'Otros' registrados para Oscar</td>
                                                             </tr>
                                                         ) : (
-                                                            filtroBusqueda(liquidacionData.oscar.otros).map((it, idx) => (
+                                                            filtroOtros(liquidacionData.oscar.otros).map((it, idx) => (
                                                                 <tr key={idx}>
                                                                     <td className="text-start ps-3 fw-semibold text-dark">
                                                                         <button
@@ -2453,11 +2731,30 @@ export const CruceCuentas = () => {
                                                     </tbody>
                                                     <tfoot className="table-secondary fw-bold" style={{ fontSize: '0.94rem' }}>
                                                         <tr>
-                                                            <td className="text-start ps-3 fs-6">Subtotal Otros Oscar</td>
-                                                            <td className="fs-6">{liquidacionData.oscar.totalUnidadesOtrosOscar.toLocaleString()}</td>
+                                                            <td className="text-start ps-3 fs-6">
+                                                                Subtotal Otros Oscar
+                                                                {filtroCategoriaOtros === 'KITS' && ' (Solo Kits)'}
+                                                                {filtroCategoriaOtros === 'GUANTES' && ' (Solo Guantes informativos)'}
+                                                                {filtroCategoriaOtros === 'TODOS' && ' (Kits + Guantes)'}
+                                                            </td>
+                                                            <td className="fs-6">
+                                                                {filtroCategoriaOtros === 'KITS'
+                                                                    ? liquidacionData.oscar.totalUnidadesOtrosOscarKits.toLocaleString()
+                                                                    : filtroCategoriaOtros === 'GUANTES'
+                                                                        ? liquidacionData.oscar.totalUnidadesOtrosOscarGuantes.toLocaleString()
+                                                                        : liquidacionData.oscar.totalUnidadesOtrosOscar.toLocaleString()
+                                                                }
+                                                            </td>
                                                             <td>-</td>
                                                             <td>-</td>
-                                                            <td className="text-end pe-3 text-success fs-6 fw-bolder">{formatearPrecio(liquidacionData.oscar.totalFabricaOtrosOscar)}</td>
+                                                            <td className="text-end pe-3 text-success fs-6 fw-bolder">
+                                                                {filtroCategoriaOtros === 'KITS'
+                                                                    ? formatearPrecio(liquidacionData.oscar.totalFabricaOtrosOscarKits)
+                                                                    : filtroCategoriaOtros === 'GUANTES'
+                                                                        ? formatearPrecio(liquidacionData.oscar.totalFabricaOtrosOscarGuantes)
+                                                                        : formatearPrecio(liquidacionData.oscar.totalFabricaOtrosOscar)
+                                                                }
+                                                            </td>
                                                             <td>-</td>
                                                         </tr>
                                                     </tfoot>
@@ -2482,7 +2779,7 @@ export const CruceCuentas = () => {
                                                     <i className={`fa-solid fa-chevron-${openItemsOscar.guantes ? 'up' : 'down'} text-muted ms-1.5 small`} style={{ fontSize: '0.75rem' }}></i>
                                                 </strong>
                                                 <small className="text-muted d-block" style={{ fontSize: '0.72rem' }}>
-                                                    Suministro de guantes a Leonardo a precio de fábrica (Anticipo a recibir)
+                                                    Suministro de guantes y otros (guantes) a Leonardo a precio de fábrica (a cobrar a Leo)
                                                 </small>
                                             </div>
                                         </div>
@@ -2493,13 +2790,26 @@ export const CruceCuentas = () => {
                                     <Collapse in={openItemsOscar.guantes}>
                                         <div>
                                             <Card.Body className="p-3">
-                                                <div className="d-flex justify-content-between align-items-center small">
-                                                    <span>Docenas de guantes vendidos por Leonardo:</span>
-                                                    <strong>{liquidacionData.leo.totalUnidadesGuantesLeo} doc.</strong>
+                                                <div className="d-flex justify-content-between align-items-center small mb-1">
+                                                    <span>1. Guantes estándar vendidos por Leonardo:</span>
+                                                    <span>
+                                                        <strong className="me-2">{liquidacionData.leo.totalUnidadesGuantesLeo} doc.</strong>
+                                                        <strong className="text-warning-emphasis">{formatearPrecio(liquidacionData.leo.totalFabricaGuantesLeo)}</strong>
+                                                    </span>
                                                 </div>
-                                                <div className="d-flex justify-content-between align-items-center small mt-1">
-                                                    <span>Monto total a cobrar a Leonardo por los guantes:</span>
-                                                    <strong className="text-warning-emphasis fs-6">{formatearPrecio(liquidacionData.leo.totalAnticipoGuantesLeo)}</strong>
+                                                {liquidacionData.leo.totalFabricaOtrosLeoGuantes > 0 && (
+                                                    <div className="d-flex justify-content-between align-items-center small mb-1">
+                                                        <span>2. Otros (Subcategoría Guantes) de Leonardo:</span>
+                                                        <span>
+                                                            <strong className="me-2">{liquidacionData.leo.totalUnidadesOtrosLeoGuantes} und.</strong>
+                                                            <strong className="text-warning-emphasis">{formatearPrecio(liquidacionData.leo.totalFabricaOtrosLeoGuantes)}</strong>
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <hr className="my-1.5" />
+                                                <div className="d-flex justify-content-between align-items-center small">
+                                                    <span className="fw-bold text-dark">Total a cobrar a Leonardo por Guantes:</span>
+                                                    <strong className="text-warning-emphasis fs-6">+{formatearPrecio(liquidacionData.leo.totalAnticipoGuantesLeo)}</strong>
                                                 </div>
                                             </Card.Body>
                                         </div>
@@ -2511,7 +2821,7 @@ export const CruceCuentas = () => {
                                     <h6 className="fw-bold text-dark mb-2">Liquidación Operativa de Oscar</h6>
                                     <div className="d-flex flex-column gap-1.5 small">
                                         <div className="d-flex justify-content-between">
-                                            <span>Venta Total Kits a Fábrica de Oscar:</span>
+                                            <span>Venta Total Kits a Fábrica de Oscar (Kits + Cirios + Otros Kits):</span>
                                             <strong className="text-primary">{formatearPrecio(liquidacionData.oscar.ventaFabricaKitsOscarTotal)}</strong>
                                         </div>
                                         <div className="d-flex justify-content-between text-danger">
@@ -2526,9 +2836,21 @@ export const CruceCuentas = () => {
                                             </span>
                                         </div>
                                         <div className="d-flex justify-content-between pt-1 text-warning-emphasis">
-                                            <span>(+) Guantes Fábrica a favor de Oscar:</span>
+                                            <span>(+) Guantes + Otros Guantes Fábrica a favor de Oscar:</span>
                                             <strong>+{formatearPrecio(liquidacionData.leo.totalAnticipoGuantesLeo)}</strong>
                                         </div>
+                                        {liquidacionData.leo.totalFabricaOtrosLeoGuantes > 0 && (
+                                            <div className="d-flex justify-content-between text-muted ps-2" style={{ fontSize: '0.78rem' }}>
+                                                <span>&bull; Incluye Otros (Guantes) cobrados a Leo:</span>
+                                                <span>+{formatearPrecio(liquidacionData.leo.totalFabricaOtrosLeoGuantes)}</span>
+                                            </div>
+                                        )}
+                                        {liquidacionData.oscar.totalFabricaOtrosOscarGuantes > 0 && (
+                                            <div className="d-flex justify-content-between pt-1 text-secondary bg-secondary-subtle px-2 py-1 rounded mt-1" style={{ fontSize: '0.78rem' }}>
+                                                <span><i className="fa-solid fa-circle-info me-1"></i> [Informativo] Otros - Guantes propios de Oscar (no afecta cruce 50/50):</span>
+                                                <strong>{formatearPrecio(liquidacionData.oscar.totalFabricaOtrosOscarGuantes)}</strong>
+                                            </div>
+                                        )}
                                         {liquidacionData.consolidado.totalAnticiposOscarALeo > 0 && (
                                             <div className="d-flex justify-content-between pt-1 text-success">
                                                 <span>(+) Anticipos Entregados a Leonardo (a favor de Oscar):</span>
@@ -2595,7 +2917,7 @@ export const CruceCuentas = () => {
                                     <Form onSubmit={handleAgregarAnticipo}>
                                         <Row className="g-3 align-items-end">
                                             {/* Selector Quién entregó el dinero */}
-                                            <Col xs={12} sm={6} md={3} lg={3}>
+                                            <Col xs={12} sm={6} md={3} lg={2.5}>
                                                 <Form.Label className="small fw-bold text-secondary mb-1.5">
                                                     ¿Quién entregó el dinero?
                                                 </Form.Label>
@@ -2621,8 +2943,22 @@ export const CruceCuentas = () => {
                                                 </ButtonGroup>
                                             </Col>
 
+                                            {/* Fecha del Anticipo (Predeterminada la actual y editable) */}
+                                            <Col xs={12} sm={6} md={3} lg={2}>
+                                                <Form.Label className="small fw-bold text-secondary mb-1.5">
+                                                    <i className="fa-regular fa-calendar me-1 text-success"></i> Fecha
+                                                </Form.Label>
+                                                <Form.Control
+                                                    size="sm"
+                                                    type="date"
+                                                    value={nuevoAnticipo.fecha || new Date().toLocaleDateString('en-CA')}
+                                                    onChange={(e) => setNuevoAnticipo(p => ({ ...p, fecha: e.target.value }))}
+                                                    className="fw-medium text-center"
+                                                />
+                                            </Col>
+
                                             {/* Detalle / Motivo */}
-                                            <Col xs={12} sm={6} md={3} lg={3}>
+                                            <Col xs={12} sm={12} md={6} lg={3}>
                                                 <Form.Label className="small fw-bold text-secondary mb-1.5">
                                                     Detalle / Motivo del Anticipo
                                                 </Form.Label>
@@ -2637,9 +2973,9 @@ export const CruceCuentas = () => {
                                             </Col>
 
                                             {/* Cantidad */}
-                                            <Col xs={6} sm={4} md={2} lg={1.5}>
+                                            <Col xs={6} sm={4} md={2} lg={1}>
                                                 <Form.Label className="small fw-bold text-secondary mb-1.5">
-                                                    Cantidad
+                                                    Cant.
                                                 </Form.Label>
                                                 <Form.Control
                                                     size="sm"
@@ -2653,7 +2989,7 @@ export const CruceCuentas = () => {
                                             </Col>
 
                                             {/* Valor Unitario ($) */}
-                                            <Col xs={6} sm={4} md={2} lg={2}>
+                                            <Col xs={6} sm={4} md={3} lg={1.5}>
                                                 <Form.Label className="small fw-bold text-secondary mb-1.5">
                                                     Valor Unit. ($)
                                                 </Form.Label>
@@ -2669,15 +3005,10 @@ export const CruceCuentas = () => {
                                                         className="fw-bold text-end"
                                                     />
                                                 </InputGroup>
-                                                {Number(nuevoAnticipo.valor) > 0 && (
-                                                    <div className="text-muted text-end small" style={{ fontSize: '0.72rem', marginTop: '3px' }}>
-                                                        {formatearPrecio(nuevoAnticipo.valor)} c/u
-                                                    </div>
-                                                )}
                                             </Col>
 
                                             {/* Total ($) - Calculado automáticamente pero editable */}
-                                            <Col xs={8} sm={4} md={2} lg={2.5}>
+                                            <Col xs={12} sm={4} md={3} lg={2}>
                                                 <Form.Label className="small fw-bold text-success mb-1.5 d-flex justify-content-between align-items-center">
                                                     <span>Total ($)</span>
                                                     <span className="badge bg-success-subtle text-success border border-success-subtle" style={{ fontSize: '0.68rem' }}>
@@ -2696,29 +3027,78 @@ export const CruceCuentas = () => {
                                                         className="fw-bolder text-end bg-white border-success-subtle"
                                                     />
                                                 </InputGroup>
-                                                {Number(nuevoAnticipo.total) > 0 && (
-                                                    <div className="text-success fw-bold text-end small" style={{ fontSize: '0.74rem', marginTop: '3px' }}>
-                                                        = {formatearPrecio(nuevoAnticipo.total)}
-                                                    </div>
-                                                )}
+                                            </Col>
+                                        </Row>
+
+                                        {/* Fila secundaria: Adjuntar soportes/comprobantes y botón Agregar */}
+                                        <Row className="g-3 align-items-center mt-1">
+                                            {/* Adjuntos / Soportes */}
+                                            <Col xs={12} md={8} lg={9}>
+                                                <div className="d-flex flex-wrap align-items-center gap-2">
+                                                    <label 
+                                                        className="btn btn-sm btn-outline-secondary fw-semibold rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-1.5 shadow-xs mb-0 bg-white" 
+                                                        style={{ cursor: 'pointer', fontSize: '0.78rem' }}
+                                                    >
+                                                        <i className="fa-solid fa-paperclip text-success"></i>
+                                                        <span>Adjuntar soportes / comprobantes</span>
+                                                        <input
+                                                            type="file"
+                                                            multiple
+                                                            accept="image/*,application/pdf"
+                                                            className="d-none"
+                                                            onChange={handleSeleccionarSoportesNuevo}
+                                                        />
+                                                    </label>
+
+                                                    <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                        (Fotos de transferencias, recibos o PDF)
+                                                    </small>
+
+                                                    {/* Badges de archivos seleccionados */}
+                                                    {nuevoAnticipo.soportes && nuevoAnticipo.soportes.length > 0 && (
+                                                        <div className="d-flex flex-wrap align-items-center gap-1.5 ms-1">
+                                                            {nuevoAnticipo.soportes.map((sop, idx) => (
+                                                                <span 
+                                                                    key={idx} 
+                                                                    className="badge bg-success-subtle text-success border border-success-subtle rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1"
+                                                                    style={{ fontSize: '0.75rem' }}
+                                                                >
+                                                                    <i className={sop.tipo?.includes('pdf') ? 'fa-solid fa-file-pdf' : 'fa-regular fa-image'}></i>
+                                                                    <span className="text-truncate" style={{ maxWidth: '120px' }}>{sop.nombre}</span>
+                                                                    <span className="text-muted" style={{ fontSize: '0.68rem' }}>({formatearTamanoArchivo(sop.size)})</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn-close btn-close-xs ms-1"
+                                                                        style={{ fontSize: '0.55rem' }}
+                                                                        onClick={() => handleQuitarSoporteNuevo(idx)}
+                                                                        title="Quitar comprobante"
+                                                                    ></button>
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </Col>
 
                                             {/* Botón Agregar */}
-                                            <Col xs={4} sm={12} md={12} lg={true} className="d-grid">
+                                            <Col xs={12} md={4} lg={3} className="text-end d-grid d-md-flex justify-content-md-end">
                                                 <Button
                                                     type="submit"
                                                     size="sm"
                                                     variant="success"
-                                                    className="fw-bold d-flex align-items-center justify-content-center gap-1.5 shadow-sm py-1.5"
+                                                    className="fw-bold d-inline-flex align-items-center justify-content-center gap-1.5 shadow-sm py-1.5 px-4"
                                                     disabled={isGuardandoAnticipo}
-                                                    title="Agregar anticipo"
+                                                    title="Agregar anticipo a la base de datos"
                                                 >
                                                     {isGuardandoAnticipo ? (
-                                                        <i className="fa-solid fa-spinner fa-spin"></i>
+                                                        <>
+                                                            <Spinner animation="border" size="sm" />
+                                                            <span>Guardando...</span>
+                                                        </>
                                                     ) : (
                                                         <>
                                                             <i className="fa-solid fa-plus"></i>
-                                                            <span>Agregar</span>
+                                                            <span>Guardar Anticipo</span>
                                                         </>
                                                     )}
                                                 </Button>
@@ -2733,18 +3113,24 @@ export const CruceCuentas = () => {
                                 <Table hover bordered size="sm" className="align-middle mb-0 text-center" style={{ borderColor: '#e2e8f0', fontSize: '0.88rem' }}>
                                     <thead className="table-light">
                                         <tr className="text-secondary small fw-bold">
-                                            <th style={{ width: '150px' }}>Dirección</th>
+                                            <th style={{ width: '135px' }}>
+                                                <i className="fa-regular fa-calendar me-1"></i> Fecha
+                                            </th>
+                                            <th style={{ width: '130px' }}>Dirección</th>
                                             <th className="text-start ps-3">Detalle / Motivo</th>
-                                            <th style={{ width: '90px' }}>Cant.</th>
-                                            <th style={{ width: '160px' }} className="text-end">Valor Unitario ($)</th>
-                                            <th style={{ width: '170px' }} className="text-end pe-3">Total ($)</th>
-                                            <th style={{ width: '70px' }}>Acción</th>
+                                            <th style={{ width: '130px' }}>
+                                                <i className="fa-solid fa-paperclip me-1"></i> Comprobantes
+                                            </th>
+                                            <th style={{ width: '70px' }}>Cant.</th>
+                                            <th style={{ width: '140px' }} className="text-end">Valor Unitario ($)</th>
+                                            <th style={{ width: '150px' }} className="text-end pe-3">Total ($)</th>
+                                            <th style={{ width: '65px' }}>Acción</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {anticiposBusqueda.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="text-muted py-4">No hay anticipos o adelantos registrados en este periodo</td>
+                                                <td colSpan={8} className="text-muted py-4">No hay anticipos o adelantos registrados en este periodo</td>
                                             </tr>
                                         ) : (
                                             anticiposBusqueda.map((ant, idx) => {
@@ -2752,9 +3138,27 @@ export const CruceCuentas = () => {
                                                 const valorUnit = (ant.valor !== undefined && ant.valor !== null && Number(ant.valor) > 0)
                                                     ? Number(ant.valor)
                                                     : (cant > 0 ? Number(ant.total) / cant : Number(ant.total));
+                                                const fechaVal = obtenerFechaInput(ant.fecha || ant.createdAt);
+                                                const cantSoportes = ant.soportes?.length || 0;
 
                                                 return (
                                                     <tr key={ant._id || ant.id || idx}>
+                                                        {/* Fecha editable directamente en la tabla */}
+                                                        <td className="p-1">
+                                                            <OverlayTrigger
+                                                                placement="top"
+                                                                overlay={<Tooltip id={`tt-fecha-${ant._id || ant.id}`}>Clic para modificar la fecha</Tooltip>}
+                                                            >
+                                                                <Form.Control
+                                                                    type="date"
+                                                                    size="sm"
+                                                                    value={fechaVal}
+                                                                    onChange={(e) => handleCambiarFechaAnticipo(ant, e.target.value)}
+                                                                    className="text-center fw-medium border-0 bg-light p-1 shadow-none"
+                                                                    style={{ fontSize: '0.82rem', width: '125px', margin: '0 auto', cursor: 'pointer' }}
+                                                                />
+                                                            </OverlayTrigger>
+                                                        </td>
                                                         <td>
                                                             {ant.tipo === 'OSCAR_A_LEO' ? (
                                                                 <span className="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1" style={{ fontSize: '0.78rem' }}>
@@ -2769,6 +3173,35 @@ export const CruceCuentas = () => {
                                                         <td className="text-start ps-3 fw-semibold text-dark">
                                                             {ant.detalle}
                                                         </td>
+                                                        {/* Comprobantes / Soportes */}
+                                                        <td>
+                                                            {cantSoportes > 0 ? (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline-success"
+                                                                    className="rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1.5 shadow-xs"
+                                                                    style={{ fontSize: '0.78rem' }}
+                                                                    onClick={() => handleAbrirModalSoportes(ant)}
+                                                                    title="Ver comprobantes y adjuntos guardados en la BD"
+                                                                >
+                                                                    <i className="fa-solid fa-paperclip text-success"></i>
+                                                                    <span className="fw-bold">{cantSoportes}</span>
+                                                                    <span className="d-none d-sm-inline">{cantSoportes === 1 ? 'soporte' : 'soportes'}</span>
+                                                                </Button>
+                                                            ) : (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline-secondary"
+                                                                    className="rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1.5 border-dashed"
+                                                                    style={{ fontSize: '0.76rem', color: '#64748b' }}
+                                                                    onClick={() => handleAbrirModalSoportes(ant)}
+                                                                    title="Adjuntar comprobantes a este anticipo"
+                                                                >
+                                                                    <i className="fa-solid fa-plus text-muted"></i>
+                                                                    <span className="d-none d-sm-inline">Adjuntar</span>
+                                                                </Button>
+                                                            )}
+                                                        </td>
                                                         <td className="fw-bold">{cant}</td>
                                                         <td className="text-end text-muted fw-medium">
                                                             {formatearPrecio(valorUnit)}
@@ -2781,7 +3214,7 @@ export const CruceCuentas = () => {
                                                                 size="sm"
                                                                 variant="outline-danger"
                                                                 className="d-inline-flex align-items-center justify-content-center p-0 shadow-xs"
-                                                                style={{ width: '32px', height: '32px', borderRadius: '6px' }}
+                                                                style={{ width: '30px', height: '30px', borderRadius: '6px' }}
                                                                 onClick={() => startEliminarAnticipo(ant._id || ant.id, ant.detalle)}
                                                                 title="Eliminar anticipo"
                                                             >
@@ -2795,7 +3228,7 @@ export const CruceCuentas = () => {
                                     </tbody>
                                     <tfoot className="table-secondary fw-bold" style={{ fontSize: '0.92rem' }}>
                                         <tr>
-                                            <td colSpan={2} className="text-start ps-3">
+                                            <td colSpan={4} className="text-start ps-3">
                                                 Resumen de Anticipos:
                                             </td>
                                             <td className="text-muted">{anticiposFiltrados.length} reg.</td>
@@ -2824,6 +3257,188 @@ export const CruceCuentas = () => {
                 </Collapse>
             </Card>
 
+            {/* ================================================================= */}
+            {/* MODAL: GESTOR Y VISOR DE SOPORTES Y COMPROBANTES DE PAGO EN BD */}
+            {/* ================================================================= */}
+            <Modal 
+                show={modalSoportesData.show} 
+                onHide={handleCerrarModalSoportes} 
+                size="lg" 
+                centered
+                className="rounded-4"
+            >
+                <Modal.Header closeButton className="bg-light py-3 border-bottom">
+                    <Modal.Title className="fs-6 fw-bolder d-flex align-items-center gap-2">
+                        <i className="fa-solid fa-folder-open text-success"></i>
+                        <span>Soportes y Comprobantes de Pago</span>
+                        {modalSoportesData.anticipo && (
+                            <Badge bg="secondary" className="fw-normal small ms-2">
+                                {modalSoportesData.anticipo.soportes?.length || 0} archivos
+                            </Badge>
+                        )}
+                    </Modal.Title>
+                </Modal.Header>
+
+                <Modal.Body className="p-3 p-md-4">
+                    {modalSoportesData.anticipo && (
+                        <>
+                            {/* Resumen del Anticipo */}
+                            <div className="p-3 mb-4 rounded-3 bg-light border d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                <div>
+                                    <div className="text-muted small">Detalle del anticipo:</div>
+                                    <div className="fw-bold text-dark fs-6">{modalSoportesData.anticipo.detalle}</div>
+                                    <div className="small text-muted mt-0.5">
+                                        Fecha: <strong>{obtenerFechaInput(modalSoportesData.anticipo.fecha || modalSoportesData.anticipo.createdAt)}</strong> &bull; 
+                                        {modalSoportesData.anticipo.tipo === 'OSCAR_A_LEO' ? ' Oscar entregó a Leonardo' : ' Leonardo entregó a Oscar'}
+                                    </div>
+                                </div>
+                                <div className="text-end">
+                                    <div className="text-muted small">Monto Total:</div>
+                                    <div className="fw-bolder text-success fs-5">
+                                        {formatearPrecio(modalSoportesData.anticipo.total)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Acciones de comprobantes */}
+                            <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
+                                <h6 className="fw-bold text-secondary mb-0">Comprobantes guardados en base de datos:</h6>
+                                <div>
+                                    <label className="btn btn-sm btn-outline-success fw-bold rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-1.5 shadow-xs mb-0" style={{ cursor: 'pointer' }}>
+                                        <i className="fa-solid fa-cloud-arrow-up"></i>
+                                        <span>Adjuntar comprobante</span>
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/*,application/pdf"
+                                            className="d-none"
+                                            onChange={handleSubirSoportesAExistente}
+                                            disabled={modalSoportesData.subiendo}
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+
+                            {modalSoportesData.subiendo && (
+                                <div className="text-center py-3 text-primary">
+                                    <Spinner animation="border" size="sm" className="me-2" />
+                                    <span>Guardando en la base de datos...</span>
+                                </div>
+                            )}
+
+                            {/* Lista de soportes */}
+                            {(!modalSoportesData.anticipo.soportes || modalSoportesData.anticipo.soportes.length === 0) ? (
+                                <div className="text-center py-5 border rounded-3 bg-light bg-opacity-50">
+                                    <i className="fa-regular fa-folder-open display-6 text-muted mb-2 opacity-50"></i>
+                                    <p className="text-muted mb-2">No hay soportes ni comprobantes adjuntos a este anticipo.</p>
+                                    <small className="text-secondary d-block">Puedes adjuntar comprobantes de transferencias, recibos o extractos en formato imagen (PNG, JPG) o PDF.</small>
+                                </div>
+                            ) : (
+                                <Row className="g-3">
+                                    {modalSoportesData.anticipo.soportes.map((sop, sIdx) => {
+                                        const esImagen = sop.tipo?.startsWith('image/') || (sop.data && sop.data.startsWith('data:image/'));
+                                        const esPdf = sop.tipo === 'application/pdf' || (sop.data && sop.data.startsWith('data:application/pdf'));
+
+                                        return (
+                                            <Col xs={12} sm={6} md={4} key={sIdx}>
+                                                <Card className="h-100 border shadow-xs rounded-3 overflow-hidden">
+                                                    {esImagen ? (
+                                                        <div 
+                                                            style={{ height: '140px', backgroundColor: '#f8fafc', cursor: 'pointer', overflow: 'hidden' }}
+                                                            className="d-flex align-items-center justify-content-center position-relative"
+                                                            onClick={() => setVisorImagenUrl({ url: sop.data, nombre: sop.nombre })}
+                                                            title="Clic para ampliar imagen"
+                                                        >
+                                                            <img 
+                                                                src={sop.data} 
+                                                                alt={sop.nombre} 
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                            />
+                                                            <div className="position-absolute bottom-0 end-0 m-1.5 bg-dark bg-opacity-75 text-white px-2 py-0.5 rounded small" style={{ fontSize: '0.7rem' }}>
+                                                                <i className="fa-solid fa-magnifying-glass me-1"></i> Ampliar
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div 
+                                                            style={{ height: '140px', backgroundColor: '#f1f5f9' }}
+                                                            className="d-flex flex-column align-items-center justify-content-center p-3 text-center"
+                                                        >
+                                                            <i className={`fa-solid ${esPdf ? 'fa-file-pdf text-danger' : 'fa-file-lines text-primary'} display-5 mb-2`}></i>
+                                                            <span className="badge bg-white text-secondary border small">{esPdf ? 'Documento PDF' : 'Archivo adjunto'}</span>
+                                                        </div>
+                                                    )}
+                                                    <Card.Body className="p-2.5 d-flex flex-column justify-content-between">
+                                                        <div>
+                                                            <div className="fw-semibold text-truncate small text-dark" title={sop.nombre}>
+                                                                {sop.nombre}
+                                                            </div>
+                                                            <div className="text-muted small" style={{ fontSize: '0.72rem' }}>
+                                                                {formatearTamanoArchivo(sop.size)}
+                                                            </div>
+                                                        </div>
+                                                        <div className="d-flex align-items-center justify-content-between gap-1.5 mt-2 pt-2 border-top">
+                                                            <a 
+                                                                href={sop.data} 
+                                                                download={sop.nombre} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                className="btn btn-xs btn-outline-primary py-1 px-2 small d-inline-flex align-items-center gap-1 rounded"
+                                                                style={{ fontSize: '0.75rem' }}
+                                                            >
+                                                                <i className="fa-solid fa-arrow-down"></i> Descargar
+                                                            </a>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline-danger"
+                                                                className="py-1 px-2 rounded"
+                                                                style={{ fontSize: '0.75rem' }}
+                                                                onClick={() => handleEliminarSoporteDeAnticipo(sIdx)}
+                                                                title="Eliminar este comprobante"
+                                                            >
+                                                                <i className="fa-solid fa-trash-can"></i>
+                                                            </Button>
+                                                        </div>
+                                                    </Card.Body>
+                                                </Card>
+                                            </Col>
+                                        );
+                                    })}
+                                </Row>
+                            )}
+                        </>
+                    )}
+                </Modal.Body>
+                <Modal.Footer className="py-2">
+                    <Button variant="secondary" size="sm" onClick={handleCerrarModalSoportes}>
+                        Cerrar
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Visor de Imagen en Gran Tamaño */}
+            {visorImagenUrl && (
+                <Modal
+                    show={!!visorImagenUrl}
+                    onHide={() => setVisorImagenUrl(null)}
+                    size="xl"
+                    centered
+                >
+                    <Modal.Header closeButton className="py-2">
+                        <Modal.Title className="fs-6 fw-bold text-truncate" style={{ maxWidth: '80vw' }}>
+                            <i className="fa-regular fa-image me-2 text-primary"></i>
+                            {visorImagenUrl.nombre}
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body className="p-1 text-center bg-dark">
+                        <img 
+                            src={visorImagenUrl.url} 
+                            alt={visorImagenUrl.nombre} 
+                            style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} 
+                        />
+                    </Modal.Body>
+                </Modal>
+            )}
+
             {/* NOTA METODOLÓGICA Y AUDITORÍA AL PIE */}
             <div className="card border-0 rounded-4 shadow-sm p-3 bg-white mb-4">
                 <div className="d-flex align-items-start gap-2">
@@ -2832,7 +3447,7 @@ export const CruceCuentas = () => {
                         <strong>Metodología de Cruce de Cuentas:</strong>
                         <ul className="mb-0 ps-3 mt-1">
                             <li><strong>Precios de Fábrica:</strong> Se obtienen de la tarifa vigente según la fecha de cada pedido registrada en la tabla de precios de fábrica.</li>
-                            <li><strong>Guantes:</strong> Funcionan como anticipo/suministro directo de Oscar hacia Leonardo a precio de fábrica; por ende, Leonardo debe pagarle ese valor a Oscar.</li>
+                            <li><strong>Guantes y Otros (Guantes):</strong> Funcionan como suministro directo de Oscar hacia Leonardo a precio de fábrica (precio fábrica × cantidad); por ende, le restan a Leonardo y le suman a Oscar. Para Karol y Oscar, los artículos de otros con subcategoría guantes no varían la conciliación entre socios (se muestran de forma informativa para Oscar).</li>
                             <li><strong>Otros de Kits:</strong> Incluye los accesorios clasificados como Kits. La casilla editable permite ingresar el costo de fábrica y se almacena en su navegador.</li>
                             <li><strong>Kits de Karol Gómez:</strong> Se integran al volumen de Leonardo (Karol actúa como su cliente en Kits).</li>
                             <li><strong>Gastos Deducibles de Kits:</strong> Exclusivamente se computan los egresos registrados con categoría Kits ('K'). Se descartan gastos de guantes y otros que no correspondan a la producción de kits.</li>

@@ -8,7 +8,7 @@ export const HeadersPedidos = ({ codigo, titulo, cantidadItems, collapsed, vTota
 
     const {
         precioKits: { kcg, kcp, kb, kce } = {},
-        precioCirios: { cc, cb } = {},
+        precioCirios: { cc, cb, ccon } = {},
     } = clienteActivo?.precios || {};
 
     const formatPrice = (cantidad, categoria) => {
@@ -20,6 +20,7 @@ export const HeadersPedidos = ({ codigo, titulo, cantidadItems, collapsed, vTota
             case 'KCE': valorMultiplicado = cantidad * (kce || 0); break;
             case 'KB': valorMultiplicado = cantidad * (kb || 0); break;
             case 'CC': valorMultiplicado = cantidad * (cc || 0); break;
+            case 'CCON': valorMultiplicado = cantidad * (ccon || cc || cb || 0); break;
             case 'CB': valorMultiplicado = cantidad * (cb || 0); break;
             default: valorMultiplicado = 0; break;
         }
@@ -36,6 +37,7 @@ export const HeadersPedidos = ({ codigo, titulo, cantidadItems, collapsed, vTota
             case 'KB':
                 return { icon: 'fa-boxes-packing', badgeBg: 'bg-primary-subtle text-primary border-primary-subtle' };
             case 'CC':
+            case 'CCON':
             case 'CB':
                 return { icon: 'fa-fire-flame-curved', badgeBg: 'bg-warning-subtle text-warning-emphasis border-warning-subtle' };
             case 'GUA':

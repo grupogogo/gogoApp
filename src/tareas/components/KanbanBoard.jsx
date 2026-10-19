@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Row, Col, Badge } from 'react-bootstrap';
 import { CardTarea } from './CardTarea';
 
 export const KanbanBoard = ({ tareas = [], onEditar, onNuevaTareaEstado }) => {
+    const [columnaMovil, setColumnaMovil] = useState('todas');
+
     const columnas = [
         {
             id: 'pendiente',
@@ -33,18 +35,51 @@ export const KanbanBoard = ({ tareas = [], onEditar, onNuevaTareaEstado }) => {
         }
     ];
 
+    const columnasAVisualizar = columnas.filter(col => {
+        if (columnaMovil === 'todas') return true;
+        return col.id === columnaMovil;
+    });
+
     return (
-        <Row className="g-3">
-            {columnas.map(col => (
-                <Col key={col.id} xs={12} lg={4}>
-                    <div
-                        className="rounded-4 p-3 h-100 d-flex flex-column"
-                        style={{
-                            backgroundColor: '#f8fafc',
-                            border: `1.5px solid #e2e8f0`,
-                            minHeight: '520px'
-                        }}
+        <>
+            {/* Pestañas de Cambio de Columna para Pantallas Móviles */}
+            <div className="d-flex d-lg-none scroll-horizontal-touch gap-1 mb-3">
+                <button
+                    type="button"
+                    className={`btn btn-sm rounded-pill px-3 text-nowrap ${
+                        columnaMovil === 'todas' ? 'btn-primary shadow-xs fw-bold' : 'btn-light border text-secondary'
+                    }`}
+                    onClick={() => setColumnaMovil('todas')}
+                >
+                    Todas ({tareas.length})
+                </button>
+                {columnas.map(c => (
+                    <button
+                        key={c.id}
+                        type="button"
+                        className={`btn btn-sm rounded-pill px-3 text-nowrap d-flex align-items-center gap-1.5 ${
+                            columnaMovil === c.id ? 'btn-dark text-white shadow-xs fw-bold' : 'btn-light border text-secondary'
+                        }`}
+                        onClick={() => setColumnaMovil(c.id)}
                     >
+                        <i className={`fa-solid ${c.icon}`} style={{ color: c.color }}></i>
+                        <span>{c.titulo}</span>
+                        <span className="badge bg-white text-dark ms-1">{c.items.length}</span>
+                    </button>
+                ))}
+            </div>
+
+            <Row className="g-3">
+                {columnasAVisualizar.map(col => (
+                    <Col key={col.id} xs={12} lg={4}>
+                        <div
+                            className="rounded-4 p-3 h-100 d-flex flex-column"
+                            style={{
+                                backgroundColor: '#f8fafc',
+                                border: `1.5px solid #e2e8f0`,
+                                minHeight: '420px'
+                            }}
+                        >
                         {/* Cabecera de Columna */}
                         <div className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
                             <div className="d-flex align-items-center gap-2">
@@ -114,5 +149,6 @@ export const KanbanBoard = ({ tareas = [], onEditar, onNuevaTareaEstado }) => {
                 </Col>
             ))}
         </Row>
+        </>
     );
 };

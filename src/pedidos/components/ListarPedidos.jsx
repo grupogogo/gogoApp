@@ -107,6 +107,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
         else if (catCode === 'KCE' && pKits.kce) precioNuevo = Number(pKits.kce);
         else if (catCode === 'KB' && pKits.kb) precioNuevo = Number(pKits.kb);
         else if (catCode === 'CC' && pCirios.cc) precioNuevo = Number(pCirios.cc);
+        else if (catCode === 'CCON' && (pCirios.ccon || pCirios.cc || pCirios.cb)) precioNuevo = Number(pCirios.ccon || pCirios.cc || pCirios.cb);
         else if (catCode === 'CB' && pCirios.cb) precioNuevo = Number(pCirios.cb);
         else if (catCode === 'GUANTES' || catCode === 'GUA') {
           const catG = String(item.categoria || '').toUpperCase().trim();
@@ -395,39 +396,39 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
 
       {/* PESTAÑAS DE FILTRO RÁPIDO POR ESTADO (SOLO ADMIN Y VENTAS) */}
       {!esPlanta && (
-        <div className="d-flex align-items-center gap-1 flex-wrap mb-3">
+        <div className="scroll-horizontal-touch d-flex align-items-center gap-1 mb-3">
           <button
-            className={`btn btn-sm rounded-pill px-3 ${filtroEstado === 'todos' ? 'btn-primary shadow-xs' : 'btn-light border'}`}
+            className={`btn btn-sm rounded-pill px-3 text-nowrap ${filtroEstado === 'todos' ? 'btn-primary shadow-xs' : 'btn-light border'}`}
             onClick={() => { setFiltroEstado('todos'); pagination.fns.onSetPage(0); }}
           >
             Todos <span className="badge bg-white text-dark ms-1">{conteoPorEstado.todos}</span>
           </button>
           <button
-            className={`btn btn-sm rounded-pill px-3 ${filtroEstado === 'pendiente' ? 'btn-warning text-dark fw-bold shadow-xs' : 'btn-light border'}`}
+            className={`btn btn-sm rounded-pill px-3 text-nowrap ${filtroEstado === 'pendiente' ? 'btn-warning text-dark fw-bold shadow-xs' : 'btn-light border'}`}
             onClick={() => { setFiltroEstado('pendiente'); pagination.fns.onSetPage(0); }}
           >
             <i className="fas fa-clock me-1 text-warning"></i>Pendientes <span className="badge bg-warning-subtle text-dark ms-1">{conteoPorEstado.pendiente}</span>
           </button>
           <button
-            className={`btn btn-sm rounded-pill px-3 ${filtroEstado === 'preparado' ? 'btn-info text-white shadow-xs' : 'btn-light border'}`}
+            className={`btn btn-sm rounded-pill px-3 text-nowrap ${filtroEstado === 'preparado' ? 'btn-info text-white shadow-xs' : 'btn-light border'}`}
             onClick={() => { setFiltroEstado('preparado'); pagination.fns.onSetPage(0); }}
           >
             <i className="fas fa-boxes-packing me-1"></i>Preparados <span className="badge bg-info-subtle text-dark ms-1">{conteoPorEstado.preparado}</span>
           </button>
           <button
-            className={`btn btn-sm rounded-pill px-3 ${filtroEstado === 'enviado' ? 'btn-secondary text-white shadow-xs' : 'btn-light border'}`}
+            className={`btn btn-sm rounded-pill px-3 text-nowrap ${filtroEstado === 'enviado' ? 'btn-secondary text-white shadow-xs' : 'btn-light border'}`}
             onClick={() => { setFiltroEstado('enviado'); pagination.fns.onSetPage(0); }}
           >
             <i className="fas fa-truck me-1"></i>Enviados <span className="badge bg-secondary-subtle text-dark ms-1">{conteoPorEstado.enviado}</span>
           </button>
           <button
-            className={`btn btn-sm rounded-pill px-3 ${filtroEstado === 'entregado' ? 'btn-success text-white shadow-xs' : 'btn-light border'}`}
+            className={`btn btn-sm rounded-pill px-3 text-nowrap ${filtroEstado === 'entregado' ? 'btn-success text-white shadow-xs' : 'btn-light border'}`}
             onClick={() => { setFiltroEstado('entregado'); pagination.fns.onSetPage(0); }}
           >
             <i className="fas fa-handshake me-1"></i>Entregados <span className="badge bg-success-subtle text-dark ms-1">{conteoPorEstado.entregado}</span>
           </button>
           <button
-            className={`btn btn-sm rounded-pill px-3 ${filtroEstado === 'pagado' ? 'btn-dark text-white shadow-xs' : 'btn-light border'}`}
+            className={`btn btn-sm rounded-pill px-3 text-nowrap ${filtroEstado === 'pagado' ? 'btn-dark text-white shadow-xs' : 'btn-light border'}`}
             onClick={() => { setFiltroEstado('pagado'); pagination.fns.onSetPage(0); }}
           >
             <i className="fas fa-dollar-sign me-1"></i>Pagados <span className="badge bg-light text-dark ms-1">{conteoPorEstado.pagado}</span>

@@ -121,7 +121,7 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
         if (c === 'GUANTES' || c.startsWith('G_') || c === 'G') {
             return { icon: 'fa-mitten', color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' };
         }
-        if (c === 'CC' || c === 'CB') {
+        if (c === 'CC' || c === 'CB' || c === 'CCON') {
             return { icon: 'fa-fire', color: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe' };
         }
         return { icon: 'fa-tags', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' };
@@ -659,7 +659,7 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
 
                                                         // Imagen del producto si corresponde
                                                         let imgSrc = null;
-                                                        if (['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB'].includes(categoria) && !esSurtidoNino && !esSurtidoNina) {
+                                                        if (['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'CCON'].includes(categoria) && !esSurtidoNino && !esSurtidoNina) {
                                                             const motivoNum = parseInt(inputStr.split('-')[1] || '1', 10);
                                                             if (!isNaN(motivoNum)) {
                                                                 imgSrc = useImage(obtenerImagen(categoria, item.genero), motivoNum);
@@ -743,7 +743,7 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                                                 </span>
                                                                             )}
 
-                                                                            {['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB'].includes(categoria) && (
+                                                                            {['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'CCON'].includes(categoria) && (
                                                                                 <>
                                                                                     {esSurtidoNino ? (
                                                                                         <div className="d-flex align-items-center gap-1.5">
@@ -761,9 +761,19 @@ export const ModalDetallePedido = ({ setShow, show, pedido }) => {
                                                                                         </div>
                                                                                     ) : (
                                                                                         <div className="d-flex align-items-center gap-2">
-                                                                                            <span className={`fw-bold text-dark ${modoTaller ? 'fs-5' : ''}`}>
-                                                                                                Motivo #{inputStr.split('-')[1] || item.motivo || '1'}
-                                                                                            </span>
+                                                                                            {(() => {
+                                                                                                const rawMotivo = inputStr.split('-')[1] || item.motivo || '1';
+                                                                                                const num = parseInt(rawMotivo, 10);
+                                                                                                const usaLetras = ['KCG', 'KCP', 'KCE', 'CC', 'KB', 'CB', 'CCON'].includes(categoria.toUpperCase());
+                                                                                                const label = (usaLetras && !isNaN(num) && num >= 1 && num <= 26)
+                                                                                                    ? `Modelo ${String.fromCharCode(64 + num)}`
+                                                                                                    : `Motivo #${rawMotivo}`;
+                                                                                                return (
+                                                                                                    <span className={`fw-bold text-dark ${modoTaller ? 'fs-5' : ''}`}>
+                                                                                                        {label}
+                                                                                                    </span>
+                                                                                                );
+                                                                                            })()}
                                                                                             {item.genero !== undefined && (
                                                                                                 <Badge
                                                                                                     bg={item.genero === '0' || item.genero === 0 ? 'primary' : 'danger'}

@@ -288,6 +288,9 @@ export const GestionPrecios = () => {
                                                         <span className="badge bg-teal-subtle text-dark border px-2 py-1" title="Cirio Comunión">
                                                             CC: {formatearPrecio(item.precioCirios?.cc || 0)}
                                                         </span>
+                                                        <span className="badge bg-warning-subtle text-dark border px-2 py-1" title="Cirio Confirmación">
+                                                            CCON: {formatearPrecio(item.precioCirios?.ccon || item.precioCirios?.cc || 0)}
+                                                        </span>
                                                         <span className="badge bg-pink-subtle text-dark border px-2 py-1" title="Cirio Bautizo">
                                                             CB: {formatearPrecio(item.precioCirios?.cb || 0)}
                                                         </span>

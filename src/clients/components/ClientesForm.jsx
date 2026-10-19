@@ -13,6 +13,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
      clienteActivo.precios.precioKits?.kb ||
      clienteActivo.precios.precioKits?.kce ||
      clienteActivo.precios.precioCirios?.cc ||
+     clienteActivo.precios.precioCirios?.ccon ||
      clienteActivo.precios.precioCirios?.cb ||
      clienteActivo.precios.precioGuantes?.gb ||
      clienteActivo.precios.precioGuantes?.gn ||
@@ -33,7 +34,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
     distribuidor = true,
     precios: {
       precioKits: { kcg = 0, kcp = 0, kb = 0, kce = 0 } = {},
-      precioCirios: { cc = 0, cb = 0 } = {},
+      precioCirios: { cc = 0, cb = 0, ccon = 0 } = {},
       precioGuantes: { gb = 0, gn = 0, gm = 0 } = {}
     } = {},
     onInputChange,
@@ -42,7 +43,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
     distribuidor: true,
     precios: {
       precioKits: { kcg: 0, kcp: 0, kb: 0, kce: 0 },
-      precioCirios: { cc: 0, cb: 0 },
+      precioCirios: { cc: 0, cb: 0, ccon: 0 },
       precioGuantes: { gb: 0, gn: 0, gm: 0 }
     }
   });
@@ -67,6 +68,8 @@ export const ClientesForm = ({ setCliente, cliente }) => {
       ...formState,
       distribuidor: clienteTipo,
       precios: {
+        ...(formState.precios?._id && { _id: formState.precios._id }),
+        ...(formState.precios?.Precios_id && { Precios_id: formState.precios.Precios_id }),
         precioKits: {
           kcg: Number(formState.precios?.precioKits?.kcg) || 0,
           kcp: Number(formState.precios?.precioKits?.kcp) || 0,
@@ -75,6 +78,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
         },
         precioCirios: {
           cc: Number(formState.precios?.precioCirios?.cc) || 0,
+          ccon: Number(formState.precios?.precioCirios?.ccon) || 0,
           cb: Number(formState.precios?.precioCirios?.cb) || 0,
         },
         precioGuantes: {
@@ -437,7 +441,7 @@ export const ClientesForm = ({ setCliente, cliente }) => {
               </div>
 
               <div className="row g-2">
-                <div className="col-6 col-md-6">
+                <div className="col-12 col-md-4">
                   <label className="form-label small text-muted mb-1">CC (Cirio Comunión)</label>
                   <div className="input-group input-group-sm">
                     <span className="input-group-text bg-white text-muted">$</span>
@@ -453,7 +457,23 @@ export const ClientesForm = ({ setCliente, cliente }) => {
                   </div>
                 </div>
 
-                <div className="col-6 col-md-6">
+                <div className="col-12 col-md-4">
+                  <label className="form-label small text-muted mb-1">CCON (Cirio Confirmación)</label>
+                  <div className="input-group input-group-sm">
+                    <span className="input-group-text bg-white text-muted">$</span>
+                    <input
+                      type="number"
+                      className="form-control form-control-sm text-end fw-bold shadow-none"
+                      name="ccon"
+                      value={ccon || 0}
+                      onChange={handleChange}
+                      onFocus={(e) => e.target.select()}
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <div className="col-12 col-md-4">
                   <label className="form-label small text-muted mb-1">CB (Cirio Bautizo)</label>
                   <div className="input-group input-group-sm">
                     <span className="input-group-text bg-white text-muted">$</span>

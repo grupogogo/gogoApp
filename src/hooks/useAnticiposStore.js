@@ -55,7 +55,7 @@ export const useAnticiposStore = () => {
     /**
      * Guardar nuevo anticipo en la base de datos
      */
-    const startCrearAnticipo = async ({ detalle, cantidad, valor, total, tipo, anio }) => {
+    const startCrearAnticipo = async ({ detalle, cantidad, valor, total, tipo, anio, fecha, soportes }) => {
         try {
             const cantNum = Number(cantidad) > 0 ? Number(cantidad) : 1;
             const valorNum = Number(valor) >= 0 ? Number(valor) : 0;
@@ -69,7 +69,9 @@ export const useAnticiposStore = () => {
                 valor: valorNum,
                 total: totalNum,
                 tipo: (tipo === 'LEO_A_OSCAR') ? 'LEO_A_OSCAR' : 'OSCAR_A_LEO',
-                anio: anio ? Number(anio) : new Date().getFullYear()
+                anio: anio ? Number(anio) : new Date().getFullYear(),
+                fecha: fecha || new Date().toISOString().split('T')[0],
+                soportes: Array.isArray(soportes) ? soportes : []
             };
 
             const { data } = await gogoApi.post('/anticipos', nuevo);
@@ -101,6 +103,45 @@ export const useAnticiposStore = () => {
         } catch (error) {
             console.error('Error al guardar anticipo:', error);
             const msg = error.response?.data?.msg || 'No se pudo guardar el anticipo en la base de datos.';
+            Swal.fire('Error', msg, 'error');
+            return null;
+        }
+    };
+
+    /**
+     * Actualizar anticipo en la base de datos (fecha, soportes, montos, etc.)
+     */
+    const startActualizarAnticipo = async (id, datosActualizados, mostrarToast = true) => {
+        try {
+            const { data } = await gogoApi.put(`/anticipos/${id}`, datosActualizados);
+            if (data.ok && data.anticipo) {
+                setAnticipos(prev => {
+                    const actualizados = prev.map(a => (a._id === id || a.id === id) ? data.anticipo : a);
+                    try {
+                        localStorage.setItem(STORAGE_KEY_ANTICIPOS, JSON.stringify(actualizados));
+                    } catch (e) {
+                        console.error('Error guardando en localStorage', e);
+                    }
+                    return actualizados;
+                });
+
+                if (mostrarToast) {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'Anticipo actualizado',
+                        timer: 1800,
+                        showConfirmButton: false
+                    });
+                }
+
+                return data.anticipo;
+            }
+            return null;
+        } catch (error) {
+            console.error('Error al actualizar anticipo:', error);
+            const msg = error.response?.data?.msg || 'No se pudo actualizar el anticipo.';
             Swal.fire('Error', msg, 'error');
             return null;
         }
@@ -161,6 +202,7 @@ export const useAnticiposStore = () => {
         isLoadingAnticipos,
         startLoadingAnticipos,
         startCrearAnticipo,
+        startActualizarAnticipo,
         startEliminarAnticipo,
         setAnticipos
     };
