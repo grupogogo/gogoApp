@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
+import Modal from 'react-bootstrap/Modal';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Popover from 'react-bootstrap/Popover';
 import Swal from 'sweetalert2';
@@ -15,6 +16,8 @@ import { useGastosStore } from '../../hooks/useGastosStore';
 import { StackedChart, AreaChartOld, AreaChartOldYear } from '../../dashboard/js';
 import { AreaChartOldYearAcumulada } from '../../dashboard/js/AreaChartOldYearAcumulada';
 import { ChartKitsMultiAnual } from '../components/ChartKitsMultiAnual';
+import { ChartBarrasMensualAnios } from '../components/ChartBarrasMensualAnios';
+import { ChartMetaVsAnterior } from '../components/ChartMetaVsAnterior';
 
 import {
     MONTH_LABELS,
@@ -26,6 +29,8 @@ import {
     obtenerAniosDisponibles,
     filtrarPedidosYGastosPorUsuario,
     calcularDivisionSocios,
+    aplicarPreciosFabricaAKits,
+    parsearFechaSegura,
     esOtrDeKit,
     esOtrDeGuantes,
     UID_LEONARDO,
@@ -75,6 +80,53 @@ export const ListOldOrders = () => {
     const [filtroGrupoMatriz, setFiltroGrupoMatriz] = useState('TODAS'); // 'TODAS' | 'Kits' | 'Guantes' | 'Otros'
     const [paginaActual, setPaginaActual] = useState(1);
     const itemsPorPagina = 25;
+    const [trimestresExpandidos, setTrimestresExpandidos] = useState({});
+    const [auditoriaTrimestreModal, setAuditoriaTrimestreModal] = useState(null);
+    const topFilterRef = useRef(null);
+    const [mostrarFiltroFlotante, setMostrarFiltroFlotante] = useState(false);
+
+    const handleCambiarAnio = (nuevo) => {
+        setFechaPedido(nuevo);
+        if (String(anioComparar) === nuevo) {
+            const yrNum = Number(nuevo);
+            const fallback = String(yrNum > 2017 ? yrNum - 1 : (yrNum + 1));
+            setAnioComparar(fallback);
+        }
+    };
+
+    // Detectar scroll para mostrar el filtro flotante cuando el superior sale del viewport
+    useEffect(() => {
+        const checkScroll = () => {
+            if (topFilterRef.current) {
+                const rect = topFilterRef.current.getBoundingClientRect();
+                setMostrarFiltroFlotante(rect.bottom < 50);
+            } else {
+                const scrollActual = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+                setMostrarFiltroFlotante(scrollActual > 260);
+            }
+        };
+
+        window.addEventListener("scroll", checkScroll, { passive: true, capture: true });
+        document.addEventListener("scroll", checkScroll, { passive: true, capture: true });
+
+        let observer = null;
+        if (typeof IntersectionObserver !== "undefined" && topFilterRef.current) {
+            observer = new IntersectionObserver(([entry]) => {
+                const isAbove = entry.boundingClientRect.bottom < 60;
+                setMostrarFiltroFlotante(!entry.isIntersecting && isAbove);
+            }, { threshold: [0, 1] });
+            observer.observe(topFilterRef.current);
+        }
+
+        const timer = setTimeout(checkScroll, 200);
+
+        return () => {
+            clearTimeout(timer);
+            if (observer) observer.disconnect();
+            window.removeEventListener("scroll", checkScroll, { capture: true });
+            document.removeEventListener("scroll", checkScroll, { capture: true });
+        };
+    }, []);
 
     // Load initial data
     useEffect(() => {
@@ -109,11 +161,12 @@ export const ListOldOrders = () => {
         });
     }, [soloPagados]);
 
-    // Pedidos y gastos totales del año seleccionado
+    // Pedidos y gastos totales del año seleccionado (Kits valorados con precios de fábrica según Gestión de Precios)
     const todosPedidosDelAnio = useMemo(() => {
         const raw = obtenerPedidosPorAnio(oldOrders, pedidos, fechaPedido);
-        return filtrarPorEstadoPagado(raw);
-    }, [oldOrders, pedidos, fechaPedido, filtrarPorEstadoPagado]);
+        const filtrados = filtrarPorEstadoPagado(raw);
+        return aplicarPreciosFabricaAKits(filtrados, listaPrecios);
+    }, [oldOrders, pedidos, fechaPedido, filtrarPorEstadoPagado, listaPrecios]);
 
     const todosGastosDelAnio = useMemo(() => {
         return obtenerGastosPorAnio(gastos, fechaPedido);
@@ -121,6 +174,7 @@ export const ListOldOrders = () => {
 
     // Ventas de guantes de Leonardo Gómez para destacar a Oscar (GUANTES + OTR)
     const ventasGuantesLeoAnio = useMemo(() => {
+        if (filtroCategoria === 'KITS' || filtroCategoria === 'OTROS') return 0;
         let sum = 0;
         todosPedidosDelAnio.forEach(ord => {
             const userId = (ord.user?._id || ord.user || ord.raw?.user?._id || ord.raw?.user)?.toString();
@@ -136,10 +190,11 @@ export const ListOldOrders = () => {
             }
         });
         return sum;
-    }, [todosPedidosDelAnio]);
+    }, [todosPedidosDelAnio, filtroCategoria]);
 
     // Ventas de guantes de Leonardo vs Karol (separadas y sumadas)
     const desgloseGuantesLeoYKarol = useMemo(() => {
+        if (filtroCategoria === 'KITS' || filtroCategoria === 'OTROS') return { leo: 0, karol: 0, total: 0 };
         let leo = 0;
         let karol = 0;
         todosPedidosDelAnio.forEach(ord => {
@@ -159,12 +214,12 @@ export const ListOldOrders = () => {
             });
         });
         return { leo, karol, total: leo + karol };
-    }, [todosPedidosDelAnio]);
+    }, [todosPedidosDelAnio, filtroCategoria]);
 
     // División consolidada de cuentas por socio (Leonardo vs Oscar + Regla Karol)
     const divisionSocios = useMemo(() => {
-        return calcularDivisionSocios(todosPedidosDelAnio, todosGastosDelAnio);
-    }, [todosPedidosDelAnio, todosGastosDelAnio]);
+        return calcularDivisionSocios(todosPedidosDelAnio, todosGastosDelAnio, listaPrecios, filtroCategoria);
+    }, [todosPedidosDelAnio, todosGastosDelAnio, listaPrecios, filtroCategoria]);
 
     // Pedidos y gastos filtrados según la vista seleccionada ('GENERAL', 'LEONARDO', 'OSCAR') y categoría
     const { pedidosFiltrados: pedidosDelAnio, gastosFiltrados: gastosDelAnio, descripcionFiltro } = useMemo(() => {
@@ -175,8 +230,9 @@ export const ListOldOrders = () => {
     const anioAnterior = String(parseInt(fechaPedido, 10) - 1);
     const todosPedidosAnioAnterior = useMemo(() => {
         const raw = obtenerPedidosPorAnio(oldOrders, pedidos, anioAnterior);
-        return filtrarPorEstadoPagado(raw);
-    }, [oldOrders, pedidos, anioAnterior, filtrarPorEstadoPagado]);
+        const filtrados = filtrarPorEstadoPagado(raw);
+        return aplicarPreciosFabricaAKits(filtrados, listaPrecios);
+    }, [oldOrders, pedidos, anioAnterior, filtrarPorEstadoPagado, listaPrecios]);
 
     const todosGastosAnioAnterior = useMemo(() => {
         return obtenerGastosPorAnio(gastos, anioAnterior);
@@ -189,8 +245,9 @@ export const ListOldOrders = () => {
     // Pedidos y gastos para la pestaña de Comparativa Cara a Cara
     const todosPedidosComparar = useMemo(() => {
         const raw = obtenerPedidosPorAnio(oldOrders, pedidos, anioComparar);
-        return filtrarPorEstadoPagado(raw);
-    }, [oldOrders, pedidos, anioComparar, filtrarPorEstadoPagado]);
+        const filtrados = filtrarPorEstadoPagado(raw);
+        return aplicarPreciosFabricaAKits(filtrados, listaPrecios);
+    }, [oldOrders, pedidos, anioComparar, filtrarPorEstadoPagado, listaPrecios]);
 
     const todosGastosComparar = useMemo(() => {
         return obtenerGastosPorAnio(gastos, anioComparar);
@@ -215,15 +272,22 @@ export const ListOldOrders = () => {
     }, [stats, statsComparar, fechaPedido, anioComparar]);
 
     // Filtrado y totales para la Matriz Unificada de Categorías (Kits, Guantes, Otros)
-    const conteoMatrizKits = useMemo(() => (stats?.categoriasMatriz || []).filter(c => c.grupo === 'Kits').length, [stats?.categoriasMatriz]);
-    const conteoMatrizGuantes = useMemo(() => (stats?.categoriasMatriz || []).filter(c => c.grupo === 'Guantes').length, [stats?.categoriasMatriz]);
-    const conteoMatrizOtros = useMemo(() => (stats?.categoriasMatriz || []).filter(c => c.grupo === 'Otros').length, [stats?.categoriasMatriz]);
+    const categoriasMatrizSegunFiltro = useMemo(() => {
+        const list = stats?.categoriasMatriz || [];
+        if (filtroCategoria === 'KITS') return list.filter(c => c.grupo === 'Kits');
+        if (filtroCategoria === 'GUANTES') return list.filter(c => c.grupo === 'Guantes');
+        if (filtroCategoria === 'OTROS') return list.filter(c => c.grupo === 'Otros');
+        return list;
+    }, [stats?.categoriasMatriz, filtroCategoria]);
+
+    const conteoMatrizKits = useMemo(() => categoriasMatrizSegunFiltro.filter(c => c.grupo === 'Kits').length, [categoriasMatrizSegunFiltro]);
+    const conteoMatrizGuantes = useMemo(() => categoriasMatrizSegunFiltro.filter(c => c.grupo === 'Guantes').length, [categoriasMatrizSegunFiltro]);
+    const conteoMatrizOtros = useMemo(() => categoriasMatrizSegunFiltro.filter(c => c.grupo === 'Otros').length, [categoriasMatrizSegunFiltro]);
 
     const categoriasMatrizFiltradas = useMemo(() => {
-        const list = stats?.categoriasMatriz || [];
-        if (filtroGrupoMatriz === 'TODAS') return list;
-        return list.filter(cat => String(cat.grupo || '').toLowerCase() === filtroGrupoMatriz.toLowerCase());
-    }, [stats?.categoriasMatriz, filtroGrupoMatriz]);
+        if (filtroGrupoMatriz === 'TODAS') return categoriasMatrizSegunFiltro;
+        return categoriasMatrizSegunFiltro.filter(cat => String(cat.grupo || '').toLowerCase() === filtroGrupoMatriz.toLowerCase());
+    }, [categoriasMatrizSegunFiltro, filtroGrupoMatriz]);
 
     const totalesMatrizFiltrada = useMemo(() => {
         const unidades = categoriasMatrizFiltradas.reduce((acc, c) => acc + (Number(c.unidades) || 0), 0);
@@ -270,14 +334,15 @@ export const ListOldOrders = () => {
         setPaginaActual(1);
     }, [fechaPedido, search, categoriaFiltro, excluirCliente]);
 
-    // Preparación de datasets para gráficos multianuales
+    // Preparación de datasets para gráficos multianuales (con filtros de usuario, categoría y pago)
     const multiAnualSalesData = useMemo(() => {
         const yearsToCompare = aniosDisponibles.slice().reverse();
         const datasets = yearsToCompare.map((yr, idx) => {
             const raw = obtenerPedidosPorAnio(oldOrders, pedidos, yr);
-            const peds = filtrarPorEstadoPagado(raw);
+            const conPrecios = aplicarPreciosFabricaAKits(filtrarPorEstadoPagado(raw), listaPrecios);
+            const { pedidosFiltrados } = filtrarPedidosYGastosPorUsuario(conPrecios, [], filtroUsuario, esLeonardo, filtroCategoria);
             const monthly = Array(12).fill(0);
-            peds.forEach(p => {
+            pedidosFiltrados.forEach(p => {
                 if (p.mes !== null && p.mes >= 0 && p.mes <= 11) {
                     monthly[p.mes] += p.total;
                 }
@@ -295,17 +360,18 @@ export const ListOldOrders = () => {
             labels: MONTH_LABELS,
             datasets
         };
-    }, [aniosDisponibles, oldOrders, pedidos, pastelColors, filtrarPorEstadoPagado]);
+    }, [aniosDisponibles, oldOrders, pedidos, pastelColors, filtrarPorEstadoPagado, listaPrecios, filtroUsuario, esLeonardo, filtroCategoria]);
 
-    // Preparación de datasets para gastos multianuales
+    // Preparación de datasets para gastos multianuales (con filtros de usuario y categoría)
     const multiAnualGastosData = useMemo(() => {
         const yearsToCompare = aniosDisponibles.slice().reverse();
         const datasets = yearsToCompare.map((yr, idx) => {
-            const g = obtenerGastosPorAnio(gastos, yr);
+            const rawG = obtenerGastosPorAnio(gastos, yr);
+            const { gastosFiltrados } = filtrarPedidosYGastosPorUsuario([], rawG, filtroUsuario, esLeonardo, filtroCategoria);
             const color = pastelColors[(idx + 4) % pastelColors.length];
             return {
                 label: String(yr),
-                data: g.mensual,
+                data: gastosFiltrados.mensual,
                 backgroundColor: color,
                 borderColor: color,
             };
@@ -315,56 +381,79 @@ export const ListOldOrders = () => {
             labels: MONTH_LABELS,
             datasets
         };
-    }, [aniosDisponibles, gastos, pastelColors]);
+    }, [aniosDisponibles, gastos, pastelColors, filtroUsuario, esLeonardo, filtroCategoria]);
 
     // Datasets para gráfico de Ventas vs Gastos del año seleccionado
     const chartVentasVsGastos = useMemo(() => {
+        const catSuffix = filtroCategoria !== 'TODOS' ? ` (${filtroCategoria === 'KITS' ? 'Kits' : filtroCategoria === 'GUANTES' ? 'Guantes' : 'Otros'})` : '';
         return {
             labels: MONTH_LABELS,
             datasets: [
                 {
-                    label: `Ventas ${fechaPedido}`,
+                    label: `Ventas ${fechaPedido}${catSuffix}`,
                     data: stats.ventasMensuales,
                     backgroundColor: 'rgba(16, 185, 129, 0.75)',
                 },
                 {
-                    label: `Gastos ${fechaPedido}`,
+                    label: `Gastos ${fechaPedido}${catSuffix}`,
                     data: stats.gastosMensuales,
                     backgroundColor: 'rgba(239, 68, 68, 0.75)',
                 }
             ]
         };
-    }, [fechaPedido, stats]);
+    }, [fechaPedido, stats, filtroCategoria]);
 
-    // Datasets para gráfico de ventas por categoría del año
+    // Datasets para gráfico de ventas por categoría del año (respeta filtro superior de categoría)
     const chartCategoriasData = useMemo(() => {
-        const datasets = stats.categoriasMatriz.map((cat, idx) => ({
-            label: cat.nombre,
-            data: cat.mensualVenta,
-            backgroundColor: cat.color || pastelColors[idx % pastelColors.length],
-        }));
+        let lista = stats.categoriasMatriz || [];
+        if (filtroCategoria === 'KITS') {
+            lista = lista.filter(c => c.grupo === 'Kits');
+        } else if (filtroCategoria === 'GUANTES') {
+            lista = lista.filter(c => c.grupo === 'Guantes');
+        } else if (filtroCategoria === 'OTROS') {
+            lista = lista.filter(c => c.grupo === 'Otros');
+        }
+
+        const datasets = lista
+            .filter(cat => filtroCategoria !== 'TODOS' ? true : (cat.totalVenta > 0 || cat.unidades > 0))
+            .map((cat, idx) => ({
+                label: cat.nombre,
+                data: cat.mensualVenta,
+                backgroundColor: cat.color || pastelColors[idx % pastelColors.length],
+            }));
 
         return {
             labels: MONTH_LABELS,
             datasets
         };
-    }, [stats, pastelColors]);
+    }, [stats, pastelColors, filtroCategoria]);
 
-    // Datasets para gráfico de cantidades por categoría del año
+    // Datasets para gráfico de cantidades por categoría del año (respeta filtro superior de categoría)
     const chartCategoriasCantidad = useMemo(() => {
-        const datasets = stats.categoriasMatriz.map((cat, idx) => ({
-            label: cat.nombre,
-            data: cat.mensualUnidades,
-            backgroundColor: cat.color || pastelColors[idx % pastelColors.length],
-        }));
+        let lista = stats.categoriasMatriz || [];
+        if (filtroCategoria === 'KITS') {
+            lista = lista.filter(c => c.grupo === 'Kits');
+        } else if (filtroCategoria === 'GUANTES') {
+            lista = lista.filter(c => c.grupo === 'Guantes');
+        } else if (filtroCategoria === 'OTROS') {
+            lista = lista.filter(c => c.grupo === 'Otros');
+        }
+
+        const datasets = lista
+            .filter(cat => filtroCategoria !== 'TODOS' ? true : (cat.totalVenta > 0 || cat.unidades > 0))
+            .map((cat, idx) => ({
+                label: cat.nombre,
+                data: cat.mensualUnidades,
+                backgroundColor: cat.color || pastelColors[idx % pastelColors.length],
+            }));
 
         return {
             labels: MONTH_LABELS,
             datasets
         };
-    }, [stats, pastelColors]);
+    }, [stats, pastelColors, filtroCategoria]);
 
-    // Preparación para AreaChartOld (mantener compatibilidad Brand Design vs Otros)
+    // Preparación para AreaChartOld (mantener compatibilidad Brand Design vs Otros con filtros activos)
     const areaChartProps = useMemo(() => {
         const NIT_BRAND_DESIGN = '900879470';
         const brandMensual = Array(12).fill(0);
@@ -381,19 +470,39 @@ export const ListOldOrders = () => {
             }
         });
 
-        const gastosData = mensualGastosUsuarios ? mensualGastosUsuarios(gastos, parseInt(fechaPedido, 10), 'K') : null;
+        const gastosFiltradosLista = gastosDelAnio.lista || [];
+        const gastosMensualesO = new Array(12).fill(0);
+        const gastosMensualesL = new Array(12).fill(0);
+
+        gastosFiltradosLista.forEach(gasto => {
+            const fechaGasto = parsearFechaSegura(gasto.fecha || gasto.createdAt);
+            if (!fechaGasto) return;
+            const mes = fechaGasto.getMonth();
+            if (mes < 0 || mes > 11) return;
+
+            const subtotal = Number(gasto.precio || 0) * Number(gasto.cantidad || 1);
+            const userId = (gasto.user?._id || gasto.user)?.toString();
+            if (userId === UID_OSCAR) {
+                gastosMensualesO[mes] += subtotal;
+            } else if (userId === UID_LEONARDO) {
+                gastosMensualesL[mes] += subtotal;
+            } else {
+                gastosMensualesL[mes] += Math.round(subtotal * 0.5);
+                gastosMensualesO[mes] += Math.round(subtotal * 0.5);
+            }
+        });
 
         return {
-            gastos: gastosData || {
-                gastosMensualesO: stats.gastosMensuales.map(v => Math.round(v * 0.5)),
-                gastosMensualesL: stats.gastosMensuales.map(v => Math.round(v * 0.5))
+            gastos: {
+                gastosMensualesO,
+                gastosMensualesL
             },
             ventas: { data: stats.ventasMensuales },
             ventasBrandDesign: { data: brandMensual },
             ventasOtros: { data: otrosMensual },
             porValor: false
         };
-    }, [pedidosDelAnio, gastos, fechaPedido, stats, mensualGastosUsuarios]);
+    }, [pedidosDelAnio, gastosDelAnio, stats]);
 
     // Exportación CSV
     const handleDownloadCsv = () => {
@@ -448,7 +557,131 @@ export const ListOldOrders = () => {
 
     return (
         <LayoutApp>
-            <div className="container-fluid py-3 px-3 px-md-4" ref={reportPrintRef}>
+            {/* Barra Flotante de Filtro de Cuentas y Año al hacer Scroll */}
+            <div
+                className={`floating-user-filter rounded-pill px-3 py-2 align-items-center gap-2.5 shadow ${
+                    mostrarFiltroFlotante ? "is-visible" : ""
+                }`}
+                role="region"
+                aria-label="Filtro rápido de cuentas y año"
+            >
+                {/* Indicador / Icono de Cuentas */}
+                <div className="d-flex align-items-center gap-2 px-1 text-secondary">
+                    <span 
+                        className="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle shadow-xs" 
+                        style={{ width: "28px", height: "28px", fontSize: "0.82rem" }}
+                    >
+                        <i className="fa-solid fa-users-gear"></i>
+                    </span>
+                    <span className="fw-bold small d-none d-sm-inline text-dark" style={{ fontSize: "0.82rem" }}>
+                        Cuentas:
+                    </span>
+                </div>
+
+                {esKarol ? (
+                    <span className="badge bg-primary text-white rounded-pill px-3 py-2 fw-semibold shadow-xs" style={{ fontSize: "0.82rem" }}>
+                        <i className="fa-solid fa-user me-1.5"></i> Karol Gómez
+                    </span>
+                ) : (
+                    <div className="btn-group rounded-pill p-1 bg-light border shadow-xs" role="group">
+                        <button
+                            type="button"
+                            className={`btn btn-sm rounded-pill px-3 py-1.5 fw-bold transition-all ${
+                                filtroUsuario === "GENERAL"
+                                    ? "btn-dark text-white shadow-sm"
+                                    : "btn-light text-secondary border-0 bg-transparent"
+                            }`}
+                            onClick={() => setFiltroUsuario("GENERAL")}
+                            title={esLeonardo ? "Consolidado General filtrado: Kits globales, Guantes propios y Otros de Kits" : "Consolidado General de la Empresa"}
+                            style={{ fontSize: "0.82rem", whiteSpace: "nowrap" }}
+                        >
+                            <i className="fa-solid fa-building me-1.5 opacity-75"></i>
+                            Consolidado General
+                        </button>
+                        <button
+                            type="button"
+                            className={`btn btn-sm rounded-pill px-3 py-1.5 fw-bold transition-all ${
+                                filtroUsuario === "LEONARDO"
+                                    ? "btn-primary text-white shadow-sm"
+                                    : "btn-light text-secondary border-0 bg-transparent"
+                            }`}
+                            onClick={() => setFiltroUsuario("LEONARDO")}
+                            style={{ fontSize: "0.82rem", whiteSpace: "nowrap" }}
+                        >
+                            <i className="fa-solid fa-user me-1.5 opacity-75"></i>
+                            Leonardo
+                            <span className="badge bg-white text-primary rounded-pill ms-2 px-2 py-0.5" style={{ fontSize: "0.68rem" }}>
+                                + Karol
+                            </span>
+                        </button>
+                        {!esLeonardo && (
+                            <button
+                                type="button"
+                                className={`btn btn-sm rounded-pill px-3 py-1.5 fw-bold transition-all ${
+                                    filtroUsuario === "OSCAR"
+                                        ? "btn-success text-white shadow-sm"
+                                        : "btn-light text-secondary border-0 bg-transparent"
+                                }`}
+                                onClick={() => setFiltroUsuario("OSCAR")}
+                                style={{ fontSize: "0.82rem", whiteSpace: "nowrap" }}
+                            >
+                                <i className="fa-solid fa-user-tie me-1.5 opacity-75"></i>
+                                Oscar
+                                <span className="badge bg-white text-success rounded-pill ms-2 px-2 py-0.5" style={{ fontSize: "0.68rem" }}>
+                                    + Guantes
+                                </span>
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Divisor vertical sutil */}
+                <div className="vr my-1 text-secondary opacity-25 d-none d-sm-block" style={{ height: "24px" }}></div>
+
+                {/* Selector interactivo de año con espacio adecuado */}
+                <div className="d-flex align-items-center gap-2 bg-light border rounded-pill px-3 py-1 shadow-xs" title="Año analizado">
+                    <i className="fa-regular fa-calendar text-primary" style={{ fontSize: "0.85rem" }}></i>
+                    <span className="fw-semibold text-secondary small d-none d-md-inline" style={{ fontSize: "0.78rem" }}>Año:</span>
+                    <select
+                        className="form-select form-select-sm border-0 bg-transparent fw-bolder py-0 ps-1 pe-3 text-dark"
+                        value={fechaPedido}
+                        onChange={(e) => handleCambiarAnio(e.target.value)}
+                        style={{ cursor: "pointer", width: "auto", minWidth: "68px", fontSize: "0.82rem", boxShadow: "none" }}
+                    >
+                        {aniosDisponibles.map(yr => (
+                            <option key={yr} value={yr}>
+                                {yr}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Badge contextual si hay filtro de categoría activo */}
+                {filtroCategoria !== "TODOS" && (
+                    <span 
+                        className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1.5 fw-bold d-none d-lg-inline-block"
+                        style={{ fontSize: "0.75rem" }}
+                        title={`Filtro de categoría: ${filtroCategoria}`}
+                    >
+                        {filtroCategoria === "KITS" ? "Kits" : filtroCategoria === "GUANTES" ? "Guantes" : "Otros"}
+                    </span>
+                )}
+
+                {/* Divisor vertical hacia el botón de subir */}
+                <div className="vr my-1 text-secondary opacity-25" style={{ height: "24px" }}></div>
+
+                {/* Botón para subir rápido al inicio con mejor proporción */}
+                <button
+                    type="button"
+                    onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                    className="btn btn-sm btn-light text-secondary rounded-circle border d-flex align-items-center justify-content-center shadow-xs"
+                    style={{ width: "32px", height: "32px", minWidth: "32px" }}
+                    title="Subir al inicio de la página"
+                >
+                    <i className="fa-solid fa-arrow-up" style={{ fontSize: "0.78rem" }}></i>
+                </button>
+            </div>
+            <div className="w-100 py-2" ref={reportPrintRef} style={{ minWidth: 0, maxWidth: "100%" }}>
                 {/* Header Superior con Selector de Años y Acciones */}
                 <div className="card shadow-sm border-0 mb-4 bg-white rounded-4 overflow-hidden">
                     <div className="card-body p-4">
@@ -479,15 +712,7 @@ export const ListOldOrders = () => {
                                         <select
                                             className="form-select form-select-sm w-auto rounded-pill border-success fw-bold shadow-sm px-3"
                                             value={fechaPedido}
-                                            onChange={(e) => {
-                                                const nuevo = e.target.value;
-                                                setFechaPedido(nuevo);
-                                                if (String(anioComparar) === nuevo) {
-                                                    const yrNum = Number(nuevo);
-                                                    const fallback = String(yrNum > 2017 ? yrNum - 1 : (yrNum + 1));
-                                                    setAnioComparar(fallback);
-                                                }
-                                            }}
+                                            onChange={(e) => handleCambiarAnio(e.target.value)}
                                             style={{ cursor: 'pointer', minWidth: '100px' }}
                                         >
                                             {aniosDisponibles.map(yr => (
@@ -502,7 +727,7 @@ export const ListOldOrders = () => {
                                     <div className="text-lg-end mt-1">
                                         <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill small fw-bold shadow-xs">
                                             <i className="fa-solid fa-box-archive me-1"></i>
-                                            Ventas Kits {fechaPedido}: {formatearPrecio(stats.totalVentasKits || ((stats.gruposResumen?.Kits?.total || 0) + (stats.gruposResumen?.Cirios?.total || 0)))}
+                                            Ventas Kits (Fábrica) {fechaPedido}: {formatearPrecio(stats.totalVentasKits || ((stats.gruposResumen?.Kits?.total || 0) + (stats.gruposResumen?.Cirios?.total || 0)))}
                                         </span>
                                     </div>
 
@@ -529,7 +754,7 @@ export const ListOldOrders = () => {
                         </div>
 
                         {/* Selector de Cuentas por Usuario / Consolidado */}
-                        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-4 pt-3 border-top">
+                        <div ref={topFilterRef} className="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-4 pt-3 border-top">
                             <div className="d-flex align-items-center gap-2">
                                 <span className="p-2 bg-light rounded-3 border text-secondary">
                                     <i className="fa-solid fa-users-gear"></i>
@@ -933,8 +1158,8 @@ export const ListOldOrders = () => {
                                     <span className="text-muted small fw-bold text-uppercase d-block">Ventas Totales</span>
                                     <div className="d-flex align-items-center gap-1 mt-1">
                                         <span className="badge bg-light text-secondary border">Año {fechaPedido}</span>
-                                        <span className="badge bg-primary-subtle text-primary border border-primary-subtle" style={{ fontSize: '0.68rem' }} title="Calculado con la facturación comercial real cobrada en los pedidos">
-                                            Precios de Pedidos
+                                        <span className="badge bg-primary-subtle text-primary border border-primary-subtle" style={{ fontSize: '0.68rem' }} title="Kits calculados a precios de fábrica; Guantes y Otros a precios de venta">
+                                            Kits a Precio de Fábrica
                                         </span>
                                     </div>
                                 </div>
@@ -944,7 +1169,7 @@ export const ListOldOrders = () => {
                             </div>
                             <h4 className="fw-bolder text-dark mb-1">{formatearPrecio(stats.totalVentas)}</h4>
                             <small className="text-muted d-block mb-1" style={{ fontSize: '0.72rem' }}>
-                                Facturación real cobrada en pedidos
+                                Kits a precio de fábrica + Guantes/Otros venta
                             </small>
                             <div className="d-flex align-items-center gap-2 mt-auto pt-2">
                                 {stats.totalVentasAnterior > 0 ? (
@@ -998,7 +1223,7 @@ export const ListOldOrders = () => {
                                 {formatearPrecio(stats.utilidadOperativa)}
                             </h4>
                             <small className="text-muted d-block mb-1" style={{ fontSize: '0.72rem' }}>
-                                Base: Precios reales facturados
+                                Base: Kits a precio de fábrica
                             </small>
                             <div className="d-flex align-items-center justify-content-between mt-auto pt-2">
                                 <span className={`badge rounded-pill fw-bold ${stats.margenOperativoPorcentaje >= 30 ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-dark'}`}>
@@ -1049,7 +1274,7 @@ export const ListOldOrders = () => {
                                                 Flujo Mensual: Ventas vs Gastos ({fechaPedido})
                                             </h5>
                                             <span className="badge bg-primary-subtle text-primary border border-primary-subtle small fw-semibold">
-                                                <i className="fa-solid fa-receipt me-1"></i> Precios Reales de Pedidos
+                                                <i className="fa-solid fa-industry me-1"></i> Kits a Precio de Fábrica
                                             </span>
                                         </div>
                                         <p className="text-muted small mb-0">
@@ -1148,6 +1373,100 @@ export const ListOldOrders = () => {
                                                         Margen: {tri.margen.toFixed(1)}%
                                                     </span>
                                                 </div>
+
+                                                {/* Acciones de comprobación de precios */}
+                                                <div className="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 rounded-pill px-2 py-0"
+                                                        style={{ fontSize: '0.70rem' }}
+                                                        onClick={() => setTrimestresExpandidos(prev => ({ ...prev, [clave]: !prev[clave] }))}
+                                                        title="Ver la fórmula Cantidad × Precio de cada producto"
+                                                    >
+                                                        <i className={`fa-solid ${trimestresExpandidos[clave] ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
+                                                        <span>{trimestresExpandidos[clave] ? 'Ocultar Precios' : 'Comprobar Precios'}</span>
+                                                        <span className="badge bg-primary text-white rounded-pill ms-1" style={{ fontSize: '0.60rem' }}>
+                                                            {tri.auditoriaProductos?.length || 0}
+                                                        </span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm btn-light text-primary border rounded-pill px-2 py-0"
+                                                        style={{ fontSize: '0.70rem' }}
+                                                        title="Abrir auditoría completa con tabla detallada"
+                                                        onClick={() => setAuditoriaTrimestreModal({ clave, ...tri })}
+                                                    >
+                                                        <i className="fa-solid fa-calculator me-1"></i> Auditoría
+                                                    </button>
+                                                </div>
+
+                                                {/* Desglose inline de comprobación: Cantidad × Precio por asignación de fecha */}
+                                                {trimestresExpandidos[clave] && (
+                                                    <div className="mt-2 p-2 bg-white rounded-3 border shadow-xs" style={{ fontSize: '0.73rem' }}>
+                                                        <div className="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                                                            <span className="fw-bold text-dark" style={{ fontSize: '0.72rem' }}>
+                                                                <i className="fa-solid fa-list-check text-success me-1"></i>
+                                                                Comprobación: Cantidad × Precio
+                                                            </span>
+                                                            <span className="badge bg-light text-dark border" style={{ fontSize: '0.64rem' }}>
+                                                                Total: {formatearPrecio(tri.ventas)}
+                                                            </span>
+                                                        </div>
+
+                                                        {(!tri.auditoriaProductos || tri.auditoriaProductos.length === 0) ? (
+                                                            <div className="text-muted text-center py-2 fst-italic">No hay productos registrados en este trimestre.</div>
+                                                        ) : (
+                                                            <div className="d-flex flex-column gap-2">
+                                                                {tri.auditoriaProductos.map((prod) => (
+                                                                    <div key={prod.id} className="p-2 rounded bg-light border border-light-subtle">
+                                                                        <div className="d-flex justify-content-between align-items-center mb-1">
+                                                                            <span className="fw-bold text-dark text-truncate" style={{ maxWidth: '65%' }} title={prod.nombre}>
+                                                                                {prod.nombre}
+                                                                            </span>
+                                                                            <span className="fw-bolder text-primary">
+                                                                                {formatearPrecio(prod.totalVenta)}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        {/* Filas de fórmulas por asignación de precio */}
+                                                                        {prod.desglosesPorPrecio.map((des, dIdx) => (
+                                                                            <div key={dIdx} className="d-flex justify-content-between align-items-center text-muted ms-1 mt-1" style={{ fontSize: '0.69rem' }}>
+                                                                                <div>
+                                                                                    <span className="text-dark fw-semibold">{des.cantidad} {prod.unidad}</span>
+                                                                                    <span className="mx-1">×</span>
+                                                                                    <span className="text-primary fw-semibold">{formatearPrecio(des.precioUnitario)}</span>
+                                                                                    {des.esPrecioFabrica && (
+                                                                                        <span className="badge bg-primary-subtle text-primary border border-primary-subtle ms-1 py-0 px-1" style={{ fontSize: '0.58rem' }}>Fábrica</span>
+                                                                                    )}
+                                                                                    {des.rangoFechas && (
+                                                                                        <span className="text-secondary ms-1" style={{ fontSize: '0.62rem' }}>
+                                                                                            ({des.rangoFechas})
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="fw-bold text-dark">
+                                                                                    = {formatearPrecio(des.subtotal)}
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+
+                                                                        {prod.tieneMultiplesPrecios && (
+                                                                            <div className="d-flex justify-content-between align-items-center text-warning-emphasis fw-bold mt-1 pt-1 border-top" style={{ fontSize: '0.64rem' }}>
+                                                                                <span>
+                                                                                    <i className="fa-solid fa-clock-rotate-left me-1 text-warning"></i>
+                                                                                    {prod.desglosesPorPrecio.length} precios modificados por fecha
+                                                                                </span>
+                                                                                <span>
+                                                                                    Total: {prod.totalCantidad} {prod.unidad}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
@@ -1166,7 +1485,7 @@ export const ListOldOrders = () => {
                                                 Estado de Resultados Mensual (P&L {fechaPedido})
                                             </h5>
                                             <span className="badge bg-primary-subtle text-primary border border-primary-subtle small fw-semibold">
-                                                <i className="fa-solid fa-receipt me-1"></i> Precios Reales Facturados en Pedidos
+                                                <i className="fa-solid fa-industry me-1"></i> Kits a Precio de Fábrica
                                             </span>
                                         </div>
                                         <p className="text-muted small mb-0">
@@ -2099,76 +2418,98 @@ export const ListOldOrders = () => {
                     <div className="row g-4">
                         {/* Tarjetas de Producción por Género (Niña vs Niño) */}
                         <div className="col-12">
-                            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
-                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
-                                    <h6 className="fw-bold text-dark mb-0">
-                                        <i className="fa-solid fa-venus-mars text-primary me-2"></i>
-                                        Análisis de Producción por Género (Niña vs Niño en {fechaPedido})
-                                    </h6>
-                                    <span className="badge bg-light text-secondary border small">
-                                        Kits/Cirios: Precios Fábrica (2025+) | Pedidos (pre-2025)
-                                    </span>
-                                </div>
-                                <p className="text-muted small mb-3">
-                                    Métrica de taller para planificar confección, compras de telas, cintas y accesorios.
-                                </p>
-
-                                <div className="row g-3 align-items-center">
-                                    <div className="col-12 col-md-5">
-                                        <div className="p-3 bg-light rounded-3 border">
-                                            <div className="d-flex justify-content-between align-items-center mb-1">
-                                                <span className="fw-bold text-danger">
-                                                    <i className="fa-solid fa-venus me-1"></i> Línea Niña (Kits)
-                                                </span>
-                                                <span className="badge bg-danger rounded-pill">{stats.desgloseGenero.porcentajeNina.toFixed(1)}%</span>
-                                            </div>
-                                            <h4 className="fw-bold text-dark mb-1">{stats.desgloseGenero.prendasNina.toLocaleString()} productos</h4>
-                                            <div className="d-flex justify-content-between small text-muted">
-                                                <span>Kits Niña: <strong>{stats.desgloseGenero.kitsNina}</strong> | Cirios: <strong>{stats.desgloseGenero.ciriosNina}</strong></span>
-                                                <strong className="text-dark">{formatearPrecio(stats.desgloseGenero.ventasNina)}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="col-12 col-md-2 text-center">
-                                        <div className="progress" style={{ height: 16 }}>
-                                            <div
-                                                className="progress-bar bg-danger"
-                                                role="progressbar"
-                                                style={{ width: `${stats.desgloseGenero.porcentajeNina}%` }}
-                                                title={`Niña: ${stats.desgloseGenero.porcentajeNina.toFixed(1)}%`}
-                                            >
-                                                {stats.desgloseGenero.porcentajeNina.toFixed(0)}%
-                                            </div>
-                                            <div
-                                                className="progress-bar bg-primary"
-                                                role="progressbar"
-                                                style={{ width: `${stats.desgloseGenero.porcentajeNino}%` }}
-                                                title={`Niño: ${stats.desgloseGenero.porcentajeNino.toFixed(1)}%`}
-                                            >
-                                                {stats.desgloseGenero.porcentajeNino.toFixed(0)}%
-                                            </div>
-                                        </div>
-                                        <span className="small text-muted mt-1 d-block">Distribución de Género</span>
-                                    </div>
-
-                                    <div className="col-12 col-md-5">
-                                        <div className="p-3 bg-light rounded-3 border">
-                                            <div className="d-flex justify-content-between align-items-center mb-1">
-                                                <span className="fw-bold text-primary">
-                                                    <i className="fa-solid fa-mars me-1"></i> Línea Niño (Kits)
-                                                </span>
-                                                <span className="badge bg-primary rounded-pill">{stats.desgloseGenero.porcentajeNino.toFixed(1)}%</span>
-                                            </div>
-                                            <h4 className="fw-bold text-dark mb-1">{stats.desgloseGenero.prendasNino.toLocaleString()} productos</h4>
-                                            <div className="d-flex justify-content-between small text-muted">
-                                                <span>Kits Niño: <strong>{stats.desgloseGenero.kitsNino}</strong> | Cirios: <strong>{stats.desgloseGenero.ciriosNino}</strong></span>
-                                                <strong className="text-dark">{formatearPrecio(stats.desgloseGenero.ventasNino)}</strong>
-                                            </div>
-                                        </div>
+                            {filtroCategoria === 'GUANTES' ? (
+                                <div className="alert alert-warning py-3 px-4 rounded-4 shadow-sm border-0 d-flex align-items-center gap-3">
+                                    <i className="fa-solid fa-mitten fs-3 text-warning"></i>
+                                    <div>
+                                        <h6 className="fw-bold mb-1">Filtro activo: Solo Guantes</h6>
+                                        <p className="mb-0 small text-muted">
+                                            El análisis de producción por género (Niña vs Niño) aplica a la confección de Kits y Cirios. Cambie el filtro superior a "Todas" o "Solo Kits" para visualizarlo.
+                                        </p>
                                     </div>
                                 </div>
-                            </div>
+                            ) : filtroCategoria === 'OTROS' ? (
+                                <div className="alert alert-info py-3 px-4 rounded-4 shadow-sm border-0 d-flex align-items-center gap-3">
+                                    <i className="fa-solid fa-tags fs-3 text-info"></i>
+                                    <div>
+                                        <h6 className="fw-bold mb-1">Filtro activo: Solo Otros</h6>
+                                        <p className="mb-0 small text-muted">
+                                            El análisis de producción por género (Niña vs Niño) aplica a la confección de Kits y Cirios.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                                    <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                        <h6 className="fw-bold text-dark mb-0">
+                                            <i className="fa-solid fa-venus-mars text-primary me-2"></i>
+                                            Análisis de Producción por Género (Niña vs Niño en {fechaPedido})
+                                        </h6>
+                                        <span className="badge bg-light text-secondary border small">
+                                            Kits/Cirios: Precios Fábrica (2025+) | Pedidos (pre-2025)
+                                        </span>
+                                    </div>
+                                    <p className="text-muted small mb-3">
+                                        Métrica de taller para planificar confección, compras de telas, cintas y accesorios.
+                                    </p>
+
+                                    <div className="row g-3 align-items-center">
+                                        <div className="col-12 col-md-5">
+                                            <div className="p-3 bg-light rounded-3 border">
+                                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                                    <span className="fw-bold text-danger">
+                                                        <i className="fa-solid fa-venus me-1"></i> Línea Niña (Kits)
+                                                    </span>
+                                                    <span className="badge bg-danger rounded-pill">{stats.desgloseGenero.porcentajeNina.toFixed(1)}%</span>
+                                                </div>
+                                                <h4 className="fw-bold text-dark mb-1">{stats.desgloseGenero.prendasNina.toLocaleString()} productos</h4>
+                                                <div className="d-flex justify-content-between small text-muted">
+                                                    <span>Kits Niña: <strong>{stats.desgloseGenero.kitsNina}</strong> | Cirios: <strong>{stats.desgloseGenero.ciriosNina}</strong></span>
+                                                    <strong className="text-dark">{formatearPrecio(stats.desgloseGenero.ventasNina)}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="col-12 col-md-2 text-center">
+                                            <div className="progress" style={{ height: 16 }}>
+                                                <div
+                                                    className="progress-bar bg-danger"
+                                                    role="progressbar"
+                                                    style={{ width: `${stats.desgloseGenero.porcentajeNina}%` }}
+                                                    title={`Niña: ${stats.desgloseGenero.porcentajeNina.toFixed(1)}%`}
+                                                >
+                                                    {stats.desgloseGenero.porcentajeNina.toFixed(0)}%
+                                                </div>
+                                                <div
+                                                    className="progress-bar bg-primary"
+                                                    role="progressbar"
+                                                    style={{ width: `${stats.desgloseGenero.porcentajeNino}%` }}
+                                                    title={`Niño: ${stats.desgloseGenero.porcentajeNino.toFixed(1)}%`}
+                                                >
+                                                    {stats.desgloseGenero.porcentajeNino.toFixed(0)}%
+                                                </div>
+                                            </div>
+                                            <span className="small text-muted mt-1 d-block">Distribución de Género</span>
+                                        </div>
+
+                                        <div className="col-12 col-md-5">
+                                            <div className="p-3 bg-light rounded-3 border">
+                                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                                    <span className="fw-bold text-primary">
+                                                        <i className="fa-solid fa-mars me-1"></i> Línea Niño (Kits)
+                                                    </span>
+                                                    <span className="badge bg-primary rounded-pill">{stats.desgloseGenero.porcentajeNino.toFixed(1)}%</span>
+                                                </div>
+                                                <h4 className="fw-bold text-dark mb-1">{stats.desgloseGenero.prendasNino.toLocaleString()} productos</h4>
+                                                <div className="d-flex justify-content-between small text-muted">
+                                                    <span>Kits Niño: <strong>{stats.desgloseGenero.kitsNino}</strong> | Cirios: <strong>{stats.desgloseGenero.ciriosNino}</strong></span>
+                                                    <strong className="text-dark">{formatearPrecio(stats.desgloseGenero.ventasNino)}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Matriz Unificada de Categorías */}
@@ -2467,14 +2808,37 @@ export const ListOldOrders = () => {
 
                         {/* Histórico Multianual de Toda la Categoría Kits */}
                         <div className="col-12 mt-2">
-                            <ChartKitsMultiAnual
-                                oldOrders={oldOrders}
-                                pedidos={pedidos}
-                                aniosDisponibles={aniosDisponibles}
-                                filtrarPorEstadoPagado={filtrarPorEstadoPagado}
-                                filtroUsuario="GENERAL"
-                                listaPrecios={listaPrecios}
-                            />
+                            {filtroCategoria === 'GUANTES' ? (
+                                <div className="alert alert-warning py-3 px-4 rounded-4 shadow-sm border-0 d-flex align-items-center gap-3">
+                                    <i className="fa-solid fa-mitten fs-3 text-warning"></i>
+                                    <div>
+                                        <h6 className="fw-bold mb-1">Filtro superior activo: Solo Guantes</h6>
+                                        <p className="mb-0 small text-muted">
+                                            El gráfico multianual de Kits no aplica porque actualmente estás visualizando exclusivamente la categoría <strong>Guantes</strong>.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : filtroCategoria === 'OTROS' ? (
+                                <div className="alert alert-info py-3 px-4 rounded-4 shadow-sm border-0 d-flex align-items-center gap-3">
+                                    <i className="fa-solid fa-tags fs-3 text-info"></i>
+                                    <div>
+                                        <h6 className="fw-bold mb-1">Filtro superior activo: Solo Otros</h6>
+                                        <p className="mb-0 small text-muted">
+                                            El gráfico multianual de Kits no aplica porque actualmente estás visualizando exclusivamente la categoría <strong>Otros</strong>.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <ChartKitsMultiAnual
+                                    oldOrders={oldOrders}
+                                    pedidos={pedidos}
+                                    aniosDisponibles={aniosDisponibles}
+                                    filtrarPorEstadoPagado={filtrarPorEstadoPagado}
+                                    filtroUsuario={filtroUsuario}
+                                    listaPrecios={listaPrecios}
+                                    esLeonardo={esLeonardo}
+                                />
+                            )}
                         </div>
                     </div>
                 )}
@@ -2522,7 +2886,7 @@ export const ListOldOrders = () => {
                                         Ranking de Clientes del Año {fechaPedido}
                                     </h5>
                                     <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill small fw-semibold">
-                                        <i className="fa-solid fa-receipt me-1"></i> Precios Reales Facturados en Pedidos
+                                        <i className="fa-solid fa-industry me-1"></i> Kits a Precio de Fábrica
                                     </span>
                                 </div>
                                 <p className="text-muted small mb-3">
@@ -2591,7 +2955,7 @@ export const ListOldOrders = () => {
                                                 Comparativa Directa: {fechaPedido} vs {anioComparar}
                                             </h5>
                                             <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill small fw-semibold">
-                                                <i className="fa-solid fa-receipt me-1"></i> Precios Reales Facturados en Pedidos
+                                                <i className="fa-solid fa-industry me-1"></i> Kits a Precio de Fábrica
                                             </span>
                                         </div>
                                         <p className="text-muted small mb-0">
@@ -2735,16 +3099,54 @@ export const ListOldOrders = () => {
                 {/* VISTA 5: EVOLUCIÓN HISTÓRICA */}
                 {activeTab === 'multianual' && (
                     <div className="row g-4">
-                        {/* Histórico Multianual de Toda la Categoría Kits */}
+                        {/* Comparativa Mensual por Barras: Año Actual vs Top 3 Años Anteriores */}
                         <div className="col-12">
-                            <ChartKitsMultiAnual
+                            <ChartBarrasMensualAnios
                                 oldOrders={oldOrders}
                                 pedidos={pedidos}
                                 aniosDisponibles={aniosDisponibles}
+                                anioActual={fechaPedido}
+                                filtroCategoria={filtroCategoria}
+                                filtroUsuario={filtroUsuario}
                                 filtrarPorEstadoPagado={filtrarPorEstadoPagado}
-                                filtroUsuario="GENERAL"
                                 listaPrecios={listaPrecios}
+                                esLeonardo={esLeonardo}
                             />
+                        </div>
+
+                        {/* Histórico Multianual de Toda la Categoría Kits */}
+                        <div className="col-12">
+                            {filtroCategoria === 'GUANTES' ? (
+                                <div className="alert alert-warning py-3 px-4 rounded-4 shadow-sm border-0 d-flex align-items-center gap-3">
+                                    <i className="fa-solid fa-mitten fs-3 text-warning"></i>
+                                    <div>
+                                        <h6 className="fw-bold mb-1">Filtro superior activo: Solo Guantes</h6>
+                                        <p className="mb-0 small text-muted">
+                                            El gráfico multianual de Kits no aplica porque actualmente estás visualizando exclusivamente la categoría <strong>Guantes</strong>.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : filtroCategoria === 'OTROS' ? (
+                                <div className="alert alert-info py-3 px-4 rounded-4 shadow-sm border-0 d-flex align-items-center gap-3">
+                                    <i className="fa-solid fa-tags fs-3 text-info"></i>
+                                    <div>
+                                        <h6 className="fw-bold mb-1">Filtro superior activo: Solo Otros</h6>
+                                        <p className="mb-0 small text-muted">
+                                            El gráfico multianual de Kits no aplica porque actualmente estás visualizando exclusivamente la categoría <strong>Otros</strong>.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <ChartKitsMultiAnual
+                                    oldOrders={oldOrders}
+                                    pedidos={pedidos}
+                                    aniosDisponibles={aniosDisponibles}
+                                    filtrarPorEstadoPagado={filtrarPorEstadoPagado}
+                                    filtroUsuario={filtroUsuario}
+                                    listaPrecios={listaPrecios}
+                                    esLeonardo={esLeonardo}
+                                />
+                            )}
                         </div>
 
                         <div className="col-12 col-lg-6">
@@ -2755,10 +3157,10 @@ export const ListOldOrders = () => {
                                         Curva Comparativa de Ventas Anuales
                                     </h6>
                                     <span className="badge bg-primary-subtle text-primary border border-primary-subtle small fw-semibold">
-                                        <i className="fa-solid fa-receipt me-1"></i> Precios Reales de Pedidos
+                                        <i className="fa-solid fa-industry me-1"></i> Kits a Precio de Fábrica
                                     </span>
                                 </div>
-                                <p className="text-muted small mb-2">Compara la facturación comercial real cobrada mes a mes en cada año.</p>
+                                <p className="text-muted small mb-2">Compara las ventas mes a mes en cada año con Kits a precios de fábrica.</p>
                                 <div style={{ minHeight: 300 }}>
                                     <AreaChartOldYear data={multiAnualSalesData} />
                                 </div>
@@ -2773,10 +3175,10 @@ export const ListOldOrders = () => {
                                         Ventas Acumuladas Año a Año
                                     </h6>
                                     <span className="badge bg-primary-subtle text-primary border border-primary-subtle small fw-semibold">
-                                        <i className="fa-solid fa-receipt me-1"></i> Precios Reales de Pedidos
+                                        <i className="fa-solid fa-industry me-1"></i> Kits a Precio de Fábrica
                                     </span>
                                 </div>
-                                <p className="text-muted small mb-2">Acumulación de ingresos comerciales reales cobrados a lo largo de cada año.</p>
+                                <p className="text-muted small mb-2">Acumulación de ventas a lo largo de cada año con Kits a precios de fábrica.</p>
                                 <div style={{ minHeight: 300 }}>
                                     <AreaChartOldYearAcumulada data={multiAnualSalesData} />
                                 </div>
@@ -2823,6 +3225,16 @@ export const ListOldOrders = () => {
                                     />
                                 </div>
                             </div>
+                        </div>
+                        {/* Gráfico: Progreso por Producto vs Año Anterior */}
+                        <div className="col-12">
+                            <ChartMetaVsAnterior
+                                pedidosAnioActual={pedidosDelAnio}
+                                pedidosAnioAnterior={pedidosAnioAnterior}
+                                anioActual={fechaPedido}
+                                anioAnterior={anioAnterior}
+                                filtroUsuario={filtroUsuario}
+                            />
                         </div>
                     </div>
                 )}
@@ -2970,7 +3382,14 @@ export const ListOldOrders = () => {
                                                                                         <td>
                                                                                             <span className="badge bg-secondary-subtle text-secondary">{it.codigo}</span>
                                                                                         </td>
-                                                                                        <td className="text-start">{it.producto}</td>
+                                                                                        <td className="text-start">
+                                                                                            {it.producto}
+                                                                                            {it.esPrecioFabrica && (
+                                                                                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style={{ fontSize: '0.65rem' }}>
+                                                                                                    Fábrica
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </td>
                                                                                         <td className="fw-bold text-nowrap">
                                                                                             {it.cantidad} <small className={esGuante ? 'badge bg-warning-subtle text-warning-emphasis' : 'text-muted fw-normal'}>({unidadTexto})</small>
                                                                                         </td>
@@ -3080,6 +3499,184 @@ export const ListOldOrders = () => {
                     </div>
                 )}
             </div>
+
+            {/* Modal de Auditoría y Comprobación de Precios de Estacionalidad Trimestral */}
+            <Modal
+                show={Boolean(auditoriaTrimestreModal)}
+                onHide={() => setAuditoriaTrimestreModal(null)}
+                size="lg"
+                centered
+                scrollable
+            >
+                <Modal.Header closeButton className="bg-light border-bottom">
+                    <Modal.Title className="h6 fw-bold text-dark d-flex align-items-center gap-2 m-0">
+                        <i className="fa-solid fa-calculator text-primary"></i>
+                        Auditoría de Cantidad × Precios: {auditoriaTrimestreModal?.nombre} ({fechaPedido})
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="p-3">
+                    {/* Banner explicativo */}
+                    <div className="alert alert-info py-2 px-3 small rounded-3 border-0 shadow-xs mb-3">
+                        <div className="d-flex align-items-center gap-2">
+                            <i className="fa-solid fa-circle-info fs-5 text-info"></i>
+                            <div>
+                                <strong>Comprobación de Precios ({fechaPedido}):</strong> Los productos de la categoría <strong>Kits y Cirios</strong> se calculan a precios de fábrica según la tarifa vigente en Gestión de Precios para la fecha del pedido. Los <strong>Guantes</strong> se calculan a sus precios reales. Si un producto tuvo cambios de precio por fecha, se desglosa cada asignación separada por periodo.
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Resumen numérico */}
+                    <div className="row g-2 mb-3">
+                        <div className="col-12 col-md-4">
+                            <div className="p-2 bg-light rounded-3 border text-center">
+                                <span className="text-muted d-block small">Venta Total Trimestre</span>
+                                <strong className="fs-6 text-dark">{formatearPrecio(auditoriaTrimestreModal?.ventas || 0)}</strong>
+                            </div>
+                        </div>
+                        <div className="col-12 col-md-4">
+                            <div className="p-2 bg-light rounded-3 border border-primary-subtle text-center">
+                                <span className="text-primary d-block small">Kits (Precio Fábrica)</span>
+                                <strong className="fs-6 text-primary">{formatearPrecio(auditoriaTrimestreModal?.ventasKits || 0)}</strong>
+                                <small className="text-muted d-block" style={{ fontSize: '0.72rem' }}>({auditoriaTrimestreModal?.kits || 0} unds)</small>
+                            </div>
+                        </div>
+                        <div className="col-12 col-md-4">
+                            <div className="p-2 bg-light rounded-3 border border-purple-subtle text-center">
+                                <span className="d-block small" style={{ color: '#7e22ce' }}>Guantes</span>
+                                <strong className="fs-6" style={{ color: '#7e22ce' }}>{formatearPrecio(auditoriaTrimestreModal?.ventasGuantes || 0)}</strong>
+                                <small className="text-muted d-block" style={{ fontSize: '0.72rem' }}>({auditoriaTrimestreModal?.guantes || 0} doc)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tabla detallada */}
+                    <div className="table-responsive border rounded-3">
+                        <table className="table table-sm table-hover align-middle mb-0" style={{ fontSize: '0.78rem' }}>
+                            <thead className="table-light text-muted">
+                                <tr>
+                                    <th>Grupo</th>
+                                    <th>Producto</th>
+                                    <th>Periodo / Fechas</th>
+                                    <th className="text-center">Cant.</th>
+                                    <th className="text-end">Precio Unit.</th>
+                                    <th className="text-center">Tipo</th>
+                                    <th className="text-end">Fórmula (Cant × Precio)</th>
+                                    <th className="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(!auditoriaTrimestreModal?.auditoriaProductos || auditoriaTrimestreModal.auditoriaProductos.length === 0) ? (
+                                    <tr>
+                                        <td colSpan={8} className="text-center py-4 text-muted fst-italic">
+                                            No hay productos registrados para este trimestre.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    auditoriaTrimestreModal.auditoriaProductos.map((prod) => (
+                                        <React.Fragment key={prod.id}>
+                                            {prod.desglosesPorPrecio.map((des, dIdx) => (
+                                                <tr key={`${prod.id}-${dIdx}`}>
+                                                    {dIdx === 0 ? (
+                                                        <td rowSpan={prod.desglosesPorPrecio.length} className="fw-semibold align-top pt-2">
+                                                            <span className={`badge ${prod.grupo === 'Kits' ? 'bg-primary-subtle text-primary border border-primary-subtle' : prod.grupo === 'Cirios' ? 'bg-info-subtle text-info-emphasis border border-info-subtle' : prod.grupo === 'Guantes' ? 'badge-purple' : 'bg-secondary-subtle text-secondary'}`} style={{ fontSize: '0.66rem' }}>
+                                                                {prod.grupo}
+                                                            </span>
+                                                        </td>
+                                                    ) : null}
+                                                    {dIdx === 0 ? (
+                                                        <td rowSpan={prod.desglosesPorPrecio.length} className="fw-bold align-top pt-2 text-dark">
+                                                            {prod.nombre}
+                                                            {prod.tieneMultiplesPrecios && (
+                                                                <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle d-block mt-1" style={{ fontSize: '0.62rem' }}>
+                                                                    <i className="fa-solid fa-clock-rotate-left me-1"></i>
+                                                                    {prod.desglosesPorPrecio.length} asignaciones por fecha
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    ) : null}
+                                                    <td>
+                                                        {des.rangoFechas ? (
+                                                            <div>
+                                                                <i className="fa-regular fa-calendar me-1 text-secondary"></i>
+                                                                <span className="text-dark">{des.rangoFechas}</span>
+                                                                {des.tarifaNombre && (
+                                                                    <small className="d-block text-muted" style={{ fontSize: '0.66rem' }}>
+                                                                        {des.tarifaNombre}
+                                                                    </small>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-muted">Trimestre</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="text-center fw-bold text-dark">
+                                                        {des.cantidad} <small className="text-muted fw-normal">{prod.unidad}</small>
+                                                    </td>
+                                                    <td className="text-end fw-semibold text-primary">
+                                                        {formatearPrecio(des.precioUnitario)}
+                                                    </td>
+                                                    <td className="text-center">
+                                                        {des.esPrecioFabrica ? (
+                                                            <span className="badge bg-primary-subtle text-primary border border-primary-subtle" style={{ fontSize: '0.65rem' }}>
+                                                                <i className="fa-solid fa-industry me-1"></i> Fábrica
+                                                            </span>
+                                                        ) : (
+                                                            <span className="badge bg-light text-secondary border" style={{ fontSize: '0.65rem' }}>
+                                                                Venta Pedido
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="text-end text-muted font-monospace" style={{ fontSize: '0.74rem' }}>
+                                                        {des.cantidad} × {formatearPrecio(des.precioUnitario)}
+                                                    </td>
+                                                    <td className="text-end fw-bold text-dark">
+                                                        {formatearPrecio(des.subtotal)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {prod.tieneMultiplesPrecios && (
+                                                <tr className="bg-light-subtle">
+                                                    <td colSpan={3} className="text-end fw-bold text-muted small py-1">
+                                                        Total {prod.nombre}:
+                                                    </td>
+                                                    <td className="text-center fw-bold text-dark small py-1">
+                                                        {prod.totalCantidad} {prod.unidad}
+                                                    </td>
+                                                    <td colSpan={3} className="py-1"></td>
+                                                    <td className="text-end fw-bold text-primary small py-1">
+                                                        {formatearPrecio(prod.totalVenta)}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    ))
+                                )}
+                            </tbody>
+                            <tfoot className="table-light fw-bold">
+                                <tr>
+                                    <td colSpan={3} className="text-end py-2">
+                                        Total General Comprobado ({auditoriaTrimestreModal?.nombre}):
+                                    </td>
+                                    <td className="text-center py-2 text-dark">
+                                        {auditoriaTrimestreModal?.prendas || 0} prods
+                                    </td>
+                                    <td colSpan={3} className="py-2 text-end text-muted small">
+                                        {auditoriaTrimestreModal?.pedidos || 0} pedidos auditados
+                                    </td>
+                                    <td className="text-end py-2 text-success fs-6">
+                                        {formatearPrecio(auditoriaTrimestreModal?.ventas || 0)}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer className="bg-light border-top py-2">
+                    <Button variant="secondary" size="sm" onClick={() => setAuditoriaTrimestreModal(null)}>
+                        Cerrar
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </LayoutApp>
     );
 };

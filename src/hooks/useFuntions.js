@@ -102,7 +102,7 @@ export const useFuntions = () => {
     function limpiarFecha(fecha) {
         if (!fecha) return '—';
         if (fecha instanceof Date) {
-            return isNaN(fecha.getTime()) ? '—' : `${mesesAbrev[fecha.getMonth()]} ${fecha.getDate()}`;
+            return isNaN(fecha.getTime()) ? '—' : `${mesesAbrev[fecha.getMonth()]} ${fecha.getDate()}, ${fecha.getFullYear()}`;
         }
         if (typeof fecha !== 'string') return String(fecha);
 
@@ -113,8 +113,10 @@ export const useFuntions = () => {
         if (matchNum) {
             const dia = parseInt(matchNum[1], 10);
             const mesIdx = parseInt(matchNum[2], 10) - 1;
+            let anio = parseInt(matchNum[3], 10);
+            if (anio < 100) anio += 2000;
             if (mesIdx >= 0 && mesIdx < 12) {
-                return `${mesesAbrev[mesIdx]} ${dia}`;
+                return `${mesesAbrev[mesIdx]} ${dia}, ${anio}`;
             }
         }
 
@@ -123,8 +125,9 @@ export const useFuntions = () => {
         if (matchIso) {
             const dia = parseInt(matchIso[3], 10);
             const mesIdx = parseInt(matchIso[2], 10) - 1;
+            const anio = parseInt(matchIso[1], 10);
             if (mesIdx >= 0 && mesIdx < 12) {
-                return `${mesesAbrev[mesIdx]} ${dia}`;
+                return `${mesesAbrev[mesIdx]} ${dia}, ${anio}`;
             }
         }
 
@@ -141,8 +144,18 @@ export const useFuntions = () => {
             }
         }
 
+        // Buscar también el año en texto libre (ej: "julio 8, 2025")
+        let anioDetectado = null;
+        for (const p of palabras) {
+            if (/^\d{4}$/.test(p)) {
+                anioDetectado = parseInt(p, 10);
+            }
+        }
+
         if (mesDetectado && diaDetectado) {
-            return `${mesDetectado} ${diaDetectado}`;
+            return anioDetectado
+                ? `${mesDetectado} ${diaDetectado}, ${anioDetectado}`
+                : `${mesDetectado} ${diaDetectado}`;
         }
 
         // Si ya viene como "Feb 12" o "Ene 05"
@@ -329,9 +342,12 @@ export const useFuntions = () => {
             'GUANTES-BLANCOS': 'Guantes Blancos',
             'GUANTES-NEGROS': 'Guantes Negros',
             'GUANTES-MITON': 'Guantes Mitón',
+            'GUANTES-ESPECIAL': 'Guantes Especial',
             'BLANCOS': 'Guantes Blancos',
             'NEGROS': 'Guantes Negros',
             'MITON': 'Guantes Mitón',
+            'ESPECIAL': 'Guantes Especial',
+            'GE': 'Guantes Especial',
             'GUANTES': 'Guantes',
             'OTR': 'Otros Productos',
             'OTROS': 'Otros Productos',
@@ -408,6 +424,8 @@ export const useFuntions = () => {
                 return gn;
             case 'MITON':
                 return gm;
+            case 'ESPECIAL':
+                return gb; // precio base = guante blanco
             default:
                 return 0;
         }
@@ -443,7 +461,8 @@ export const useFuntions = () => {
                                 (categoria === 'CIRIO DE BAUTIZO') ? preciosAnio.precioCirios.cb :
                                 (categoria === 'GUANTES BLANCOS') ? preciosAnio.precioGuantes.gb :
                                     (categoria === 'GUANTES NEGROS') ? preciosAnio.precioGuantes.gn :
-                                        (categoria === 'GUANTES MITON') ? preciosAnio.precioGuantes.gm : 0;
+                                        (categoria === 'GUANTES MITON') ? preciosAnio.precioGuantes.gm :
+                                            (categoria === 'GUANTES ESPECIAL') ? preciosAnio.precioGuantes.gb : 0;
 
         return precioProducto;
     }
@@ -459,7 +478,8 @@ export const useFuntions = () => {
                                 (categoria === 'BLANCOS' || categoria === 'GUANTES-BLANCOS' || categoria === 'GB') ? 'GUANTES BLANCOS' :
                                     (categoria === 'NEGROS' || categoria === 'GN' || categoria === 'GUANTES-NEGROS') ? 'GUANTES NEGROS' :
                                         (categoria === 'MITON' || categoria === 'GM' || categoria === 'GUANTES-MITON') ? 'GUANTES MITON' :
-                                            (categoria === 'GUANTES') ? 'GUANTES' :
+                                            (categoria === 'ESPECIAL' || categoria === 'GE' || categoria === 'GUANTES-ESPECIAL') ? 'GUANTES ESPECIAL' :
+                                                (categoria === 'GUANTES') ? 'GUANTES' :
                                                 (categoria === 'G') ? 'GENERAL' :
                                                     categoria;
 
@@ -1300,7 +1320,7 @@ export const useFuntions = () => {
 
         let totalItems = 0;
         let totalKits = [0, 0, 0, 0, 0, 0, 0];
-        let totalGuantes = [0, 0, 0];
+        let totalGuantes = [0, 0, 0, 0];
         let totalOtros = 0;
 
         const total = pedido.itemPedido.reduce((acc, item) => {
@@ -1317,6 +1337,8 @@ export const useFuntions = () => {
                             totalGuantes[1] += totalPorProducto;
                         } else if (pedidoItem.categoria === 'MITON') {
                             totalGuantes[2] += totalPorProducto;
+                        } else if (pedidoItem.categoria === 'ESPECIAL') {
+                            totalGuantes[3] += totalPorProducto;
                         }
                     } else if (categoriaKey === 'OTR') {
                         totalOtros += totalPorProducto;

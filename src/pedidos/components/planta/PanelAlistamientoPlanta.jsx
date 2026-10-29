@@ -93,7 +93,8 @@ export const PanelAlistamientoPlanta = ({ pedidos = [] }) => {
     const guantesMap = {
       BLANCOS: { total: 0, tallas: {}, pedidosMap: {} },
       NEGROS: { total: 0, tallas: {}, pedidosMap: {} },
-      MITON: { total: 0, tallas: {}, pedidosMap: {} }
+      MITON: { total: 0, tallas: {}, pedidosMap: {} },
+      ESPECIAL: { total: 0, tallas: {}, pedidosMap: {}, tiposMap: {} }
     };
 
     // 4. Otros productos y accesorios
@@ -142,12 +143,14 @@ export const PanelAlistamientoPlanta = ({ pedidos = [] }) => {
             // ----------------------------------------------------
             if (catCode === 'GUANTES' || catCode === 'GUA') {
               let catG = String(item.categoria || '').toUpperCase().trim();
-              if (!catG || (!catG.includes('NEGR') && !catG.includes('MIT'))) {
-                catG = 'BLANCOS';
+              if (catG.includes('ESPECIAL')) {
+                catG = 'ESPECIAL';
               } else if (catG.includes('NEGR')) {
                 catG = 'NEGROS';
               } else if (catG.includes('MIT')) {
                 catG = 'MITON';
+              } else {
+                catG = 'BLANCOS';
               }
 
               const rawTalla = String(item.talla || '').trim();
@@ -155,10 +158,15 @@ export const PanelAlistamientoPlanta = ({ pedidos = [] }) => {
               const labelTalla = `T-${numTalla}`;
 
               if (!guantesMap[catG]) {
-                guantesMap[catG] = { total: 0, tallas: {}, pedidosMap: {} };
+                guantesMap[catG] = { total: 0, tallas: {}, pedidosMap: {}, tiposMap: {} };
               }
               guantesMap[catG].total += cantidad;
               guantesMap[catG].tallas[labelTalla] = (guantesMap[catG].tallas[labelTalla] || 0) + cantidad;
+
+              if (item.tipoEspecial) {
+                if (!guantesMap[catG].tiposMap) guantesMap[catG].tiposMap = {};
+                guantesMap[catG].tiposMap[item.tipoEspecial] = (guantesMap[catG].tiposMap[item.tipoEspecial] || 0) + cantidad;
+              }
 
               const keyPed = `${ref} - ${clienteNombre} (${ciudad})`;
               guantesMap[catG].pedidosMap[keyPed] = (guantesMap[catG].pedidosMap[keyPed] || 0) + cantidad;
@@ -364,7 +372,7 @@ export const PanelAlistamientoPlanta = ({ pedidos = [] }) => {
 
   const countSurtidos = consolidado.totalSurtidosNino + consolidado.totalSurtidosNina;
   const countModelos = consolidado.modelos.reduce((acc, m) => acc + m.total, 0);
-  const countGuantes = consolidado.guantes.BLANCOS.total + consolidado.guantes.NEGROS.total + consolidado.guantes.MITON.total;
+  const countGuantes = consolidado.guantes.BLANCOS.total + consolidado.guantes.NEGROS.total + consolidado.guantes.MITON.total + (consolidado.guantes.ESPECIAL?.total || 0);
   const countOtros = consolidado.otros.reduce((acc, o) => acc + o.total, 0);
 
   // Información estructurada de guantes para renderizado dinámico (solo lo que tenga > 0 unidades)
@@ -395,6 +403,16 @@ export const PanelAlistamientoPlanta = ({ pedidos = [] }) => {
       total: consolidado.guantes.MITON.total,
       tallas: consolidado.guantes.MITON.tallas,
       pedidosMap: consolidado.guantes.MITON.pedidosMap
+    },
+    {
+      key: 'ESPECIAL',
+      nombre: 'GUANTES ESPECIAL',
+      icon: 'fa-star',
+      bgIcon: 'bg-primary-subtle text-primary',
+      total: consolidado.guantes.ESPECIAL?.total || 0,
+      tallas: consolidado.guantes.ESPECIAL?.tallas || {},
+      pedidosMap: consolidado.guantes.ESPECIAL?.pedidosMap || {},
+      tiposMap: consolidado.guantes.ESPECIAL?.tiposMap || {}
     }
   ], [consolidado.guantes]);
 

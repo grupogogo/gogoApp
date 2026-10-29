@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { ProductsTable } from './forms/ProductsTable';
 import { FormGuantes } from './forms/FormGuantes';
+import { FormGuanteEspecial } from './forms/FormGuanteEspecial';
 import { HeadersPedidos } from './forms/HeadersPedidos';
 import { useClientesStore, useForm, usePedidosStore } from '../../hooks';
 import { Collapse } from 'bootstrap';
@@ -21,7 +22,8 @@ export const Guantes = ({ agregarPedidoGeneral, resetearPedido, initialItems }) 
         guantes: {
             BLANCOS: clienteActivo?.precios?.precioGuantes?.gb || 0,
             NEGROS: clienteActivo?.precios?.precioGuantes?.gn || 0,
-            MITON: clienteActivo?.precios?.precioGuantes?.gm || 0
+            MITON: clienteActivo?.precios?.precioGuantes?.gm || 0,
+            ESPECIAL: clienteActivo?.precios?.precioGuantes?.gb || 0, // usa mismo precio que blancos
         }
     };
 
@@ -55,7 +57,9 @@ export const Guantes = ({ agregarPedidoGeneral, resetearPedido, initialItems }) 
         const cantidad = pedidoGuantes.reduce((acc, item) => acc + parseInt(item.cantidad || 0, 10), 0);
         setCantidadItems(cantidad);
         const subtotal = Object.values(pedidoGuantes).reduce((acc, item) => {
-            const precio = precioGuantes.guantes[item.categoria] ?? item.precioUnitario ?? 0;
+            const precio = item.categoria === 'ESPECIAL'
+                ? (item.precioUnitario || 0)
+                : (precioGuantes.guantes[item.categoria] ?? item.precioUnitario ?? 0);
             return acc + (parseInt(item.cantidad || 0, 10) * (precio || 0));
         }, 0);
         setTotalCalculado(subtotal);
@@ -83,7 +87,7 @@ export const Guantes = ({ agregarPedidoGeneral, resetearPedido, initialItems }) 
                             <FormGuantes categoria="BLANCOS" tallaInicial={4} cantTallas={9} setPedidoGuantes={setPedidoGuantes} pedidoGuantes={pedidoGuantes} />
                             <FormGuantes categoria="NEGROS" tallaInicial={6} cantTallas={7} setPedidoGuantes={setPedidoGuantes} pedidoGuantes={pedidoGuantes} />
                             <FormGuantes categoria="MITON" tallaInicial={7} cantTallas={4} setPedidoGuantes={setPedidoGuantes} pedidoGuantes={pedidoGuantes} />
-                            {/* <FormGuantes categoria="ESPECIAL" tallaInicial={7} cantTallas={4} setPedidoGuantes={setPedidoGuantes} pedidoGuantes={pedidoGuantes} /> */}
+                            <FormGuanteEspecial setPedidoGuantes={setPedidoGuantes} pedidoGuantes={pedidoGuantes} />
                             <div className="card border border-light-subtle shadow-xs rounded-4 p-3 bg-white mb-3">
                                 <label className="form-label small fw-semibold text-muted mb-1" htmlFor="detalleGUA">
                                     <i className="fa-regular fa-comment-dots me-1 text-primary"></i> Observaciones de Guantes (opcional)

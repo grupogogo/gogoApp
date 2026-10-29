@@ -24,14 +24,14 @@ const Navbar = () => {
         <nav
             className="navbar navbar-expand app-navbar shadow-sm py-2 px-3 d-flex justify-content-between align-items-center"
             style={{
-                marginLeft: user?.rol !== 'planta' ? "80px" : "0px",
                 height: "64px",
                 minHeight: "64px",
+                width: "100%",
+                maxWidth: "100%",
                 background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
                 color: '#ffffff',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                zIndex: 1020,
-                transition: 'margin-left 0.3s ease'
+                zIndex: 1020
             }}
         >
             {/* Botón Menú Móvil */}

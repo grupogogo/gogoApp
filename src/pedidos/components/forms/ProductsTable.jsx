@@ -128,7 +128,14 @@ export const ProductsTable = ({ CategoryProduct, tablaPedido, setPedido }) => {
                                     {tablaPedido.map((item, index) => (
                                         <tr className="text-center align-middle" key={index}>
                                             {CategoryProduct === 5 ? (
-                                                <td className="align-middle text-start ps-3 fw-semibold text-dark">{item.categoria}</td>
+                                                <td className="align-middle text-start ps-3">
+                                                    <div className="fw-semibold text-dark">{item.categoria}</div>
+                                                    {item.tipoEspecial && (
+                                                        <span className="badge rounded-pill small" style={{ background: '#ede9fe', color: '#5b21b6', fontSize: '0.72rem' }}>
+                                                            {item.tipoEspecial}
+                                                        </span>
+                                                    )}
+                                                </td>
                                             ) : (
                                                 <td className="align-middle text-start ps-3">
                                                     <span className={`badge rounded-pill px-2 py-1 small ${

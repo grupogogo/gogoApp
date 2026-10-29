@@ -111,7 +111,9 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
         else if (catCode === 'CB' && pCirios.cb) precioNuevo = Number(pCirios.cb);
         else if (catCode === 'GUANTES' || catCode === 'GUA') {
           const catG = String(item.categoria || '').toUpperCase().trim();
-          if (catG.includes('BLANC') && pGuantes.gb) precioNuevo = Number(pGuantes.gb);
+          if (catG.includes('ESPECIAL')) {
+            precioNuevo = Number(item.precioUnitario || item.precio || pGuantes.gb || 0);
+          } else if (catG.includes('BLANC') && pGuantes.gb) precioNuevo = Number(pGuantes.gb);
           else if (catG.includes('NEGR') && pGuantes.gn) precioNuevo = Number(pGuantes.gn);
           else if (catG.includes('MIT') && pGuantes.gm) precioNuevo = Number(pGuantes.gm);
           else if (pGuantes.gb) precioNuevo = Number(pGuantes.gb);
@@ -252,44 +254,64 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
   }
 
   const marginTheme = {
+    BaseRow: `
+        font-size: 0.74rem !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        transition: background-color 0.15s ease !important;
+        &:hover {
+          background-color: #f8fafc !important;
+        }
+    `,
+    HeaderRow: `
+        background-color: #f8fafc !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+    `,
     BaseCell: `
-        padding: 6px 8px !important;
+        padding: 5px 3px !important;
         vertical-align: middle !important;
-      `,
+        min-width: 0 !important;
+        overflow: hidden !important;
+    `,
     HeaderCell: `
-        padding: 8px !important;
+        padding: 7px 3px !important;
         background-color: #f8fafc !important;
         color: #475569 !important;
-        font-weight: 600 !important;
-        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        font-size: 0.72rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.2px !important;
+        white-space: nowrap !important;
         border-bottom: 2px solid #e2e8f0 !important;
+        min-width: 0 !important;
     `,
   };
   const sizeColumnTheme = !esPlanta ? {
     Table: `
+        width: 100% !important;
         --data-table-library_grid-template-columns: 
-             max-content  
-             max-content  
-             minmax(170px, 1.2fr) 
-             max-content  
-             max-content  
-             minmax(190px, 1.2fr) 
-             max-content  
-             max-content !important; 
+             minmax(65px, 0.75fr)
+             minmax(72px, 0.75fr)
+             minmax(110px, 1.4fr)
+             minmax(68px, 0.8fr)
+             minmax(78px, 0.85fr)
+             minmax(95px, 1.25fr)
+             minmax(75px, 0.85fr)
+             minmax(95px, 1.15fr) !important; 
     `,
   }
     : {
       Table: `
+        width: 100% !important;
         --data-table-library_grid-template-columns: 
-             max-content
-             max-content
-             max-content
-             minmax(150px, 1.2fr)
-             max-content
-             max-content
-             max-content
-             minmax(180px, 1.2fr)
-             max-content !important;
+             minmax(28px, 0.35fr)
+             minmax(65px, 0.75fr)
+             minmax(70px, 0.75fr)
+             minmax(110px, 1.4fr)
+             minmax(68px, 0.8fr)
+             minmax(65px, 0.75fr)
+             minmax(78px, 0.85fr)
+             minmax(95px, 1.25fr)
+             minmax(35px, 0.4fr) !important;
     `,
     };
   const theme = useTheme(
@@ -334,8 +356,8 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
           // Manejar la categoría "GUANTES" por subcategorías
           producto.pedido.forEach((detalle) => {
             const cantidad = parseInt(detalle.cantidad, 10);
-            const subCategoria = detalle.categoria; // Ej: BLANCOS, NEGROS
-            const nombreCategoria = `G${subCategoria.charAt(0)}`;
+            const subCategoria = detalle.categoria; // Ej: BLANCOS, NEGROS, MITON, ESPECIAL
+            const nombreCategoria = subCategoria === 'ESPECIAL' ? 'GE' : `G${subCategoria.charAt(0)}`;
 
             if (!categorias[nombreCategoria]) {
               categorias[nombreCategoria] = 0;
@@ -488,7 +510,7 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
           </div>
         </div>
         {/* Columna para el select cantidad items a mostrar */}
-        <div className="col-6 col-md-2 align-items-center m-1 text-end">
+        <div className="col-6 col-md-2 d-flex align-items-center justify-content-end text-end">
           <div className="input-group form-select-sm justify-content-end">
             <span className='m-2'>
               Items
@@ -546,14 +568,14 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                     </>
                   ) : (
                     <>
-                      <HeaderCell className="text-center">Remisión</HeaderCell>
-                      <HeaderCellSort sortKey="FECHA" className="text-center">Fecha</HeaderCellSort>
-                      <HeaderCellSort sortKey="CLIENTE" className="text-start ps-2">Cliente</HeaderCellSort>
-                      <HeaderCellSort sortKey="CIUDAD" className="text-center">Ciudad</HeaderCellSort>
-                      <HeaderCellSort sortKey="ESTADO" className="text-center">Estado</HeaderCellSort>
-                      <HeaderCell className="text-start ps-2">Detalle de Items</HeaderCell>
-                      <HeaderCellSort sortKey="TOTAL" className="text-end pe-3">Total Factura ($)</HeaderCellSort>
-                      <HeaderCell className="text-center">Acciones</HeaderCell>
+                      <HeaderCell className="text-center px-1">Remisión</HeaderCell>
+                      <HeaderCellSort sortKey="FECHA" className="text-center px-1">Fecha</HeaderCellSort>
+                      <HeaderCellSort sortKey="CLIENTE" className="text-start ps-1 pe-1">Cliente</HeaderCellSort>
+                      <HeaderCellSort sortKey="CIUDAD" className="text-center px-1">Ciudad</HeaderCellSort>
+                      <HeaderCellSort sortKey="ESTADO" className="text-center px-1">Estado</HeaderCellSort>
+                      <HeaderCell className="text-start ps-1 pe-1">Items</HeaderCell>
+                      <HeaderCellSort sortKey="TOTAL" className="text-end pe-2">Total ($)</HeaderCellSort>
+                      <HeaderCell className="text-center px-1">Acciones</HeaderCell>
                     </>
                   )}
                 </HeaderRow>
@@ -669,60 +691,61 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                       ) : (
                         <>
                           {/* 1. Remisión e inicial de asesor */}
-                          <Cell className="text-center">
-                            <div className="d-flex align-items-center gap-1">
+                          <Cell className="text-center px-1">
+                            <div className="d-flex align-items-center gap-1 justify-content-center">
                               <span
-                                className="rounded-circle bg-primary-subtle text-primary fw-bold d-inline-flex align-items-center justify-content-center"
-                                style={{ width: '24px', height: '24px', fontSize: '0.72rem' }}
+                                className="rounded-circle bg-primary-subtle text-primary fw-bold d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                                style={{ width: '20px', height: '20px', fontSize: '0.65rem' }}
                                 title={`Asesor: ${item.user.name}`}
                               >
                                 {item.user.name.slice(0, 1).toUpperCase()}
                               </span>
-                              <span className="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-semibold" style={{ fontSize: '0.78rem' }}>
+                              <span className="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-semibold" style={{ fontSize: '0.72rem', padding: '2px 5px' }}>
                                 #{(item.pedido_id).slice(-6).toUpperCase()}
                               </span>
                             </div>
                           </Cell>
 
                           {/* 2. Fecha */}
-                          <Cell className="text-center small text-muted">
-                            <span title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{fechaCorta(limpiarFecha(item.fechaCreacion))}</span>
+                          <Cell className="text-center px-1" style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
+                            <span className="text-muted" title={`Creado el: ${capitalize(item.fechaCreacion)}`}>{fechaCorta(limpiarFecha(item.fechaCreacion))}</span>
                           </Cell>
 
                           {/* 3. Cliente */}
-                          <Cell className="ps-2">
-                            <div className='d-flex align-items-center justify-content-between gap-1'>
-                              <span className="text-start fw-medium text-dark text-truncate" style={{ maxWidth: '170px' }} title={`Cliente: ${item.cliente.nombre}`}>
+                          <Cell className="ps-1 pe-1">
+                            <div className='d-flex align-items-center justify-content-between gap-1 w-100' style={{ minWidth: 0, overflow: 'hidden' }}>
+                              <span className="text-start fw-medium text-dark text-truncate" style={{ fontSize: '0.74rem' }} title={`Cliente: ${item.cliente.nombre}`}>
                                 {aTitulo(item.cliente.nombre)}
                               </span>
                               {item.cliente.distribuidor ? (
-                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-1 py-0" style={{ fontSize: '0.68rem' }} title="Cliente distribuidor">D</span>
+                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-1 py-0 flex-shrink-0" style={{ fontSize: '0.62rem' }} title="Cliente distribuidor">D</span>
                               ) : (
-                                <span className="badge bg-light text-secondary border px-1 py-0" style={{ fontSize: '0.68rem' }} title="Cliente particular">U</span>
+                                <span className="badge bg-light text-secondary border px-1 py-0 flex-shrink-0" style={{ fontSize: '0.62rem' }} title="Cliente particular">U</span>
                               )}
                             </div>
                           </Cell>
 
                           {/* 4. Ciudad */}
-                          <Cell className="text-center">
+                          <Cell className="text-center px-1">
                             <button
-                              className="btn btn-outline-secondary btn-sm py-0 px-2 rounded-pill"
-                              style={{ fontSize: '0.74rem' }}
+                              className="btn btn-outline-secondary btn-sm py-0 px-1 rounded-pill text-truncate w-100"
+                              style={{ fontSize: '0.68rem', maxWidth: '100%', lineHeight: '1.4' }}
                               onClick={() => abrirModalGuia(item)}
-                              title="Ver guía / despacho"
+                              title={`Ciudad: ${aTitulo(item.cliente.ciudad)} - Ver guía`}
                             >
                               {aTitulo(item.cliente.ciudad)}
                             </button>
                           </Cell>
+
                           {/* 5. Estado */}
-                          <Cell className="text-center">
+                          <Cell className="text-center px-1">
                             {item.estado === 'pagado' ? (
                               <span
-                                className="badge rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1 shadow-xs"
+                                className="badge rounded-pill px-1 py-0 d-inline-flex align-items-center justify-content-center gap-1 shadow-xs w-100"
                                 style={{
-                                  fontSize: '0.74rem',
-                                  minWidth: '102px',
-                                  justifyContent: 'center',
+                                  fontSize: '0.68rem',
+                                  maxWidth: '90px',
+                                  lineHeight: '1.5',
                                   cursor: 'not-allowed',
                                   backgroundColor: '#f1f5f9',
                                   color: '#475569',
@@ -730,15 +753,17 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                                 }}
                                 title="Pedido Pagado (Finalizado - No modificable)"
                               >
-                                <i className="fas fa-lock text-muted" style={{ fontSize: '0.7rem' }}></i>
+                                <i className="fas fa-lock text-muted" style={{ fontSize: '0.6rem' }}></i>
                                 <span className="fw-bold">Pagado</span>
                               </span>
                             ) : (
                               <select
-                                className="form-select form-select-sm rounded-pill fw-semibold text-center py-0"
+                                className="form-select form-select-sm rounded-pill fw-semibold text-center py-0 px-1 w-100"
                                 style={{
-                                  fontSize: '0.75rem',
-                                  minWidth: '102px',
+                                  fontSize: '0.68rem',
+                                  maxWidth: '90px',
+                                  height: '22px',
+                                  lineHeight: '1',
                                   backgroundColor: item.estado === 'pendiente' ? '#fef3c7' : item.estado === 'preparado' ? '#ede9fe' : item.estado === 'enviado' ? '#e0f2fe' : item.estado === 'entregado' ? '#dcfce7' : '#fee2e2',
                                   color: item.estado === 'pendiente' ? '#92400e' : item.estado === 'preparado' ? '#6b21a8' : item.estado === 'enviado' ? '#075985' : item.estado === 'entregado' ? '#166534' : '#991b1b',
                                   border: '1px solid transparent'
@@ -780,20 +805,20 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                           </Cell>
 
                           {/* 6. Detalle de Items */}
-                          <Cell className="ps-2">
+                          <Cell className="ps-1 pe-1">
                             <OverlayTrigger placement="top" overlay={renderTooltip}>
-                              <div className="d-flex align-items-center flex-wrap gap-1" style={{ maxWidth: '220px', cursor: 'pointer' }}>
-                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0 fw-bold" style={{ fontSize: '0.74rem' }}>
-                                  {totalProductos} unds
+                              <div className="d-flex align-items-center flex-wrap gap-1" style={{ cursor: 'pointer', minWidth: 0 }}>
+                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-1 py-0 fw-bold" style={{ fontSize: '0.68rem' }}>
+                                  {totalProductos}u
                                 </span>
-                                {categoriasList.slice(0, 3).map(([cat, qty], i) => (
-                                  <span key={i} className="badge bg-light text-secondary border px-1 py-0" style={{ fontSize: '0.68rem' }}>
-                                    {cat}: {qty}
+                                {categoriasList.slice(0, 2).map(([cat, qty], i) => (
+                                  <span key={i} className="badge bg-light text-secondary border px-1 py-0" style={{ fontSize: '0.62rem' }}>
+                                    {cat}:{qty}
                                   </span>
                                 ))}
-                                {categoriasList.length > 3 && (
-                                  <span className="badge bg-light text-muted border px-1 py-0" style={{ fontSize: '0.68rem' }}>
-                                    +{categoriasList.length - 3}
+                                {categoriasList.length > 2 && (
+                                  <span className="badge bg-light text-muted border px-1 py-0" style={{ fontSize: '0.62rem' }}>
+                                    +{categoriasList.length - 2}
                                   </span>
                                 )}
                               </div>
@@ -801,16 +826,16 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                           </Cell>
 
                           {/* 7. Total ($) */}
-                          <Cell className="text-end pe-3 fw-bold text-dark">
+                          <Cell className="text-end pe-2 fw-bold text-dark" style={{ fontSize: '0.74rem', whiteSpace: 'nowrap' }}>
                             {formatearPrecio(totalFactura)}
                           </Cell>
 
                           {/* 8. Acciones */}
-                          <Cell className="text-center">
+                          <Cell className="text-center px-1">
                             <div className="btn-group btn-group-sm" role="group">
                               <button
-                                className="btn btn-sm btn-light border text-primary px-2 py-1"
-                                style={{ fontSize: '0.92rem' }}
+                                className="btn btn-sm btn-light border text-primary p-0 d-inline-flex align-items-center justify-content-center"
+                                style={{ width: '22px', height: '22px', fontSize: '0.75rem' }}
                                 onClick={() => detallePedido(item)}
                                 title="Ver detalle del pedido"
                               >
@@ -818,8 +843,8 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                               </button>
                               {item.estado === 'pendiente' && (
                                 <button
-                                  className="btn btn-sm btn-light border text-warning px-2 py-1"
-                                  style={{ fontSize: '0.92rem' }}
+                                  className="btn btn-sm btn-light border text-warning p-0 d-inline-flex align-items-center justify-content-center"
+                                  style={{ width: '22px', height: '22px', fontSize: '0.75rem' }}
                                   onClick={() => abrirModalEditar(item)}
                                   title="Editar pedido (Solo en estado pendiente)"
                                 >
@@ -827,16 +852,16 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                                 </button>
                               )}
                               <button
-                                className="btn btn-sm btn-light border text-success px-2 py-1"
-                                style={{ fontSize: '0.92rem' }}
+                                className="btn btn-sm btn-light border text-success p-0 d-inline-flex align-items-center justify-content-center"
+                                style={{ width: '22px', height: '22px', fontSize: '0.75rem' }}
                                 onClick={() => abrirModalCopiar(item)}
                                 title="Copiar este pedido a un nuevo pedido con fecha actual y tarifas vigentes"
                               >
                                 <i className="fa-solid fa-copy"></i>
                               </button>
                               <button
-                                className="btn btn-sm btn-light border text-info px-2 py-1"
-                                style={{ fontSize: '0.92rem' }}
+                                className="btn btn-sm btn-light border text-info p-0 d-inline-flex align-items-center justify-content-center"
+                                style={{ width: '22px', height: '22px', fontSize: '0.75rem' }}
                                 onClick={() => abrirModalImprimir(item)}
                                 title="Imprimir remisión"
                               >
@@ -844,8 +869,8 @@ export const ListarPedidos = ({ editarPedido, eliminarPedido, detallePedido, abr
                               </button>
                               {item.estado === 'pendiente' && (
                                 <button
-                                  className="btn btn-sm btn-light border text-danger px-2 py-1"
-                                  style={{ fontSize: '0.92rem' }}
+                                  className="btn btn-sm btn-light border text-danger p-0 d-inline-flex align-items-center justify-content-center"
+                                  style={{ width: '22px', height: '22px', fontSize: '0.75rem' }}
                                   onClick={() => eliminarPedido(item)}
                                   title="Eliminar pedido"
                                 >

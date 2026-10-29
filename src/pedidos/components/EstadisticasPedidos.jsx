@@ -94,13 +94,16 @@ export const EstadisticasPedidos = () => {
                     // Determinar el precio según el tipo de guante
                     switch (tipoGuante) {
                         case "BLANCOS":
-                            precioUnitario = clienteActivo.precios.precioGuantes.gb;
+                            precioUnitario = clienteActivo?.precios?.precioGuantes?.gb || 0;
                             break;
                         case "NEGROS":
-                            precioUnitario = clienteActivo.precios.precioGuantes.gn;
+                            precioUnitario = clienteActivo?.precios?.precioGuantes?.gn || 0;
                             break;
                         case "MITON":
-                            precioUnitario = clienteActivo.precios.precioGuantes.gm;
+                            precioUnitario = clienteActivo?.precios?.precioGuantes?.gm || 0;
+                            break;
+                        case "ESPECIAL":
+                            precioUnitario = clienteActivo?.precios?.precioGuantes?.gb || 0;
                             break;
                         default:
                             console.warn(`Tipo de guante desconocido: ${tipoGuante}`);

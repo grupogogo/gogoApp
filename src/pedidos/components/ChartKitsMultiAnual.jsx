@@ -18,7 +18,8 @@ export const ChartKitsMultiAnual = ({
     filtrarPorEstadoPagado = null,
     filtroUsuario = 'GENERAL',
     historicoPrecalculado = null,
-    listaPrecios: listaPreciosProp = null
+    listaPrecios: listaPreciosProp = null,
+    esLeonardo = false
 }) => {
     const chartRef = useRef(null);
     const { formatearPrecio, number_format } = useFuntions();
@@ -50,9 +51,10 @@ export const ChartKitsMultiAnual = ({
             aniosDisponibles,
             filtrarPorEstadoPagado,
             filtroUsuario,
-            listaPrecios
+            listaPrecios,
+            esLeonardo
         );
-    }, [oldOrders, pedidos, aniosDisponibles, filtrarPorEstadoPagado, filtroUsuario, historicoPrecalculado, listaPrecios]);
+    }, [oldOrders, pedidos, aniosDisponibles, filtrarPorEstadoPagado, filtroUsuario, historicoPrecalculado, listaPrecios, esLeonardo]);
 
     const {
         anios,
@@ -316,11 +318,14 @@ export const ChartKitsMultiAnual = ({
                             <i className="fa-solid fa-boxes-packing me-1"></i> Categoría Completa
                         </span>
                         <span className="badge bg-warning-subtle text-dark border border-warning-subtle px-2.5 py-1 rounded-pill small fw-bold">
-                            <i className="fa-solid fa-industry text-warning-emphasis me-1"></i> Precios de Fábrica (2025+) | <i className="fa-solid fa-receipt text-primary me-1"></i> Precios Reales de Pedidos (2017-2024)
+                            <i className="fa-solid fa-industry text-warning-emphasis me-1"></i> Precios de Fábrica (2025+) | <i className="fa-solid fa-receipt text-primary me-1"></i> Precios Reales (2017-2024)
+                        </span>
+                        <span className="badge bg-secondary-subtle text-secondary border px-2.5 py-1 rounded-pill small fw-semibold">
+                            <i className="fa-regular fa-calendar-days me-1"></i> Histórico Multianual (2017 a Hoy)
                         </span>
                         {filtroUsuario !== 'GENERAL' && (
-                            <span className="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 rounded-pill small">
-                                Filtro: {filtroUsuario}
+                            <span className="badge bg-primary text-white border px-2 py-1 rounded-pill small fw-bold shadow-xs">
+                                <i className="fa-solid fa-user-check me-1"></i> Filtro: {filtroUsuario}
                             </span>
                         )}
                     </div>
@@ -534,14 +539,13 @@ export const ChartKitsMultiAnual = ({
                             <tfoot className="table-light fw-bold">
                                 <tr>
                                     <td className="text-start ps-3">Gran Total</td>
+                                    <td>{metrica === 'ventas' ? formatearPrecio(acumuladoSubcategorias.KB.venta) : number_format(acumuladoSubcategorias.KB.unidades)}</td>
                                     <td>{metrica === 'ventas' ? formatearPrecio(acumuladoSubcategorias.KCG.venta) : number_format(acumuladoSubcategorias.KCG.unidades)}</td>
                                     <td>{metrica === 'ventas' ? formatearPrecio(acumuladoSubcategorias.KCP.venta) : number_format(acumuladoSubcategorias.KCP.unidades)}</td>
                                     <td>{metrica === 'ventas' ? formatearPrecio(acumuladoSubcategorias.KCE.venta) : number_format(acumuladoSubcategorias.KCE.unidades)}</td>
-                                    <td>{metrica === 'ventas' ? formatearPrecio(acumuladoSubcategorias.KB.venta) : number_format(acumuladoSubcategorias.KB.unidades)}</td>
-                                    <td>{metrica === 'ventas' ? formatearPrecio(acumuladoSubcategorias.CC.venta) : number_format(acumuladoSubcategorias.CC.unidades)}</td>
                                     <td>{metrica === 'ventas' ? formatearPrecio(acumuladoSubcategorias.CB.venta) : number_format(acumuladoSubcategorias.CB.unidades)}</td>
-                                    <td>{metrica === 'ventas' ? formatearPrecio(acumuladoSubcategorias.OTROS_KITS.venta) : number_format(acumuladoSubcategorias.OTROS_KITS.unidades)}</td>
-                                    <td className="table-primary text-end pe-3">
+                                    <td>{metrica === 'ventas' ? formatearPrecio(acumuladoSubcategorias.CC.venta) : number_format(acumuladoSubcategorias.CC.unidades)}</td>
+                                    <td className="table-primary fw-bold text-end pe-3">
                                         {metrica === 'ventas' ? formatearPrecio(granTotalVenta) : number_format(granTotalUnidades)}
                                     </td>
                                     <td>-</td>

@@ -230,6 +230,11 @@ export const Pedidos = () => {
 
   const categoriasConProductos = Object.keys(pedidoGeneral).length;
 
+  const totalProductos = Object.values(pedidoGeneral).reduce((acc, { pedido }) => {
+    if (!Array.isArray(pedido)) return acc;
+    return acc + pedido.reduce((s, item) => s + (parseInt(item.cantidad) || 0), 0);
+  }, 0);
+
   return (
     <>
       <LayoutApp>
@@ -466,14 +471,27 @@ export const Pedidos = () => {
 
                 {/* Banner de Total y Guardar */}
                 <div className="card border-0 bg-primary bg-opacity-10 rounded-3 p-3 mt-3">
-                  <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
-                    <div>
-                      <span className="small fw-bold text-primary text-uppercase d-flex align-items-center gap-1">
+                  <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-3">
+                    <div className="d-flex flex-column gap-2">
+                      <span className="fw-bold text-primary text-uppercase d-flex align-items-center gap-1" style={{ fontSize: '0.8rem', letterSpacing: '0.05em' }}>
                         <i className="fa-solid fa-calculator"></i> Total a Facturar
                       </span>
-                      <small className="text-muted">
-                        {categoriasConProductos > 0 ? `${categoriasConProductos} categorías con ítems agregados` : 'Ningún producto agregado aún'}
-                      </small>
+                      <div className="d-flex flex-wrap gap-2 align-items-center">
+                        <span className="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-2 fw-semibold"
+                          style={{ fontSize: '0.82rem', background: 'rgba(13,110,253,0.10)', color: '#0d6efd' }}>
+                          <i className="fa-solid fa-layer-group" style={{ fontSize: '0.75rem' }}></i>
+                          {categoriasConProductos > 0
+                            ? `${categoriasConProductos} ${categoriasConProductos === 1 ? 'categoría' : 'categorías'}`
+                            : 'Sin categorías'}
+                        </span>
+                        {totalProductos > 0 && (
+                          <span className="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-2 fw-semibold"
+                            style={{ fontSize: '0.82rem', background: 'rgba(25,135,84,0.10)', color: '#198754' }}>
+                            <i className="fa-solid fa-boxes-stacked" style={{ fontSize: '0.75rem' }}></i>
+                            {totalProductos} {totalProductos === 1 ? 'producto' : 'productos'} en total
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="text-sm-end">
                       <span className="display-6 fs-3 fw-bold text-primary">

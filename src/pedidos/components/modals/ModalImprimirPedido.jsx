@@ -74,10 +74,14 @@ export const ModalImprimirPedido = ({ setShow, show, pedido }) => {
                     // Para cada subcategoría, calcular los totales por talla
                     Object.entries(subcategorias).forEach(([subcategoria, tallas]) => {
                         Object.entries(tallas).forEach(([talla, itemsTalla]) => {
+                            const tipoEsp = itemsTalla.find(it => it.tipoEspecial)?.tipoEspecial;
+                            const labelSub = subcategoria === 'ESPECIAL'
+                                ? (tipoEsp ? `ESPECIAL (${tipoEsp})` : 'ESPECIAL')
+                                : subcategoria;
                             const totalTalla = itemsTalla.reduce(
                                 (acc, item) => ({
-                                    producto: `GUANTES  ${subcategoria} ${talla.replace('T-', 'TALLA ')}`,
-                                    categoria: `G${subcategoria.charAt(0)}`,
+                                    producto: `GUANTES  ${labelSub} ${talla.replace('T-', 'TALLA ')}`,
+                                    categoria: subcategoria === 'ESPECIAL' ? 'GE' : `G${subcategoria.charAt(0)}`,
                                     cantidad: acc.cantidad + parseInt(item.cantidad),
                                     totalPrecio: acc.totalPrecio + (item.precioUnitario * parseInt(item.cantidad)),
                                     precioUnitario: item.precioUnitario,
@@ -87,7 +91,7 @@ export const ModalImprimirPedido = ({ setShow, show, pedido }) => {
 
                             totales.push({
                                 producto: totalTalla.producto || '',
-                                categoria: `G${subcategoria.charAt(0)}`,
+                                categoria: subcategoria === 'ESPECIAL' ? 'GE' : `G${subcategoria.charAt(0)}`,
                                 cantidad: totalTalla.cantidad,
                                 precioUnitario: totalTalla.precioUnitario,
                                 total: totalTalla.totalPrecio || 0, // Aseguramos que `total` siempre sea un número

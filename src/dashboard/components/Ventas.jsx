@@ -519,6 +519,7 @@ export const Ventas = ({ datosUsuario }) => {
             'GUANTES-BLANCOS',
             'GUANTES-NEGROS',
             'GUANTES-MITON',
+            'GUANTES-ESPECIAL',
             'OTR'
           ].map((categoria, index) => {
 

@@ -22,6 +22,7 @@ export const CATEGORIAS_DEFINICION = [
     { id: 'G_BLANCOS', nombre: 'Guantes Blancos', grupo: 'Guantes', unidad: 'Docenas', color: '#8b5cf6' },
     { id: 'G_MITON', nombre: 'Guantes Mitón', grupo: 'Guantes', unidad: 'Docenas', color: '#a855f7' },
     { id: 'G_NEGROS', nombre: 'Guantes Negros', grupo: 'Guantes', unidad: 'Docenas', color: '#475569' },
+    { id: 'G_ESPECIAL', nombre: 'Guantes Especial', grupo: 'Guantes', unidad: 'Docenas', color: '#7c3aed' },
     { id: 'GUANTES', nombre: 'Guantes', grupo: 'Guantes', unidad: 'Docenas', color: '#8b5cf6' },
     { id: 'OTR', nombre: 'Otros / Accesorios', grupo: 'Otros', unidad: 'Unidades', color: '#6b7280' },
 ];
@@ -48,8 +49,8 @@ export const formatearTituloProducto = (str = '') => {
  * - Negros (G_NEGROS)
  * - Cualquier variante especial detectada (G_${slug})
  */
-export const obtenerSubcategoriaGuante = (prodName = '', subcat = '', cod = '', rawCat = '') => {
-    const text = `${subcat} ${prodName} ${cod} ${rawCat}`.toLowerCase();
+export const obtenerSubcategoriaGuante = (prodName = '', subcat = '', cod = '', rawCat = '', tipoEspecial = '') => {
+    const text = `${subcat} ${prodName} ${cod} ${rawCat} ${tipoEspecial}`.toLowerCase();
 
     if (text.includes('negro')) {
         return {
@@ -65,6 +66,15 @@ export const obtenerSubcategoriaGuante = (prodName = '', subcat = '', cod = '', 
             nombre: 'Guantes Mitón',
             subcat: 'Mitón',
             color: '#a855f7'
+        };
+    }
+    if (text.includes('especial') || text.includes('tiras') || tipoEspecial) {
+        const nombreTipo = tipoEspecial || (text.includes('tiras') ? 'Guante de tiras' : 'Especial');
+        return {
+            id: 'G_ESPECIAL',
+            nombre: tipoEspecial ? `Guantes Especial (${tipoEspecial})` : 'Guantes Especial',
+            subcat: nombreTipo,
+            color: '#7c3aed'
         };
     }
     if (text.includes('blanco')) {
@@ -394,7 +404,7 @@ export const normalizarModernPedido = (pedido) => {
                     nombreItem = 'Cirio de Bautizo';
                 } else if (esGuante) {
                     categoriaId = 'GUANTES';
-                    const gloveInfo = obtenerSubcategoriaGuante(prodName, rawCat, categoriaKey, rawCat);
+                    const gloveInfo = obtenerSubcategoriaGuante(prodName, rawCat, categoriaKey, rawCat, item.tipoEspecial);
                     idMatriz = gloveInfo.id;
                     subcategoria = gloveInfo.subcat;
                     nombreItem = gloveInfo.nombre;
@@ -601,8 +611,7 @@ export const calcularEstadisticasAnio = (
         }
 
         const fechaOrder = ord.fecha || ord.fechaCreacion || ord.fechaStr || (ord.anio ? new Date(ord.anio, ord.mes ?? 0, 1) : null);
-        const esModernoFabrica = (ord.anio >= 2025);
-        const tarifaVigente = esModernoFabrica ? obtenerTarifaVigente(fechaOrder, listaPrecios) : null;
+        const tarifaVigente = obtenerTarifaVigente(fechaOrder, listaPrecios);
 
         ord.items.forEach(it => {
             const m = ord.mes;
@@ -619,7 +628,7 @@ export const calcularEstadisticasAnio = (
                 const cant = Number(it.cantidad || 0);
                 let tot = Number(it.total || 0);
                 const tipoKit = clasificarItemKit(it);
-                if (esKit && esModernoFabrica && tipoKit) {
+                if (esKit && tipoKit) {
                     const precioTarifa = obtenerPrecioFabricaItem(tipoKit, tarifaVigente);
                     if (precioTarifa > 0) {
                         tot = cant * precioTarifa;
@@ -712,6 +721,123 @@ export const calcularEstadisticasAnio = (
         const otros = mesesIndices.reduce((acc, m) => acc + otrosMensuales[m], 0);
         const ventasOtros = mesesIndices.reduce((acc, m) => acc + ventasOtrosMensuales[m], 0);
 
+        // Auditoría detallada de productos y asignación de precios por fecha
+        const auditoriaMap = {};
+
+        pedidosDelAnio.forEach(ord => {
+            if (ord.mes !== null && mesesIndices.includes(ord.mes)) {
+                (ord.items || []).forEach(it => {
+                    const cant = Number(it.cantidad || 0);
+                    if (cant <= 0) return;
+
+                    const precio = Number(it.precio || 0);
+                    const subtotal = Number(it.total !== undefined ? it.total : cant * precio);
+                    const tipoKit = clasificarItemKit(it);
+                    const esKit = Boolean(tipoKit);
+                    const esGuante = esCategoriaGuantes(it.categoriaId, it.codigo, it.producto);
+
+                    let grupo = 'Otros';
+                    let nombreProducto = it.producto || it.subcategoria || 'Otros';
+                    let idClave = it.idMatriz || it.categoriaId || it.codigo || 'OTR';
+
+                    if (esKit) {
+                        grupo = ['CC', 'CB', 'CCON'].includes(tipoKit) ? 'Cirios' : 'Kits';
+                        const kitLabels = {
+                            KCG: 'Kit Comunión Grande (KCG)',
+                            KCP: 'Kit Comunión Pequeño (KCP)',
+                            KCE: 'Kit Comunión Económico (KCE)',
+                            KB: 'Kit de Bautizo (KB)',
+                            CC: 'Cirio de Comunión (CC)',
+                            CCON: 'Cirio de Confirmación (CCON)',
+                            CB: 'Cirio de Bautizo (CB)'
+                        };
+                        nombreProducto = kitLabels[tipoKit] || `Kit ${tipoKit}`;
+                        idClave = tipoKit;
+                    } else if (esGuante) {
+                        grupo = 'Guantes';
+                        const gInfo = obtenerSubcategoriaGuante(it.producto, it.subcategoria, it.codigo);
+                        nombreProducto = gInfo.nombre || 'Guantes';
+                        idClave = gInfo.id || 'GUANTES';
+                    }
+
+                    if (!auditoriaMap[idClave]) {
+                        auditoriaMap[idClave] = {
+                            id: idClave,
+                            nombre: nombreProducto,
+                            grupo,
+                            esKit,
+                            esGuante,
+                            unidad: esGuante ? 'doc' : (esKit ? 'unds' : 'unds'),
+                            totalCantidad: 0,
+                            totalVenta: 0,
+                            preciosMap: {}
+                        };
+                    }
+
+                    auditoriaMap[idClave].totalCantidad += cant;
+                    auditoriaMap[idClave].totalVenta += subtotal;
+
+                    const pKey = String(precio);
+                    if (!auditoriaMap[idClave].preciosMap[pKey]) {
+                        auditoriaMap[idClave].preciosMap[pKey] = {
+                            precioUnitario: precio,
+                            cantidad: 0,
+                            subtotal: 0,
+                            esPrecioFabrica: Boolean(it.esPrecioFabrica || esKit),
+                            tarifaNombre: it.tarifaNombre || '',
+                            tarifaVigencia: it.tarifaVigencia || '',
+                            fechaMin: ord.fecha || null,
+                            fechaMax: ord.fecha || null,
+                            pedidosCount: 0
+                        };
+                    }
+                    const pObj = auditoriaMap[idClave].preciosMap[pKey];
+                    pObj.cantidad += cant;
+                    pObj.subtotal += subtotal;
+                    pObj.pedidosCount += 1;
+                    if (ord.fecha) {
+                        if (!pObj.fechaMin || ord.fecha < pObj.fechaMin) pObj.fechaMin = ord.fecha;
+                        if (!pObj.fechaMax || ord.fecha > pObj.fechaMax) pObj.fechaMax = ord.fecha;
+                    }
+                    if (it.tarifaNombre && !pObj.tarifaNombre) pObj.tarifaNombre = it.tarifaNombre;
+                    if (it.tarifaVigencia && !pObj.tarifaVigencia) pObj.tarifaVigencia = it.tarifaVigencia;
+                });
+            }
+        });
+
+        const auditoriaProductos = Object.values(auditoriaMap).map(prod => {
+            const desglosesPorPrecio = Object.values(prod.preciosMap).map(p => {
+                let rangoFechas = '';
+                if (p.fechaMin && p.fechaMax) {
+                    const fMinStr = p.fechaMin.toLocaleDateString('es-CO');
+                    const fMaxStr = p.fechaMax.toLocaleDateString('es-CO');
+                    rangoFechas = fMinStr === fMaxStr ? fMinStr : `${fMinStr} - ${fMaxStr}`;
+                }
+                return {
+                    precioUnitario: p.precioUnitario,
+                    cantidad: p.cantidad,
+                    subtotal: p.subtotal,
+                    esPrecioFabrica: p.esPrecioFabrica,
+                    tarifaNombre: p.tarifaNombre,
+                    tarifaVigencia: p.tarifaVigencia,
+                    rangoFechas,
+                    pedidosCount: p.pedidosCount
+                };
+            }).sort((a, b) => b.precioUnitario - a.precioUnitario);
+
+            return {
+                ...prod,
+                desglosesPorPrecio,
+                tieneMultiplesPrecios: desglosesPorPrecio.length > 1
+            };
+        }).sort((a, b) => {
+            const ordenGrupo = { Kits: 1, Cirios: 2, Guantes: 3, Otros: 4 };
+            const gA = ordenGrupo[a.grupo] || 99;
+            const gB = ordenGrupo[b.grupo] || 99;
+            if (gA !== gB) return gA - gB;
+            return b.totalVenta - a.totalVenta;
+        });
+
         return {
             nombre,
             ventas,
@@ -727,7 +853,8 @@ export const calcularEstadisticasAnio = (
             guantes,
             ventasGuantes,
             otros,
-            ventasOtros
+            ventasOtros,
+            auditoriaProductos
         };
     };
 
@@ -805,6 +932,7 @@ export const calcularEstadisticasAnio = (
         { id: 'G_BLANCOS', nombre: 'Guantes Blancos', grupo: 'Guantes', unidad: 'Docenas', color: '#8b5cf6' },
         { id: 'G_MITON', nombre: 'Guantes Mitón', grupo: 'Guantes', unidad: 'Docenas', color: '#a855f7' },
         { id: 'G_NEGROS', nombre: 'Guantes Negros', grupo: 'Guantes', unidad: 'Docenas', color: '#475569' },
+        { id: 'G_ESPECIAL', nombre: 'Guantes Especial', grupo: 'Guantes', unidad: 'Docenas', color: '#7c3aed' },
     ];
 
     const categoriasMatriz = {};
@@ -827,8 +955,7 @@ export const calcularEstadisticasAnio = (
     pedidosDelAnio.forEach(ord => {
         const esKarol = ord.atribuidoKarol || esUsuarioKarol(ord.user) || esUsuarioKarol(ord.raw?.user);
         const fechaOrder = ord.fecha || ord.fechaCreacion || ord.fechaStr || (ord.anio ? new Date(ord.anio, ord.mes ?? 0, 1) : null);
-        const esModernoFabrica = (ord.anio >= 2025);
-        const tarifaVigente = esModernoFabrica ? obtenerTarifaVigente(fechaOrder, listaPrecios) : null;
+        const tarifaVigente = obtenerTarifaVigente(fechaOrder, listaPrecios);
 
         ord.items.forEach(item => {
             const esKit = esCategoriaKits(item.categoriaId, item.codigo);
@@ -897,7 +1024,7 @@ export const calcularEstadisticasAnio = (
             const cant = Number(item.cantidad || 0);
             let itemTotal = Number(item.total || 0);
             const tipoKit = clasificarItemKit(item);
-            if (esKit && esModernoFabrica && tipoKit) {
+            if (esKit && tipoKit) {
                 const precioTarifa = obtenerPrecioFabricaItem(tipoKit, tarifaVigente);
                 if (precioTarifa > 0) {
                     itemTotal = cant * precioTarifa;
@@ -943,7 +1070,7 @@ export const calcularEstadisticasAnio = (
     // 2. Guantes (subcategorías)
     // 3. Otros (productos individuales agrupados)
     const categoriasMatrizOrdenadas = Object.values(categoriasMatriz).filter(cat => {
-        if (['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'CCON', 'G_BLANCOS', 'G_MITON', 'G_NEGROS'].includes(cat.id)) {
+        if (['KCG', 'KCP', 'KCE', 'KB', 'CC', 'CB', 'CCON', 'G_BLANCOS', 'G_MITON', 'G_NEGROS', 'G_ESPECIAL'].includes(cat.id)) {
             return true;
         }
         return cat.unidades > 0 || cat.totalVenta > 0;
@@ -1465,13 +1592,14 @@ export const filtrarPedidosYGastosPorUsuario = (
 /**
  * Realiza la división integral de cuentas entre los socios para un conjunto de pedidos y gastos.
  */
-export const calcularDivisionSocios = (pedidos = [], gastos = []) => {
-    const { pedidosFiltrados: pedidosLeo, gastosFiltrados: gastosLeo } = filtrarPedidosYGastosPorUsuario(pedidos, gastos, 'LEONARDO');
-    const { pedidosFiltrados: pedidosOscar, gastosFiltrados: gastosOscar } = filtrarPedidosYGastosPorUsuario(pedidos, gastos, 'OSCAR');
+export const calcularDivisionSocios = (pedidos = [], gastos = [], listaPrecios = [], filtroCategoria = 'TODOS') => {
+    const { pedidosFiltrados: pedidosLeo, gastosFiltrados: gastosLeo } = filtrarPedidosYGastosPorUsuario(pedidos, gastos, 'LEONARDO', false, filtroCategoria);
+    const { pedidosFiltrados: pedidosOscar, gastosFiltrados: gastosOscar } = filtrarPedidosYGastosPorUsuario(pedidos, gastos, 'OSCAR', false, filtroCategoria);
+    const { pedidosFiltrados: pedidosGeneral, gastosFiltrados: gastosGeneral } = filtrarPedidosYGastosPorUsuario(pedidos, gastos, 'GENERAL', false, filtroCategoria);
 
-    const statsLeo = calcularEstadisticasAnio(pedidosLeo, gastosLeo);
-    const statsOscar = calcularEstadisticasAnio(pedidosOscar, gastosOscar);
-    const statsGeneral = calcularEstadisticasAnio(pedidos, gastos);
+    const statsLeo = calcularEstadisticasAnio(pedidosLeo, gastosLeo, [], listaPrecios);
+    const statsOscar = calcularEstadisticasAnio(pedidosOscar, gastosOscar, [], listaPrecios);
+    const statsGeneral = calcularEstadisticasAnio(pedidosGeneral, gastosGeneral, [], listaPrecios);
 
     let karolKitsVenta = 0;
     let karolKitsPrendas = 0;
@@ -1894,29 +2022,35 @@ export const obtenerTarifaVigente = (fechaOrder, listaPrecios = []) => {
     if (!Array.isArray(listaPrecios) || listaPrecios.length === 0) return null;
 
     let fechaPedStr = '';
+    let anioPedido = null;
+
     if (fechaOrder instanceof Date && !isNaN(fechaOrder.getTime())) {
-        const y = fechaOrder.getFullYear();
+        anioPedido = fechaOrder.getFullYear();
+        const y = anioPedido;
         const m = String(fechaOrder.getMonth() + 1).padStart(2, '0');
         const d = String(fechaOrder.getDate()).padStart(2, '0');
         fechaPedStr = `${y}-${m}-${d}`;
     } else if (typeof fechaOrder === 'string') {
         const parsed = parsearFechaSegura(fechaOrder);
         if (parsed) {
-            const y = parsed.getFullYear();
+            anioPedido = parsed.getFullYear();
+            const y = anioPedido;
             const m = String(parsed.getMonth() + 1).padStart(2, '0');
             const d = String(parsed.getDate()).padStart(2, '0');
             fechaPedStr = `${y}-${m}-${d}`;
         } else {
             const match = fechaOrder.match(/\d{4}-\d{2}-\d{2}/);
-            if (match) fechaPedStr = match[0];
+            if (match) {
+                fechaPedStr = match[0];
+                anioPedido = parseInt(fechaPedStr.substring(0, 4), 10);
+            }
         }
     } else if (typeof fechaOrder === 'number') {
+        anioPedido = fechaOrder;
         fechaPedStr = `${fechaOrder}-01-01`;
     }
 
-    if (!fechaPedStr) return null;
-
-    // Ordenar tarifas activas por fechaVigencia ascendente
+    // Normalizar y ordenar tarifas activas por fechaVigencia ascendente
     const tarifasValidas = listaPrecios
         .filter(t => t && t.activo !== false)
         .map(t => {
@@ -1942,13 +2076,35 @@ export const obtenerTarifaVigente = (fechaOrder, listaPrecios = []) => {
         .filter(t => t._fechaStr)
         .sort((a, b) => a._fechaStr.localeCompare(b._fechaStr));
 
-    // Buscar la última tarifa cuya fechaVigencia <= fechaPedStr
+    if (tarifasValidas.length === 0) return null;
+
+    if (!fechaPedStr) {
+        // Si no hay fecha, tomar la última tarifa registrada
+        return tarifasValidas[tarifasValidas.length - 1];
+    }
+
+    // 1. Buscar la última tarifa cuya fechaVigencia sea MENOR O IGUAL a la fecha del pedido
     let tarifaAplicable = null;
     for (let i = tarifasValidas.length - 1; i >= 0; i--) {
         if (tarifasValidas[i]._fechaStr <= fechaPedStr) {
             tarifaAplicable = tarifasValidas[i];
             break;
         }
+    }
+
+    // 2. Si no encontró una anterior o igual (ej. pedido antes de la fechaVigencia modificada),
+    // pero existe una tarifa registrada para ese mismo año, usar la tarifa de ese año
+    if (!tarifaAplicable && anioPedido) {
+        const tarifasDelMismoAnio = tarifasValidas.filter(t => Number(t.anio) === anioPedido);
+        if (tarifasDelMismoAnio.length > 0) {
+            tarifaAplicable = tarifasDelMismoAnio[0];
+        }
+    }
+
+    // 3. Si aún no hay tarifa (ej. pedidos de años históricos anteriores a 2021),
+    // usar la primera tarifa disponible (la más antigua en la BD)
+    if (!tarifaAplicable) {
+        tarifaAplicable = tarifasValidas[0];
     }
 
     return tarifaAplicable;
@@ -1977,11 +2133,12 @@ export const obtenerPrecioFabricaItem = (tipoKit, tarifaVigente) => {
  * Obtiene el precio unitario de fábrica para una subcategoría de guantes según la tarifa vigente
  */
 export const obtenerPrecioFabricaGuante = (item = {}, tarifaVigente = null) => {
-    if (!tarifaVigente || !tarifaVigente.precioGuantes) return 0;
+    if (!tarifaVigente || !tarifaVigente.precioGuantes) return Number(item.precioUnitario || item.precio || 0);
     const pg = tarifaVigente.precioGuantes;
-    const subcat = obtenerSubcategoriaGuante(item.producto, item.subcategoria, item.codigo, item.categoriaId);
+    const subcat = obtenerSubcategoriaGuante(item.producto, item.subcategoria, item.codigo, item.categoriaId, item.tipoEspecial);
     if (subcat.id === 'G_NEGROS') return Number(pg.gn || 0);
     if (subcat.id === 'G_MITON') return Number(pg.gm || 0);
+    if (subcat.id === 'G_ESPECIAL') return Number(item.precioUnitario || item.precio || pg.gb || 0);
     return Number(pg.gb || 0);
 };
 
@@ -2052,7 +2209,84 @@ export const clasificarItemKit = (item = {}) => {
         return 'KCG';
     }
 
+    // Fallbacks si prod menciona cirio o kit y no fue clasificado previamente
+    if (prod.includes('cirio')) {
+        if (prod.includes('confirm')) return 'CCON';
+        if (prod.includes('bautiz')) return 'CB';
+        return 'CC';
+    }
+    if (prod.includes('kit')) {
+        if (prod.includes('bautiz')) return 'KB';
+        if (prod.includes('peque')) return 'KCP';
+        if (prod.includes('econ')) return 'KCE';
+        return 'KCG';
+    }
+
     return null;
+};
+
+/**
+ * Transforma una lista de pedidos calculando el precio y total de los ítems
+ * de la categoría KITS (KB, KCG, KCP, KCE, CC, CCON, CB) a precios de fábrica,
+ * manteniendo las demás categorías (GUANTES, OTROS) a sus precios de venta normales.
+ * Recalcula el `order.total` como la suma exacta de todos los ítems resultantes.
+ */
+export const aplicarPreciosFabricaAKits = (pedidos = [], listaPrecios = []) => {
+    if (!Array.isArray(pedidos)) return [];
+
+    return pedidos.map(ord => {
+        const fechaOrder = ord.fecha || ord.fechaCreacion || ord.fechaStr || (ord.anio ? new Date(ord.anio, ord.mes ?? 0, 1) : null);
+        const tarifaVigente = obtenerTarifaVigente(fechaOrder, listaPrecios);
+
+        let nuevoTotal = 0;
+        let tieneKits = false;
+
+        const nuevosItems = (ord.items || []).map(it => {
+            const tipoKit = clasificarItemKit(it);
+            if (tipoKit) {
+                tieneKits = true;
+                const precioTarifa = obtenerPrecioFabricaItem(tipoKit, tarifaVigente);
+                let pFabrica = 0;
+                if (precioTarifa > 0) {
+                    pFabrica = precioTarifa;
+                } else if (PRECIOS_FABRICA_KITS_DEFAULT[tipoKit]) {
+                    pFabrica = PRECIOS_FABRICA_KITS_DEFAULT[tipoKit];
+                } else {
+                    pFabrica = Number(it.precio || (it.cantidad > 0 ? it.total / it.cantidad : 0));
+                }
+
+                const cant = Number(it.cantidad || 0);
+                const subTotal = cant * pFabrica;
+                nuevoTotal += subTotal;
+
+                return {
+                    ...it,
+                    precioOriginal: it.precioOriginal !== undefined ? it.precioOriginal : it.precio,
+                    totalOriginal: it.totalOriginal !== undefined ? it.totalOriginal : it.total,
+                    precio: pFabrica,
+                    total: subTotal,
+                    tipoKit,
+                    esPrecioFabrica: true,
+                    tarifaNombre: tarifaVigente?.nombre || '',
+                    tarifaVigencia: tarifaVigente?._fechaStr || tarifaVigente?.fechaVigencia || ''
+                };
+            } else {
+                const subTotal = Number(it.total !== undefined ? it.total : (Number(it.precio || 0) * Number(it.cantidad || 0)));
+                nuevoTotal += subTotal;
+                return {
+                    ...it,
+                    esPrecioFabrica: false
+                };
+            }
+        });
+
+        return {
+            ...ord,
+            items: nuevosItems,
+            total: nuevosItems.length > 0 ? nuevoTotal : Number(ord.total || 0),
+            kitsConPrecioFabrica: tieneKits
+        };
+    });
 };
 
 /**
@@ -2064,7 +2298,8 @@ export const obtenerHistoricoKitsPorAnio = (
     anios = [],
     filtrarPorEstadoPagado = null,
     filtroUsuario = 'GENERAL',
-    listaPrecios = []
+    listaPrecios = [],
+    esLeonardo = false
 ) => {
     // Orden cronológico ascendente (2017 a año en curso)
     const aniosOrdenados = [...anios].sort((a, b) => Number(a) - Number(b));
@@ -2090,8 +2325,8 @@ export const obtenerHistoricoKitsPorAnio = (
         }
 
         let peds = raw;
-        if (filtroUsuario && filtroUsuario !== 'GENERAL') {
-            peds = filtrarPedidosYGastosPorUsuario(raw, [], filtroUsuario).pedidosFiltrados;
+        if (filtroUsuario) {
+            peds = filtrarPedidosYGastosPorUsuario(raw, [], filtroUsuario, esLeonardo).pedidosFiltrados;
         }
 
         const subcatVentas = { KB: 0, KCG: 0, KCP: 0, KCE: 0, CB: 0, CC: 0 };
@@ -2101,12 +2336,11 @@ export const obtenerHistoricoKitsPorAnio = (
         let pedidosConKitsCount = 0;
 
         const anioNum = Number(yr);
-        const esModernoFabrica = (anioNum >= 2025);
 
         peds.forEach(order => {
             let tieneKit = false;
             const fechaOrder = order.fecha || order.fechaCreacion || order.fechaStr || (order.anio ? new Date(order.anio, order.mes ?? 0, 1) : null);
-            const tarifaVigente = esModernoFabrica ? obtenerTarifaVigente(fechaOrder, listaPrecios) : null;
+            const tarifaVigente = obtenerTarifaVigente(fechaOrder, listaPrecios);
 
             (order.items || []).forEach(item => {
                 const tipo = clasificarItemKit(item);
@@ -2116,15 +2350,11 @@ export const obtenerHistoricoKitsPorAnio = (
                 const cant = Number(item.cantidad || 0);
 
                 let tot = 0;
-                if (esModernoFabrica) {
-                    const precioTarifa = obtenerPrecioFabricaItem(tipo, tarifaVigente);
-                    if (precioTarifa > 0) {
-                        tot = cant * precioTarifa;
-                    } else if (PRECIOS_FABRICA_KITS_DEFAULT[tipo]) {
-                        tot = cant * PRECIOS_FABRICA_KITS_DEFAULT[tipo];
-                    } else {
-                        tot = Number(item.total || (cant * Number(item.precio || item.precioUnitario || 0)));
-                    }
+                const precioTarifa = obtenerPrecioFabricaItem(tipo, tarifaVigente);
+                if (precioTarifa > 0) {
+                    tot = cant * precioTarifa;
+                } else if (PRECIOS_FABRICA_KITS_DEFAULT[tipo]) {
+                    tot = cant * PRECIOS_FABRICA_KITS_DEFAULT[tipo];
                 } else {
                     tot = Number(item.total || (cant * Number(item.precio || item.precioUnitario || 0)));
                 }
